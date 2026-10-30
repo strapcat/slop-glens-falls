@@ -779,4 +779,6 @@ async function initApp() {
   });
 }
 
-initApp();
+// ?city=glensfalls opens the standalone Glens Falls geodata debug view instead of the New York simulation
+if (new URLSearchParams(location.search).get('city') === 'glensfalls') location.replace(`./gf.html${location.search}`);
+else initApp();
