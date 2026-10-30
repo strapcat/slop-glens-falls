@@ -32,6 +32,10 @@ import { polygonContact } from './building-collision.js';
 
 // Spawn on 5th Ave at 37th St, facing south down the avenue toward the Empire State Building (34th St)
 const SPAWN_Z = streetZ(37);
+// The world the player moves in (constructor's `world`): the bounds of the land and its shore at z (west & east x the
+// player keeps 8 m inside), the ground height and the sidewalks (null: Manhattan's parks, lawns and raised curbs), and
+// where the player starts ({ x, z, heading }; null: 5th Ave at 37th St)
+const NYC_WORLD = { bounds: ISLAND_BOUNDS, shoreAt: getIslandBoundsAtZ, groundHeightAt: null, isPointOnSidewalk: null, spawn: null };
 const groundCollider = { type: 'ground' };
 
 const CAR_DRIVE = {
@@ -191,9 +195,10 @@ function createNYLicensePlateTexture() {
 }
 
 class ThirdPersonControllerManager {
-  constructor(scene, colliders = []) {
+  constructor(scene, colliders = [], world = NYC_WORLD) {
     this.scene = scene;
     this.colliders = colliders;
+    this._world = { ...NYC_WORLD, ...world };
     this._colliderCells = null; // built on first use, see nearColliders()
     this.activeMode = 'car'; // 'person' | 'car' | 'cyclist' | 'helicopter'
 
@@ -229,7 +234,32 @@ class ThirdPersonControllerManager {
       }
     });
 
+    if (this.world.spawn) this.placeAtSpawn(this.world.spawn);
     this.bindKeyboard();
+  }
+
+  get world() {
+    return this._world || NYC_WORLD;
+  }
+
+  // Every mode starts at the world's spawn: the car on it, the cyclist behind, the person beside it and the helicopter
+  // hovering behind and above
+  placeAtSpawn({ x, z, heading }) {
+    const fx = Math.sin(heading), fz = Math.cos(heading);
+    const offsets = { car: [0, 0, 0], cyclist: [-8, 0, 0], person: [0, 3.5, 0], helicopter: [-60, 0, 96] };
+    for (const [mode, [back, side, up]] of Object.entries(offsets)) {
+      const ent = this.entities[mode];
+      // forward (fx, fz), its right (-fz, fx)
+      ent.position.set(x + fx * back - fz * side, 0, z + fz * back + fx * side);
+      ent.position.y = up || this.getGroundHeight(ent.position.x, ent.position.z, mode);
+      ent.heading = heading;
+      ent.mesh.position.copy(ent.position);
+      ent.mesh.rotation.y = heading;
+      if (mode === 'car') {
+        ent.prevX = ent.position.x;
+        ent.prevZ = ent.position.z;
+      }
+    }
   }
 
   setCollisionListener(listener) {
@@ -407,11 +437,12 @@ class ThirdPersonControllerManager {
     }));
     const cameraBack = Math.cos(0.09) * entity.chaseDistance;
     const cameraUp = entity.chaseHeight + Math.sin(0.09) * entity.chaseDistance * 0.85;
+    const { bounds, shoreAt } = this.world;
     const clampPoint = (px, pz) => {
-      pz = Math.max(ISLAND_BOUNDS.minZ + (heli ? -6000 : 30), Math.min(ISLAND_BOUNDS.maxZ + margin, pz));
-      px = Math.max(ISLAND_BOUNDS.minX - margin, Math.min(ISLAND_BOUNDS.maxX + margin, px));
-      if (!heli && getIslandBoundsAtZ) {
-        const shore = getIslandBoundsAtZ(pz);
+      pz = Math.max(bounds.minZ + (heli ? -6000 : 30), Math.min(bounds.maxZ + margin, pz));
+      px = Math.max(bounds.minX - margin, Math.min(bounds.maxX + margin, px));
+      if (!heli && shoreAt) {
+        const shore = shoreAt(pz);
         const west = shore.westX + 8, east = shore.eastX - 8;
         if (west > east) return null;
         px = Math.max(west, Math.min(east, px));
@@ -438,8 +469,8 @@ class ThirdPersonControllerManager {
     const origin = clampPoint(x, z);
     if (clear(origin)) return origin;
     // Four-metre rings cover nearby streets and courtyards, with bounded work even for a click inside a large block.
-    const cx = origin ? origin.x : Math.max(ISLAND_BOUNDS.minX, Math.min(ISLAND_BOUNDS.maxX, x));
-    const cz = origin ? origin.z : Math.max(ISLAND_BOUNDS.minZ + 30, Math.min(ISLAND_BOUNDS.maxZ, z));
+    const cx = origin ? origin.x : Math.max(bounds.minX, Math.min(bounds.maxX, x));
+    const cz = origin ? origin.z : Math.max(bounds.minZ + 30, Math.min(bounds.maxZ, z));
     for (let distance = 4; distance <= 256; distance += 4) {
       for (let i = 0; i < 32; i++) {
         const angle = i * Math.PI / 16;
@@ -854,11 +885,13 @@ class ThirdPersonControllerManager {
 
   // On a raised curb island (city-config.js BLOCKS: the real blocks, malls & plazas), not in a park
   isPointOnSidewalk(x, z) {
+    if (this.world.isPointOnSidewalk) return this.world.isPointOnSidewalk(x, z);
     const b = blockAt(x, z);
     return !!b && !(b.park > 0.6 && !b.median);
   }
 
   getGroundHeight(x, z, mode = 'person') {
+    if (this.world.groundHeightAt) return this.world.groundHeightAt(x, z, mode);
     // Inside Central Park (5th Ave to Central Park West, 59th St to 110th St)
     const cp = CENTRAL_PARK_BOUNDS;
     if (x > cp.minX && x < cp.maxX && z > cp.minZ && z < cp.maxZ) {
@@ -917,10 +950,11 @@ class ThirdPersonControllerManager {
     // The detailed island (the helicopter may roam out over the harbour & the boroughs)
     const heli = this.activeMode === 'helicopter';
     const m = heli ? 6000 : 0;
-    pos.x = Math.max(ISLAND_BOUNDS.minX - m, Math.min(ISLAND_BOUNDS.maxX + m, pos.x));
-    pos.z = Math.max(ISLAND_BOUNDS.minZ + (heli ? -6000 : 30), Math.min(ISLAND_BOUNDS.maxZ + m, pos.z));
-    if (this.activeMode !== 'helicopter' && getIslandBoundsAtZ) {
-      const shore = getIslandBoundsAtZ(pos.z);
+    const { bounds, shoreAt } = this.world;
+    pos.x = Math.max(bounds.minX - m, Math.min(bounds.maxX + m, pos.x));
+    pos.z = Math.max(bounds.minZ + (heli ? -6000 : 30), Math.min(bounds.maxZ + m, pos.z));
+    if (this.activeMode !== 'helicopter' && shoreAt) {
+      const shore = shoreAt(pos.z);
       const minShoreX = shore.westX + 8.0;
       const maxShoreX = shore.eastX - 8.0;
       if (pos.x < minShoreX) {

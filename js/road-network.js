@@ -17,13 +17,28 @@ import { polygonBoxOverlaps } from './building-collision.js';
 // (rx, rz) = (-dz, dx). Lanes are lateral offsets to the right of the centreline, sorted left to right.
 
 const CELL = 32;
-const Z_MIN = Math.floor(ISLAND_BOUNDS.minZ) - 20; // the detailed island, ~129th St to the Battery
-const Z_MAX = Math.ceil(ISLAND_BOUNDS.maxZ) + 20;
 const LANE_CLEAR = 1.2; // half width each lane keeps free of obstacles
 const CROSSWALK = 2.5; // depth between an intersection box and its stop lines
 const SHORE_MARGIN = 6;
 
-function buildRoadNetwork(sidewalks, obstacles, signalIntersections = []) {
+// The city the network is built for: its grid's avenue corridors and cross streets, its blocks (for their median
+// malls), its street centreline graph (4b), the bounds of the land and its shore at any z, and the names of major roads.
+// Manhattan by default; a city with no grid (gf-roadgraph.js) builds the whole network from its centreline graph.
+const NYC_SOURCE = {
+  avenues: ALL_AVENUES,
+  streets: ALL_STREETS,
+  blocks: BLOCKS,
+  roadGraph: GEO.roadGraph,
+  bounds: ISLAND_BOUNDS,
+  shoreAt: getIslandBoundsAtZ,
+  majorName: /\bAVE\b|AVENUE|BROADWAY|BOWERY|BLVD|PARK ROW/
+};
+
+function buildRoadNetwork(sidewalks, obstacles, signalIntersections = [], source = NYC_SOURCE) {
+  const { avenues: cityAvenues, streets: cityStreets, blocks: cityBlocks, roadGraph, bounds, shoreAt, majorName } = source;
+  const Z_MIN = Math.floor(bounds.minZ) - 20; // the land north to south (Manhattan: the detailed island, ~129th St to the Battery)
+  const Z_MAX = Math.ceil(bounds.maxZ) + 20;
+
   // 1. Spatial hash of ground footprints: curbs bound the roads, everything else also blocks pedestrians
   const hash = new Map();
   const cellKey = (ix, iz) => (ix + 512) * 1024 + iz + 512;
@@ -57,7 +72,7 @@ function buildRoadNetwork(sidewalks, obstacles, signalIntersections = []) {
 
   function onLand(minX, maxX, minZ, maxZ) {
     for (const z of [minZ, maxZ]) {
-      const shore = getIslandBoundsAtZ(z);
+      const shore = shoreAt(z);
       if (minX < shore.westX + SHORE_MARGIN || maxX > shore.eastX - SHORE_MARGIN) return false;
     }
     return true;
@@ -70,7 +85,7 @@ function buildRoadNetwork(sidewalks, obstacles, signalIntersections = []) {
   // irregular sidewalks may reach a little past their curbs, a whole park's bounds take in the streets around it and a
   // median mall's bounds (Allen St, Chrystie St...) both its roadways, so only a curb right at (x, z), median malls by
   // their real outline and other obstacles under 50 m across count
-  const MEDIANS = BLOCKS.filter((b) => b.median);
+  const MEDIANS = cityBlocks.filter((b) => b.median);
   const medianBox = (r) => MEDIANS.some((b) => Math.abs(b.minX - r.minX) < 0.6 && Math.abs(b.maxX - r.maxX) < 0.6 && Math.abs(b.minZ - r.minZ) < 0.6 && Math.abs(b.maxZ - r.maxZ) < 0.6);
   const medianCells = new Map(); // 64 m cells -> the medians reaching into them
   for (const b of MEDIANS) {
@@ -115,7 +130,7 @@ function buildRoadNetwork(sidewalks, obstacles, signalIntersections = []) {
       : half >= 6.8 ? [-3.6, 0, 3.6]
         : half >= 4.4 ? [-1.8, 1.8] : null);
   const avenues = [];
-  for (const ave of ALL_AVENUES) {
+  for (const ave of cityAvenues) {
     if (ave.isHighway) continue;
     const segs = ave.segs || [{ z0: ave.minZ, z1: ave.maxZ, dir: ave.dir }];
     // the avenue's stretch at z (or the nearest one within an intersection's reach of its ends)
@@ -223,7 +238,7 @@ function buildRoadNetwork(sidewalks, obstacles, signalIntersections = []) {
   // One-way or two-way from the nearest named street inside the gap (majors and wide gaps are two-way)
   for (const p of pieces) {
     let st = null;
-    for (const s of ALL_STREETS) {
+    for (const s of cityStreets) {
       if (Math.abs(s.z - p.z) <= p.gap / 2 && (!st || Math.abs(s.z - p.z) < Math.abs(st.z - p.z))) st = s;
     }
     const twoWay = !st || st.dir === 0 || p.gap >= 20;
@@ -254,7 +269,7 @@ function buildRoadNetwork(sidewalks, obstacles, signalIntersections = []) {
   //     cross street); a street's bends get shape nodes, so every edge stays straight.
   const genRuns = centrelineStreets();
   function centrelineStreets() {
-    const RG = GEO.roadGraph;
+    const RG = roadGraph;
     const runs = [];
     if (!RG) return runs;
     const pos = [];
@@ -387,7 +402,7 @@ function buildRoadNetwork(sidewalks, obstacles, signalIntersections = []) {
     }
     // Lanes by the street's real curb-to-curb width and direction of travel: one-way streets as wide as the grid's
     // (two lanes from ~9 m), two-way ones a lane each way (two each way from 17 m). Wide or named avenues are major.
-    const MAJOR = /\bAVE\b|AVENUE|BROADWAY|BOWERY|BLVD|PARK ROW/;
+    const MAJOR = { test: (name) => !!majorName && majorName.test(name) }; // (no major names: by width & lanes alone)
     function lanesOf(l) {
       const w = l.w > 3 ? l.w : MAJOR.test(l.name) ? 18 : 9.1;
       const half = w / 2;
@@ -1180,4 +1195,4 @@ function curvePoint(c, s, out) {
   return out;
 }
 
-export { buildRoadNetwork, CROSSWALK };
+export { buildRoadNetwork, NYC_SOURCE, CROSSWALK };

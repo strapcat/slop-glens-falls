@@ -31,6 +31,17 @@ import {
 const NUM_CARS = 200;
 const NUM_BUSES = 12;
 
+// The stand-in for pedestrian-system.js where a city has no sidewalks to walk (options.pedestrians false): nobody
+// walks, so nothing reads the city's blocks. Like it, it gives every node its (here always empty) lists of the
+// pedestrians on its crosswalks and at its curbs, which the drivers check.
+function noPedestrians(network) {
+  for (const n of network.nodes) {
+    n.walkers = [];
+    n.curb = [];
+  }
+  return { peds: [], meshes: [], update() {} };
+}
+
 // Intelligent Driver Model: max acceleration, comfortable braking, time headway, standstill gap; the sideways
 // acceleration drivers accept in bends, which sets how fast they take each turn or lane shift; and how hard they brake
 // in an emergency. At the wheel (see steer): the sideways acceleration the tyres grip up to, how far the front wheels
@@ -104,7 +115,10 @@ function createBusDestinationTexture() {
 
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 
-function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections) {
+// options: roadSource (buildRoadNetwork's city source, Manhattan by default), numCars, numBuses, pedestrians (false:
+// no pedestrian system)
+function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, options = {}) {
+  const { roadSource, numCars = NUM_CARS, numBuses = NUM_BUSES, pedestrians = true } = options;
   const group = new THREE.Group();
   group.name = 'ManhattanTrafficAndPedestrians';
   let collisionListener = null;
@@ -132,7 +146,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections) {
   // =========================================================================
   // 0. ROAD NETWORK
   // =========================================================================
-  const network = buildRoadNetwork(sidewalks, obstacles, signalIntersections);
+  const network = buildRoadNetwork(sidewalks, obstacles, signalIntersections, roadSource);
   const { nodes, edges, connector, curvePoint } = network;
 
   // Sides of an intersection (road-network.js step 9): a grid intersection's are 0 east, 1 west, 2 south, 3 north;
@@ -181,7 +195,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections) {
   // Every body kind shares one 3D wheel model, instanced separately and scaled to the kind's wheel radius
   const carWheelLeftGeo = buildSteerableWheelGeo(BODY_SPECS.sedan, -1);
   const carWheelRightGeo = buildSteerableWheelGeo(BODY_SPECS.sedan, 1);
-  const carWheelStyles = new THREE.InstancedBufferAttribute(new Float32Array(NUM_CARS * 2), 1);
+  const carWheelStyles = new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1, numCars) * 2), 1);
   carWheelLeftGeo.setAttribute('wheelStyle', carWheelStyles);
   carWheelRightGeo.setAttribute('wheelStyle', carWheelStyles);
   const carWheelMat = createCarWheelMaterial({ instanced: true });
@@ -267,7 +281,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections) {
   const counts = Object.fromEntries(Object.keys(CAR_KINDS).map((kind) => [kind, 0]));
   const policeCounts = { sedan: 0, suv: 0 };
 
-  for (let i = 0; i < NUM_CARS; i++) {
+  for (let i = 0; i < numCars; i++) {
     const isPolice = (i % 50) === 6 || (i % 100) === 56;
     const isBoroTaxi = !isPolice && (i % 25) === 3;
     let bodyType = FLEET_MIX[i % FLEET_MIX.length];
@@ -324,8 +338,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections) {
   }
   const bodyMeshes = Object.values(bodies).flatMap((b) => [b.near, b.far]);
 
-  const carWheelLeftInst = new THREE.InstancedMesh(carWheelLeftGeo, carWheelMat, NUM_CARS * 2);
-  const carWheelRightInst = new THREE.InstancedMesh(carWheelRightGeo, carWheelMat, NUM_CARS * 2);
+  const carWheelLeftInst = new THREE.InstancedMesh(carWheelLeftGeo, carWheelMat, Math.max(1, numCars) * 2);
+  const carWheelRightInst = new THREE.InstancedMesh(carWheelRightGeo, carWheelMat, Math.max(1, numCars) * 2);
   carWheelRightInst.userData.sharesPipelineWith = carWheelLeftInst;
 
   // 3D Collision Spark & Debris Particle Pool
@@ -366,7 +380,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections) {
     suv: new THREE.InstancedMesh(buildLightbarGeometry(BODY_SPECS.suv), lightbarMat, Math.max(1, policeCounts.suv))
   };
   const policeLightbarMeshes = [policeLightbars.sedan, policeLightbars.suv];
-  const carShadowInst = new THREE.InstancedMesh(unitPlane, contactShadowMat, NUM_CARS);
+  const carShadowInst = new THREE.InstancedMesh(unitPlane, contactShadowMat, Math.max(1, numCars));
   carShadowInst.renderOrder = 998;
 
   for (const m of bodyMeshes) m.castShadow = m.receiveShadow = true;
@@ -387,7 +401,9 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections) {
   // =========================================================================
   const busBodyGeo = buildLoftedBusBodyGeometry();
   // Per-instance lamp & variant state the bus material and sign atlas read: brake, left (+x) & right (-x) turn, variant+1
-  const busStates = new THREE.InstancedBufferAttribute(new Float32Array(NUM_BUSES * 4), 4);
+  // (at least one instance slot even without buses: syncInst() parks a hidden instance in slot 0 at first)
+  const busSlots = Math.max(1, numBuses);
+  const busStates = new THREE.InstancedBufferAttribute(new Float32Array(busSlots * 4), 4);
   busBodyGeo.setAttribute('busState', busStates);
   // Destination signs above the windshield, by the front door & on the upper-right rear cap
   const busHeaderGeo = buildBusSignGeometry();
@@ -405,11 +421,11 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections) {
   }
 
   const busWheelMat = createBusWheelMaterial();
-  const busBodyInst = new THREE.InstancedMesh(busBodyGeo, busBodyMat, NUM_BUSES);
-  const busHeaderInst = new THREE.InstancedMesh(busHeaderGeo, busDestMat, NUM_BUSES);
-  const busWheelLeftInst = new THREE.InstancedMesh(buildBusWheelGeo(-1), busWheelMat, NUM_BUSES * 2);
-  const busWheelRightInst = new THREE.InstancedMesh(buildBusWheelGeo(1), busWheelMat, NUM_BUSES * 2);
-  const busShadowInst = new THREE.InstancedMesh(unitPlane, contactShadowMat, NUM_BUSES);
+  const busBodyInst = new THREE.InstancedMesh(busBodyGeo, busBodyMat, busSlots);
+  const busHeaderInst = new THREE.InstancedMesh(busHeaderGeo, busDestMat, busSlots);
+  const busWheelLeftInst = new THREE.InstancedMesh(buildBusWheelGeo(-1), busWheelMat, busSlots * 2);
+  const busWheelRightInst = new THREE.InstancedMesh(buildBusWheelGeo(1), busWheelMat, busSlots * 2);
+  const busShadowInst = new THREE.InstancedMesh(unitPlane, contactShadowMat, busSlots);
   busShadowInst.renderOrder = 998;
 
   busBodyInst.castShadow = busBodyInst.receiveShadow = true;
@@ -417,7 +433,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections) {
   busWheelRightInst.castShadow = busWheelRightInst.receiveShadow = true;
 
   const buses = [];
-  for (let i = 0; i < NUM_BUSES; i++) {
+  for (let i = 0; i < numBuses; i++) {
     const b = createVehicle(true, 6.1, 1.3, 3.6, BUS_DRIVER, 8 + (i % 3));
     Object.assign(b, { variant: i, halfL: 5.72, mass: 12000 });
     buses.push(b);
@@ -432,10 +448,10 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections) {
     halfW: 0.86, halfL: 2.18 };
   const nearEdges = [];
   const nearSignals = [];
-  const pedestrianSystem = createPedestrianSystem(network, {
+  const pedestrianSystem = pedestrians ? createPedestrianSystem(network, {
     player, nearEdges, nearSignals, mayCross, walkOn, visible, nearView
-  });
-  group.add(...pedestrianSystem.meshes);
+  }) : noPedestrians(network);
+  if (pedestrianSystem.meshes.length) group.add(...pedestrianSystem.meshes);
 
   // Add vehicle contact shadows last + pre-allocated Clustered SpotLight / PointLight pools
   group.add(carShadowInst, busShadowInst);

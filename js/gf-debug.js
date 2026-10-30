@@ -1,7 +1,8 @@
 import * as THREE from 'three/webgpu';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { shapeOf, flatShapes, roadRibbonGeometry } from './gf-ground.js';
 
-// Glens Falls geodata debug view (gf.html, or index.html?city=glensfalls): js/gf-geodata.js drawn flat, roads as
+// Glens Falls geodata debug view (gf.html, or index.html?city=glensfalls&view=debug): js/gf-geodata.js drawn flat, roads as
 // ribbons at their curb widths, blocks as 0.15 m slabs (property line in a lighter tone), water as blue planes.
 
 const CLASS_COLORS = {
@@ -14,55 +15,6 @@ const ROAD_Y = 0.25; // above the blocks, so service ways inside blocks stay vis
 
 // Layers centimetres apart seen from kilometres away: polygon offset keeps them ordered at any depth precision
 const layerMaterial = (color, layer) => new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -layer, polygonOffsetUnits: -4 * layer });
-
-const unflat = (f) => { const r = []; for (let i = 0; i < f.length; i += 2) r.push(new THREE.Vector2(f[i], -f[i + 1])); return r; };
-const shapeOf = (outer, holes) => {
-  const s = new THREE.Shape(unflat(outer));
-  for (const h of holes) s.holes.push(new THREE.Path(unflat(h)));
-  return s;
-};
-
-// Flat ribbon (quad per segment + round joins) of every link of one highway class
-function roadGeometry(graph, classIndex, rank) {
-  const { nodes, links } = graph;
-  const pos = [];
-  const y = ROAD_Y + rank * 0.03;
-  const disc = (x, z, r) => {
-    const n = 8;
-    for (let k = 0; k < n; k++) {
-      const a0 = (k / n) * Math.PI * 2, a1 = ((k + 1) / n) * Math.PI * 2;
-      pos.push(x, y, z, x + Math.cos(a1) * r, y, z + Math.sin(a1) * r, x + Math.cos(a0) * r, y, z + Math.sin(a0) * r);
-    }
-  };
-  for (const [a, b, , cls, , , width, inner] of links) {
-    if (cls !== classIndex) continue;
-    const pts = [[nodes[a * 2], nodes[a * 2 + 1]]];
-    for (let i = 0; i < inner.length; i += 2) pts.push([inner[i], inner[i + 1]]);
-    pts.push([nodes[b * 2], nodes[b * 2 + 1]]);
-    const r = width / 2;
-    for (let i = 0; i + 1 < pts.length; i++) {
-      const [x0, z0] = pts[i], [x1, z1] = pts[i + 1];
-      const L = Math.hypot(x1 - x0, z1 - z0);
-      if (L < 1e-6) continue;
-      const nx = (-(z1 - z0) / L) * r, nz = ((x1 - x0) / L) * r;
-      pos.push(x0 + nx, y, z0 + nz, x1 - nx, y, z1 - nz, x1 + nx, y, z1 + nz);
-      pos.push(x0 + nx, y, z0 + nz, x0 - nx, y, z0 - nz, x1 - nx, y, z1 - nz);
-    }
-    for (const [x, z] of pts) disc(x, z, r);
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.computeVertexNormals();
-  return g;
-}
-
-// Shapes are built in (x, -z) and turned flat with rotateX(-90°), which maps shape (x, y) to world (x, z = -y)
-function flatShapes(shapes, y, extrude) {
-  const g = extrude ? new THREE.ExtrudeGeometry(shapes, { depth: extrude, bevelEnabled: false }) : new THREE.ShapeGeometry(shapes);
-  g.rotateX(-Math.PI / 2);
-  g.translate(0, y, 0);
-  return g;
-}
 
 function showError(message) {
   const el = document.getElementById('gf-error');
@@ -122,7 +74,7 @@ async function init() {
     for (const c of [base, base + '_link']) {
       const i = classIndex(c);
       if (i < 0) continue;
-      scene.add(new THREE.Mesh(roadGeometry(roadGraph, i, rank), layerMaterial(CLASS_COLORS[base], 2 + rank)));
+      scene.add(new THREE.Mesh(roadRibbonGeometry(roadGraph, (c) => c === i, ROAD_Y + rank * 0.03), layerMaterial(CLASS_COLORS[base], 2 + rank)));
     }
     if (classIndex(base) >= 0) legend.push(base);
   });
