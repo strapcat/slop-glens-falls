@@ -14,6 +14,8 @@ node --test tests/gf-geodata.test.mjs
 ```
 
 Then open `index.html?city=glensfalls` (or `gf.html`) through a local web server for the flat debug view.
+Add `&look=x,z,distance` to start the camera looking down at a point (metres) from that distance. The screenshots in
+`screenshots/` use `look=0,-150,900` (downtown) and `look=300,450,1300` (the Glen Street bridge over the Hudson).
 
 - `fetch.sh` runs both queries through `tools/overpass.sh`, which keeps its endpoint fallback and retries and only
   replaces a file after a complete, valid response. The User-Agent is `OVERPASS_UA` (default

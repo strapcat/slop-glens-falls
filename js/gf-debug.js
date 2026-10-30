@@ -136,9 +136,17 @@ async function init() {
   controls.enableDamping = true;
   controls.maxPolarAngle = Math.PI / 2 - 0.02;
   controls.screenSpacePanning = false;
+  // ?look=x,z,distance starts looking down at (x, z) from that distance (reproducible screenshots); else the whole bbox
+  const look = (new URLSearchParams(location.search).get('look') || '').split(',').map(Number);
   const reset = () => {
-    controls.target.set(cx, 0, cz);
-    camera.position.set(cx, (bbox.z1 - bbox.z0) * 1.15, cz + (bbox.z1 - bbox.z0) * 0.5);
+    if (look.length === 3 && look.every(Number.isFinite)) {
+      const [x, z, d] = look;
+      controls.target.set(x, 0, z);
+      camera.position.set(x, d * 0.85, z + d * 0.5);
+    } else {
+      controls.target.set(cx, 0, cz);
+      camera.position.set(cx, (bbox.z1 - bbox.z0) * 1.15, cz + (bbox.z1 - bbox.z0) * 0.5);
+    }
     controls.update();
   };
   reset();
