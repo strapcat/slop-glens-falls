@@ -2,6 +2,7 @@
 // its curb-to-curb width over the land (minus a waterfront strip), then labelling what's left.
 // Each block: curb outline polygon, axis-aligned lot rects inside its property line (curb minus sidewalk), metadata.
 import { geo, Raster, rdpRing, ringArea, bbox, log } from './geo-base.mjs';
+import { destair } from './geo-util.mjs';
 import { pieces, plazaPieces } from './geo-streets.mjs';
 
 export const CUT_Z = -7090; // detailed island south of here (≈ 129th St); Upper Manhattan beyond is low-detail
@@ -151,21 +152,6 @@ function traceComponent(c) {
     if ((q[0] - p[0]) * (n[1] - q[1]) - (q[1] - p[1]) * (n[0] - q[0]) !== 0) out.push(q);
   }
   return destair(out, RES * 1.5);
-}
-
-// Raster stairs -> lines: short edges (stair steps) are replaced by their midpoints, vertices between two long edges
-// (true corners) are kept
-export function destair(out, short) {
-  const n = out.length;
-  const len = (i) => { const a = out[i], b = out[(i + 1) % n]; return Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]); };
-  const res = [];
-  for (let i = 0; i < n; i++) {
-    const prevLong = len((i + n - 1) % n) > short;
-    const nextLong = len(i) > short;
-    if (prevLong && nextLong) res.push(out[i]);
-    if (!nextLong) { const a = out[i], b = out[(i + 1) % n]; res.push([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]); }
-  }
-  return res;
 }
 
 // --- Property line: square erosion of each island by the sidewalk width (keeps grid blocks rectangular) -------------
@@ -431,4 +417,4 @@ for (const c of comps) {
 log(`${blocks.length} blocks (${blocks.filter((b) => b.rect).length} rectangular, ${blocks.filter((b) => !b.rects.length).length} without lots); ${small} specks dropped`);
 log(`${blocks.filter((b) => b.frames).length} irregular blocks with frontage frames (${blocks.reduce((t, b) => t + (b.frames ? b.frames.length : 0), 0)} frames)`);
 
-export { blocks, innerRing, roads, R as blockRaster, lab as blockLabels };
+export { blocks, innerRing, roads, R as blockRaster, lab as blockLabels, destair };

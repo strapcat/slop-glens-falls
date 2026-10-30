@@ -1,5 +1,6 @@
 #!/bin/bash
 # usage: overpass.sh <out.json> <query-file> [tries]
+# OVERPASS_UA overrides the User-Agent sent to the Overpass servers.
 set -euo pipefail
 
 if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
@@ -7,6 +8,7 @@ if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
   exit 1
 fi
 OUT=$1; Q=$2; TRIES=${3:-12}
+UA=${OVERPASS_UA:-"nyc-layout-research/1.0 (three.js city sim)"}
 if ! [[ "$TRIES" =~ ^[1-9][0-9]*$ ]] || [ ! -r "$Q" ]; then
   echo "query file must be readable and tries must be a positive integer" >&2
   exit 1
@@ -18,7 +20,7 @@ TMP=$(mktemp "${OUT}.tmp.XXXXXX")
 trap 'rm -f -- "$TMP"' EXIT
 for ((i = 1; i <= TRIES; i++)); do
   for ep in https://overpass-api.de/api/interpreter https://lz4.overpass-api.de/api/interpreter https://z.overpass-api.de/api/interpreter; do
-    if code=$(curl -sS -m 240 -A "nyc-layout-research/1.0 (three.js city sim)" -o "$TMP" -w "%{http_code}" --data-urlencode "data@$Q" "$ep"); then
+    if code=$(curl -sS -m 240 -A "$UA" -o "$TMP" -w "%{http_code}" --data-urlencode "data@$Q" "$ep"); then
       if [ "$code" = "200" ] && node -e '
         const fs = require("node:fs");
         try {
