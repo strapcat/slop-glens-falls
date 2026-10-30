@@ -326,7 +326,7 @@ export function buildWater(elements, box = BBOX_M) {
 // =====================================================================================================================
 // 3. BLOCKS (curb islands, after tools/geo-blocks.mjs: rasterise the roadways at curb width, label what's left)
 // =====================================================================================================================
-export const BLOCK_PARAMS = { res: 1, sidewalk: 1.8, minArea: 150 };
+export const BLOCK_PARAMS = { res: 1, sidewalk: 1.8, minArea: 150, minHole: 10 };
 
 // Even-odd scanline fill of several rings at once (a polygon with holes)
 function fillRings(R, rings, val) {
@@ -382,7 +382,9 @@ function label(D, W, H, stack) {
   return { lab, comps };
 }
 
-// Contour of one labelled component (corner walk keeping it on the right, as geo-blocks.mjs traceComponent)
+// Contour of one labelled component (corner walk keeping it on the right, as geo-blocks.mjs traceComponent).
+// R is any { w, h, res, x0, z0 } grid; c is { id, n, start }. A closed contour has at most 4n edges, so a longer walk
+// is a tracer bug: throw rather than emit a broken outline.
 function traceLabel(R, lab, c) {
   const { w: W, h: H, res, x0, z0 } = R;
   const at = (i, j) => (i >= 0 && j >= 0 && i < W && j < H && lab[j * W + i] === c.id ? 1 : 0);
@@ -403,7 +405,7 @@ function traceLabel(R, lab, c) {
     else { left = at(cx - 1, cz - 1); right = at(cx, cz - 1); }
     if (left && right) dir = (dir + 3) % 4;
     else if (!right) dir = (dir + 1) % 4;
-    if (++guard > 4e6) break;
+    if (++guard > 4 * c.n + 4) throw new Error(`block contour trace runaway (component ${c.id}, ${c.n} cells)`);
   } while (cx + ',' + cz + ',' + dir !== start);
   const out = [];
   for (let i = 0; i < pts.length; i++) {
@@ -432,11 +434,29 @@ export function ringSelfIntersects(r) {
   return false;
 }
 
+// True when any edge of ring a touches or crosses any edge of ring b
+function ringsIntersect(a, b) {
+  const orient = (p, q1, r) => Math.sign((q1[0] - p[0]) * (r[1] - p[1]) - (q1[1] - p[1]) * (r[0] - p[0]));
+  const onSeg = (p, q1, r) => Math.min(p[0], q1[0]) <= r[0] && r[0] <= Math.max(p[0], q1[0]) && Math.min(p[1], q1[1]) <= r[1] && r[1] <= Math.max(p[1], q1[1]);
+  for (let i = 0; i < a.length; i++) {
+    const p1 = a[i], p2 = a[(i + 1) % a.length];
+    for (let j = 0; j < b.length; j++) {
+      const p3 = b[j], p4 = b[(j + 1) % b.length];
+      if (Math.max(p1[0], p2[0]) < Math.min(p3[0], p4[0]) || Math.max(p3[0], p4[0]) < Math.min(p1[0], p2[0])) continue;
+      if (Math.max(p1[1], p2[1]) < Math.min(p3[1], p4[1]) || Math.max(p3[1], p4[1]) < Math.min(p1[1], p2[1])) continue;
+      const o1 = orient(p1, p2, p3), o2 = orient(p1, p2, p4), o3 = orient(p3, p4, p1), o4 = orient(p3, p4, p2);
+      if (o1 !== o2 && o3 !== o4) return true;
+      if ((o1 === 0 && onSeg(p1, p2, p3)) || (o2 === 0 && onSeg(p1, p2, p4)) || (o3 === 0 && onSeg(p3, p4, p1)) || (o4 === 0 && onSeg(p3, p4, p2))) return true;
+    }
+  }
+  return false;
+}
+
 // Clean polygon of a traced contour: the smoothest of (destair + RDP 0.5 m, destair + RDP 0.25 m, destair, raw
 // corners) that keeps a simple ring. Wound like the NYC blocks (negative shoelace area).
-function polygonOf(raw, res) {
+function polygonOf(raw, res, rawOnly = false) {
   const tries = [() => rdpRing(destair(raw, res * 1.5), 0.5), () => rdpRing(destair(raw, res * 1.5), 0.25), () => destair(raw, res * 1.5), () => raw];
-  for (const make of tries) {
+  for (const make of rawOnly ? tries.slice(-1) : tries) {
     const r = make().map(([x, z]) => [q(x), q(z)]);
     if (r.length < 3 || ringSelfIntersects(r)) continue;
     if (ringArea(r) > 0) r.reverse();
@@ -445,8 +465,71 @@ function polygonOf(raw, res) {
   return null;
 }
 
+// Outline and holes of one labelled component. Holes are the cells of its bbox outside it that cannot reach the bbox
+// border through other such cells (8-connected, so no hole touches the outline): water, or a roadway enclosed by the
+// island. Holes under minHole m² are ignored. When independently simplified rings touch or cross, all rings fall back
+// to the raw raster contour; a hole that still touches another ring, or has no simple ring, is dropped (counted in
+// stats.holeConflicts).
+// Returns { outer, holes, area } (area = outline minus holes, m²) or null when no simple outline exists.
+function regionPolygons(R, lab, c, minHole, stats) {
+  const { res } = R;
+  const raw = traceLabel(R, lab, c);
+  // window around the component with a one-cell margin, in its own little grid
+  const ox = c.i0 - 1, oz = c.j0 - 1, ww = c.i1 - c.i0 + 3, wh = c.j1 - c.j0 + 3;
+  const inC = new Uint8Array(ww * wh);
+  for (let j = 1; j < wh - 1; j++) for (let i = 1; i < ww - 1; i++) inC[j * ww + i] = lab[(oz + j) * R.w + ox + i] === c.id ? 1 : 0;
+  const reach = new Uint8Array(ww * wh);
+  const stack = [];
+  for (let i = 0; i < ww; i++) stack.push(i, (wh - 1) * ww + i);
+  for (let j = 1; j < wh - 1; j++) stack.push(j * ww, j * ww + ww - 1);
+  for (const k of stack) reach[k] = 1;
+  while (stack.length) {
+    const k = stack.pop(), i = k % ww, j = (k - i) / ww;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      const ii = i + di, jj = j + dj;
+      if (ii < 0 || jj < 0 || ii >= ww || jj >= wh) continue;
+      const kk = jj * ww + ii;
+      if (!reach[kk] && !inC[kk]) { reach[kk] = 1; stack.push(kk); }
+    }
+  }
+  const H = new Uint8Array(ww * wh);
+  for (let k = 0; k < ww * wh; k++) H[k] = !inC[k] && !reach[k] ? 1 : 0;
+  const local = { w: ww, h: wh, res, x0: R.x0 + ox * res, z0: R.z0 + oz * res };
+  const { lab: hl, comps: hcs } = label(H, ww, wh, new Int32Array(ww * wh));
+  const holeRaws = [];
+  for (const hc of hcs) {
+    if (hc.n * res * res < minHole) { stats.smallHoles++; continue; }
+    holeRaws.push(traceLabel(local, hl, hc));
+  }
+
+  const build = (rawOnly) => {
+    const outer = polygonOf(raw, res, rawOnly);
+    if (!outer) return null;
+    const holes = [];
+    for (const h of holeRaws) {
+      const r = polygonOf(h, res, rawOnly);
+      if (r) holes.push(r.reverse()); // holes wind the other way
+    }
+    return { outer, holes };
+  };
+  const clashes = (p) => p.holes.some((h, i) => ringsIntersect(p.outer, h) || p.holes.some((g, j) => j > i && ringsIntersect(h, g)));
+  let p = build(false);
+  if (!p) return null;
+  if (clashes(p)) {
+    p = build(true);
+    if (!p) return null;
+    p.holes = p.holes.filter((h) => !ringsIntersect(p.outer, h));
+    for (let i = p.holes.length - 1; i >= 0; i--) {
+      if (p.holes.some((g, j) => j !== i && ringsIntersect(p.holes[i], g))) p.holes.splice(i, 1);
+    }
+  }
+  stats.holeConflicts += holeRaws.length - p.holes.length; // holes with no simple ring, or touching another ring
+  p.area = Math.abs(ringArea(p.outer)) - p.holes.reduce((t, h) => t + Math.abs(ringArea(h)), 0);
+  return p;
+}
+
 export function buildBlocks(cut, water, box = BBOX_M, params = BLOCK_PARAMS) {
-  const { res, sidewalk, minArea } = params;
+  const { res, sidewalk, minArea, minHole } = params;
   const R = new Raster(box.x0, box.z0, box.x1, box.z1, res);
   const W = R.w, H = R.h, D = R.d;
   // Cells whose centre lies inside the bbox start as land; the first/last such row & column are the bbox edge
@@ -496,17 +579,22 @@ export function buildBlocks(cut, water, box = BBOX_M, params = BLOCK_PARAMS) {
   }
 
   const blocks = [];
-  const dropped = { small: 0, edge: 0, invalid: 0, lotInvalid: 0 };
+  const dropped = { small: 0, edge: 0, invalid: 0, lotInvalid: 0, smallHoles: 0, holeConflicts: 0 };
   for (const c of comps) {
-    const area = c.n * res * res;
     if (c.i0 <= ci0 || c.i1 >= ci1 || c.j0 <= cj0 || c.j1 >= cj1) { dropped.edge++; continue; }
-    if (area < minArea) { dropped.small++; continue; }
-    const curb = polygonOf(traceLabel(R, lab, c), res);
+    if (c.n * res * res < minArea) { dropped.small++; continue; }
+    const curb = regionPolygons(R, lab, c, minHole, dropped);
     if (!curb) { dropped.invalid++; continue; }
     const pc = lotOf.get(c.id);
-    let lot = pc ? polygonOf(traceLabel(R, props.lab, pc), res) : null;
+    const lot = pc ? regionPolygons(R, props.lab, pc, minHole, dropped) : null;
     if (pc && !lot) dropped.lotInvalid++;
-    blocks.push({ area: Math.round(area), curb: flat(curb), lot: lot ? flat(lot) : null });
+    blocks.push({
+      area: Math.round(curb.area),
+      curb: flat(curb.outer),
+      curbHoles: curb.holes.map(flat),
+      lot: lot ? flat(lot.outer) : null,
+      lotHoles: lot ? lot.holes.map(flat) : []
+    });
   }
   return { blocks, dropped };
 }
@@ -584,6 +672,8 @@ function main() {
   log(`  ${'total'.padEnd(15)} ${totalKm.toFixed(2).padStart(8)} km`);
   log(`link widths: ${stats.widthSource.width} from width tags, ${stats.widthSource.lanes} from lanes, ${stats.widthSource.default} class defaults; ${stats.unnamed} unnamed links`);
   log(`blocks: ${geo.blocks.length} kept (${geo.blocks.filter((b) => !b.lot).length} without a property line); dropped ${dropped.edge} touching the bbox edge, ${dropped.small} under ${BLOCK_PARAMS.minArea} m², ${dropped.invalid} with no simple outline`);
+  const nHoles = geo.blocks.reduce((t, b) => t + b.curbHoles.length, 0);
+  log(`block holes (water or enclosed roadway): ${nHoles} in ${geo.blocks.filter((b) => b.curbHoles.length).length} blocks; ${dropped.smallHoles} under ${BLOCK_PARAMS.minHole} m² ignored, ${dropped.holeConflicts} dropped (touching another ring or not simple)`);
   log(`water: ${geo.water.length} polygons (${geo.water.map((w) => w.name || w.osm).join(', ')})`);
   for (const s of skipped) log(`  water skipped: ${s}`);
   const kb = Buffer.byteLength(text) / 1024;

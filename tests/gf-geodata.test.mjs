@@ -123,12 +123,22 @@ test('blocks: curb islands between the roads, edge islands and specks dropped', 
   // streets at x, z = -50 & 50, residential 6.6 m wide (lanes) and the primary row at z = -50 12 m wide
   assert.ok(Math.abs(Math.min(...xs) + 46.7) <= 1 && Math.abs(Math.max(...xs) - 46.7) <= 1, `x ${Math.min(...xs)}..${Math.max(...xs)}`);
   assert.ok(Math.abs(Math.min(...zs) + 44) <= 1 && Math.abs(Math.max(...zs) - 46.7) <= 1, `z ${Math.min(...zs)}..${Math.max(...zs)}`);
-  // 93.4 x 90.7 m minus the 30 x 30 m pond
+  // 93.4 x 90.7 m minus the 30 x 30 m pond, which is a hole in the block (and in its property line)
   assert.ok(b.area > 7400 && b.area < 7750, `area ${b.area}: the pond is cut out`);
+  assert.equal(b.curbHoles.length, 1);
+  assert.ok(Math.abs(Math.abs(shoelace(b.curbHoles[0])) - 900) < 60, 'the hole is the pond');
+  assert.ok(Math.abs(Math.abs(shoelace(b.curb)) - Math.abs(shoelace(b.curbHoles[0])) - b.area) <= 1, 'area = outline - holes');
+  assert.equal(b.lotHoles.length, 1);
   const lx = b.lot.filter((_, i) => i % 2 === 0);
   assert.ok(Math.abs(Math.min(...lx) - Math.min(...xs) - 1.8) <= 1, 'the property line sits a sidewalk in');
   assert.ok(dropped.edge > 0);
 });
+
+function shoelace(f) {
+  let a = 0;
+  for (let i = 0, j = f.length - 2; i < f.length; j = i, i += 2) a += f[j] * f[i + 1] - f[i] * f[j + 1];
+  return a / 2;
+}
 
 // --- The generated js/gf-geodata.js ------------------------------------------------------------------------------
 const GF = built ? (await import(pathToFileURL(OUT).href)).GF_GEO : null;
@@ -138,24 +148,41 @@ function eachPoint(geo, fn) {
   const flatPts = (f, where) => { for (let i = 0; i < f.length; i += 2) fn(f[i], f[i + 1], where); };
   flatPts(nodes, 'roadGraph.nodes');
   links.forEach((l, i) => flatPts(l[7], `link ${i}`));
-  geo.blocks.forEach((b, i) => { flatPts(b.curb, `block ${i} curb`); if (b.lot) flatPts(b.lot, `block ${i} lot`); });
+  geo.blocks.forEach((b, i) => {
+    for (const r of [b.curb, ...b.curbHoles]) flatPts(r, `block ${i} curb`);
+    if (b.lot) for (const r of [b.lot, ...b.lotHoles]) flatPts(r, `block ${i} lot`);
+  });
   geo.water.forEach((w, i) => { flatPts(w.outer, `water ${i}`); w.holes.forEach((h) => flatPts(h, `water ${i} hole`)); });
 }
+const toPts = (f) => { const p = []; for (let i = 0; i < f.length; i += 2) p.push([f[i], f[i + 1]]); return p; };
+const cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+const segsCross = (a, b, c, d) => {
+  const d1 = cross(a, b, c), d2 = cross(a, b, d), d3 = cross(c, d, a), d4 = cross(c, d, b);
+  return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+};
 function selfIntersects(f) {
-  const p = [];
-  for (let i = 0; i < f.length; i += 2) p.push([f[i], f[i + 1]]);
-  const n = p.length;
-  const cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  const p = toPts(f), n = p.length;
   for (let i = 0; i < n; i++) {
-    const a = p[i], b = p[(i + 1) % n];
     for (let j = i + 2; j < n; j++) {
       if (i === 0 && j === n - 1) continue;
-      const c = p[j], d = p[(j + 1) % n];
-      const d1 = cross(a, b, c), d2 = cross(a, b, d), d3 = cross(c, d, a), d4 = cross(c, d, b);
-      if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true;
+      if (segsCross(p[i], p[(i + 1) % n], p[j], p[(j + 1) % n])) return true;
     }
   }
   return false;
+}
+function ringsCross(f, g) {
+  const p = toPts(f), r = toPts(g);
+  for (let i = 0; i < p.length; i++) for (let j = 0; j < r.length; j++) if (segsCross(p[i], p[(i + 1) % p.length], r[j], r[(j + 1) % r.length])) return true;
+  return false;
+}
+function inRing(x, z, f) {
+  const r = toPts(f);
+  let c = false;
+  for (let i = 0, k = r.length - 1; i < r.length; k = i++) {
+    const [xa, za] = r[k], [xb, zb] = r[i];
+    if ((za > z) !== (zb > z) && x < xa + ((z - za) * (xb - xa)) / (zb - za)) c = !c;
+  }
+  return c;
 }
 
 test('gf-geodata: structure, attribution and counts', { skip: !built && NOT_BUILT }, () => {
@@ -187,14 +214,50 @@ test('gf-geodata: every coordinate is a number inside the bbox', { skip: !built 
   assert.ok(n > 0);
 });
 
-test('gf-geodata: block outlines are simple polygons (sample)', { skip: !built && NOT_BUILT }, () => {
+test('gf-geodata: block outlines and holes are simple polygons (sample)', { skip: !built && NOT_BUILT }, () => {
   const step = Math.max(1, Math.floor(GF.blocks.length / 300));
   for (let i = 0; i < GF.blocks.length; i += step) {
     const b = GF.blocks[i];
-    assert.ok(b.curb.length >= 6 && !selfIntersects(b.curb), `block ${i} curb`);
-    if (b.lot) assert.ok(b.lot.length >= 6 && !selfIntersects(b.lot), `block ${i} lot`);
+    for (const [outer, holes, what] of [[b.curb, b.curbHoles, 'curb'], [b.lot, b.lotHoles, 'lot']]) {
+      if (!outer) continue;
+      for (const r of [outer, ...holes]) assert.ok(r.length >= 6 && !selfIntersects(r), `block ${i} ${what} ring`);
+      holes.forEach((h, k) => {
+        assert.ok(inRing(h[0], h[1], outer) && !ringsCross(outer, h), `block ${i} ${what} hole ${k} inside its outline`);
+        holes.forEach((g, m) => assert.ok(m <= k || !ringsCross(h, g), `block ${i} ${what} holes ${k}/${m} cross`));
+      });
+    }
+    const area = Math.abs(shoelace(b.curb)) - b.curbHoles.reduce((t, h) => t + Math.abs(shoelace(h)), 0);
+    assert.ok(Math.abs(area - b.area) <= 1, `block ${i}: area ${b.area} vs outline - holes ${area.toFixed(1)}`);
     assert.ok(b.area >= 150);
   }
+});
+
+// The most interior point of each water polygon (5 m grid) must not lie on a block slab (curb outline minus holes)
+test('gf-geodata: no water polygon is hidden under a block', { skip: !built && NOT_BUILT }, () => {
+  const segDist = (x, z, a, b) => {
+    const dx = b[0] - a[0], dz = b[1] - a[1];
+    const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz || 1)));
+    return Math.hypot(a[0] + t * dx - x, a[1] + t * dz - z);
+  };
+  const hidden = [];
+  for (const w of GF.water) {
+    const rings = [w.outer, ...w.holes].map(toPts);
+    const xs = rings[0].map((p) => p[0]), zs = rings[0].map((p) => p[1]);
+    let best = null, depth = -1;
+    for (let x = Math.min(...xs); x <= Math.max(...xs); x += 5) {
+      for (let z = Math.min(...zs); z <= Math.max(...zs); z += 5) {
+        if (!inRing(x, z, w.outer) || w.holes.some((h) => inRing(x, z, h))) continue;
+        let d = Infinity;
+        for (const r of rings) for (let i = 0; i < r.length; i++) d = Math.min(d, segDist(x, z, r[i], r[(i + 1) % r.length]));
+        if (d > depth) { depth = d; best = [x, z]; }
+      }
+    }
+    if (!best) continue;
+    const [x, z] = best;
+    const i = GF.blocks.findIndex((b) => inRing(x, z, b.curb) && !b.curbHoles.some((h) => inRing(x, z, h)));
+    if (i >= 0) hidden.push(`${w.osm} ${w.name || w.kind} under block ${i}`);
+  }
+  assert.deepEqual(hidden, []);
 });
 
 // Named roads: required when the raw extract has them (reported, not faked, when it does not)

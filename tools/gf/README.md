@@ -15,7 +15,8 @@ node --test tests/gf-geodata.test.mjs
 
 Then open `index.html?city=glensfalls` (or `gf.html`) through a local web server for the flat debug view.
 Add `&look=x,z,distance` to start the camera looking down at a point (metres) from that distance. The screenshots in
-`screenshots/` use `look=0,-150,900` (downtown) and `look=300,450,1300` (the Glen Street bridge over the Hudson).
+`screenshots/` use `look=0,-150,900` (downtown), `look=300,450,1300` (the Glen Street bridge over the Hudson) and
+`look=-1250,-1120,700` (Crandall Pond, a hole in its block).
 
 - `fetch.sh` runs both queries through `tools/overpass.sh`, which keeps its endpoint fallback and retries and only
   replaces a file after a complete, valid response. The User-Agent is `OVERPASS_UA` (default
@@ -55,9 +56,12 @@ rounded to 0.1 m.
     - `width` is the estimated curb-to-curb width in metres.
     - `pts` are the inner shape points, simplified to 0.25 m.
 - `roads`: `[osmWayId, [link indices]]`, one row per OSM way.
-- `blocks`: `{ area, curb, lot }`.
-  - `curb` is the curb-island outline.
-  - `lot` is the property line, 1.8 m in from the curb, roads and water. It is `null` when nothing is left.
+- `blocks`: `{ area, curb, curbHoles, lot, lotHoles }`.
+  - `curb` is the curb-island outline. `curbHoles` are the holes in it: ponds and other water inside the island, or a
+    block-bounding roadway it encloses.
+  - `lot` is the property line, 1.8 m in from the curb, roads and water, with its own `lotHoles`. `lot` is `null` when
+    nothing is left.
+  - `area` (m²) is the curb outline minus its holes, so it matches the emitted geometry.
 - `water`: `{ osm, name, kind, outer, holes }` polygons, clipped to the bbox.
 - `frame`, `bbox` (degrees and metres), `osmBase`, `version`, `attribution`.
 
@@ -78,7 +82,14 @@ The method follows `tools/geo-blocks.mjs`, with parameters in `BLOCK_PARAMS`:
 2. Label the 4-connected curb islands that remain.
 3. Trace each island and remove the raster stair steps, then simplify (RDP 0.5 m). If that self-intersects, the build
    falls back to 0.25 m, then no simplification, then raw corners.
-4. Drop islands under 150 m² and any island touching the bbox edge.
+4. Trace the island's holes the same way. A hole is the cells in the island's bounding box that can't reach the box
+   edge through other non-island cells (8-connected, so a hole never touches the outline). Holes under 10 m² are
+   ignored. If simplified rings touch or cross, all rings of that island fall back to raw corners. A hole that still
+   touches another ring is dropped, and the build counts and logs it.
+5. Drop islands under 150 m² and any island touching the bbox edge.
+
+The tracer throws if a contour walk runs longer than a closed outline can be (4 × the island's cells), so a broken
+outline stops the build instead of reaching the output.
 
 Block-bounding roads are all fetched roads except tunnels and `service` ways (driveways, parking aisles, untagged
 service roads), which run into lots. `service=alley` does bound blocks. All service ways stay in the road graph.

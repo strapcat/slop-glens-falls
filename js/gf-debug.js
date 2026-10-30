@@ -16,6 +16,11 @@ const ROAD_Y = 0.25; // above the blocks, so service ways inside blocks stay vis
 const layerMaterial = (color, layer) => new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -layer, polygonOffsetUnits: -4 * layer });
 
 const unflat = (f) => { const r = []; for (let i = 0; i < f.length; i += 2) r.push(new THREE.Vector2(f[i], -f[i + 1])); return r; };
+const shapeOf = (outer, holes) => {
+  const s = new THREE.Shape(unflat(outer));
+  for (const h of holes) s.holes.push(new THREE.Path(unflat(h)));
+  return s;
+};
 
 // Flat ribbon (quad per segment + round joins) of every link of one highway class
 function roadGeometry(graph, classIndex, rank) {
@@ -70,8 +75,11 @@ async function init() {
   let GF_GEO;
   try {
     ({ GF_GEO } = await import('./gf-geodata.js'));
-  } catch {
-    showError('js/gf-geodata.js could not be loaded. Build it with: bash tools/gf/fetch.sh && node tools/gf/build-gf-geodata.mjs');
+  } catch (err) {
+    // Only a missing file means "not built yet"; a broken module (syntax error, bad export...) is a real failure
+    const res = await fetch(new URL('./gf-geodata.js', import.meta.url), { method: 'HEAD' }).catch(() => null);
+    if (!res || res.status !== 404) throw err;
+    showError('js/gf-geodata.js has not been built yet. Build it with: bash tools/gf/fetch.sh && node tools/gf/build-gf-geodata.mjs');
     return;
   }
   const { bbox, roadGraph, blocks, water } = GF_GEO;
@@ -97,16 +105,12 @@ async function init() {
   scene.add(ground);
 
   // Water
-  const waterShapes = water.map((w) => {
-    const s = new THREE.Shape(unflat(w.outer));
-    for (const h of w.holes) s.holes.push(new THREE.Path(unflat(h)));
-    return s;
-  });
+  const waterShapes = water.map((w) => shapeOf(w.outer, w.holes));
   if (waterShapes.length) scene.add(new THREE.Mesh(flatShapes(waterShapes, 0.03), new THREE.MeshLambertMaterial({ color: 0x2f6fb5 })));
 
   // Blocks: curb island slabs, property line on top
-  const curbShapes = blocks.map((b) => new THREE.Shape(unflat(b.curb)));
-  const lotShapes = blocks.filter((b) => b.lot).map((b) => new THREE.Shape(unflat(b.lot)));
+  const curbShapes = blocks.map((b) => shapeOf(b.curb, b.curbHoles));
+  const lotShapes = blocks.filter((b) => b.lot).map((b) => shapeOf(b.lot, b.lotHoles));
   if (curbShapes.length) scene.add(new THREE.Mesh(flatShapes(curbShapes, 0, BLOCK_H), new THREE.MeshLambertMaterial({ color: 0xa9a397 })));
   if (lotShapes.length) scene.add(new THREE.Mesh(flatShapes(lotShapes, LOT_Y), layerMaterial(0xd6cfbf, 1)));
 
