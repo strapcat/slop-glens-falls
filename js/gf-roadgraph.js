@@ -114,6 +114,25 @@ function joinPieces(links) {
   return out;
 }
 
+// A street rejoined into a loop back to the junction it leaves (a cul-de-sac loop) has no chord to drive along, and
+// road-network.js drops a link that starts and ends at one junction: it is cut at its shape points nearest a third and
+// two thirds of the way round, into three links with distinct ends, if each stays MIN_PIECE long. Returns the two
+// shape point indices, or null for a loop too short to cut.
+function loopCuts(pts) {
+  const along = [0];
+  for (let k = 1; k < pts.length; k++) along.push(along[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
+  const total = along[along.length - 1];
+  const nearest = (s) => {
+    let best = -1;
+    for (let k = 1; k < pts.length - 1; k++) if (best < 0 || Math.abs(along[k] - s) < Math.abs(along[best] - s)) best = k;
+    return best;
+  };
+  const k1 = nearest(total / 3);
+  const k2 = nearest((2 * total) / 3);
+  if (k1 < 0 || k2 <= k1 || along[k1] < MIN_PIECE || along[k2] - along[k1] < MIN_PIECE || total - along[k2] < MIN_PIECE) return null;
+  return [k1, k2];
+}
+
 export function gfRoadSource(geo, classes = DRIVE_CLASSES) {
   const { nodes, names } = geo.roadGraph;
   const { x0, x1, z0, z1 } = geo.bbox;
@@ -121,10 +140,21 @@ export function gfRoadSource(geo, classes = DRIVE_CLASSES) {
   const nameIds = new Map(names.map((n, i) => [n, i]));
   const outNodes = nodes.slice(); // shape points a link is cut at become nodes after GF_GEO's own
   const outLinks = [];
+  const loops = { cut: [], tooShort: [] }; // names of the streets that loop back to their own junction
   for (const { a, b, name, oneway, lanes, width, pts } of joinPieces(driveLinks(geo, classes))) {
+    const breaks = a === b ? loopCuts(pts) : [];
+    if (a === b) (breaks ? loops.cut : loops.tooShort).push(name);
+    // where the link is cut: at the loop's thirds, and where a stretch's chord strays (chordPieces)
+    const cuts = [];
+    let s0 = 0;
+    for (const e of [...(breaks || []), pts.length - 1]) {
+      cuts.push(...chordPieces(pts.slice(s0, e + 1)).map((k) => s0 + k));
+      if (e < pts.length - 1) cuts.push(e);
+      s0 = e;
+    }
     let from = a;
     let start = 0;
-    for (const k of [...chordPieces(pts), pts.length - 1]) {
+    for (const k of [...cuts, pts.length - 1]) {
       let to = b;
       if (k < pts.length - 1) {
         to = outNodes.length / 2;
@@ -142,7 +172,8 @@ export function gfRoadSource(geo, classes = DRIVE_CLASSES) {
     roadGraph: { nodes: outNodes, names, links: outLinks },
     bounds: { minX: x0 - BOUNDS_PAD, maxX: x1 + BOUNDS_PAD, minZ: z0 - BOUNDS_PAD, maxZ: z1 + BOUNDS_PAD },
     shoreAt: () => shore,
-    majorName: null
+    majorName: null,
+    loops
   };
 }
 

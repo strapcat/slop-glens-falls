@@ -55,7 +55,7 @@ function roadRibbonGeometry(graph, include, y) {
 
 // The game view's layers, all flat and centimetres apart over kilometres: polygon offset (larger = further back) keeps
 // the markings over the roads, the roads over water (bridges) and blocks, and everything over the ground
-const LAYERS = { road: 1, service: 2, water: 3, block: 4, ground: 5 };
+const LAYERS = { road: 1, service: 2, water: 3, lot: 3.5, block: 4, ground: 5 };
 const flatMaterial = (color, roughness, layer) => new THREE.MeshStandardMaterial({
   color, roughness, metalness: 0, side: THREE.DoubleSide,
   polygonOffset: true, polygonOffsetFactor: layer, polygonOffsetUnits: 4 * layer
@@ -67,8 +67,9 @@ function faceUp(g) {
   return g;
 }
 
-// The ground plane over the bbox (padded), water, block tint (curb islands, flat) and road ribbons of every class:
-// service roads (drawn, not driven, see gf-roadgraph.js DRIVE_CLASSES) a shade lighter
+// The ground plane over the bbox (padded), water, block tint (curb islands, flat: the sidewalk band between curb and
+// lot in concrete, the lots darker over it) and road ribbons of every class: service roads (drawn, not driven, see
+// gf-roadgraph.js DRIVE_CLASSES) a shade lighter
 function buildGfGround(scene, geo, { blocks = true } = {}) {
   const group = new THREE.Group();
   group.name = 'GlensFallsGround';
@@ -88,7 +89,9 @@ function buildGfGround(scene, geo, { blocks = true } = {}) {
   ground.translate((bbox.x0 + bbox.x1) / 2, -0.04, (bbox.z0 + bbox.z1) / 2);
   add(ground, flatMaterial(0x4f5a44, 0.95, LAYERS.ground), 'Ground');
   if (blocks && geo.blocks.length) {
-    add(flatShapes(geo.blocks.map((b) => shapeOf(b.curb, b.curbHoles)), -0.03), flatMaterial(0x77766d, 0.9, LAYERS.block), 'BlockTint');
+    add(flatShapes(geo.blocks.map((b) => shapeOf(b.curb, b.curbHoles)), -0.03), flatMaterial(0x8f8c83, 0.9, LAYERS.block), 'BlockTint');
+    const lots = geo.blocks.filter((b) => b.lot);
+    if (lots.length) add(flatShapes(lots.map((b) => shapeOf(b.lot, b.lotHoles)), -0.025), flatMaterial(0x6b6a61, 0.95, LAYERS.lot), 'LotTint');
   }
   if (water.length) add(flatShapes(water.map((w) => shapeOf(w.outer, w.holes)), -0.02), flatMaterial(0x2b5a7c, 0.25, LAYERS.water), 'Water');
   const service = roadGraph.classes.indexOf('service');

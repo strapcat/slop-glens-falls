@@ -1020,9 +1020,10 @@ function buildRoadNetwork(sidewalks, obstacles, signalIntersections = [], source
   nodes = nodes.filter((n) => n.in && n.out);
   nodes.forEach((n, i) => (n.id = i));
 
-  // 8. Signalized intersections are exactly the ones with signal heads (street-details.js)
+  // 8. Signalized intersections are exactly the ones with signal heads (street-details.js), never a shape node (a bend:
+  //    nothing crosses there to give way to)
   for (const s of signalIntersections) {
-    const n = nodes.find((m) => Math.abs(m.x - s.x) < 6 && Math.abs(m.z - s.z) < 6); // same tolerance as nodeAt
+    const n = nodes.find((m) => !m.shape && Math.abs(m.x - s.x) < 6 && Math.abs(m.z - s.z) < 6); // same tolerance as nodeAt
     if (n) n.signal = true;
   }
 

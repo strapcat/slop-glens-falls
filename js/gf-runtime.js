@@ -1,11 +1,14 @@
 import { GF_GEO } from './gf-geodata.js';
 import { gfRoadSource } from './gf-roadgraph.js';
+import { createGfBlocks } from './gf-blocks.js';
 import { setCityRuntime } from './city-runtime.js';
 
 // Glens Falls in the city runtime (city-runtime.js): imported first by gf-main.js, before any shared module runs.
-// No grid, park, shores or curbs: the road source's padded bbox is the land, the ground is flat at 0.
+// No grid, park or shores: the road source's padded bbox is the land, the ground is flat at 0, and the blocks are
+// GF_GEO's curb islands (gf-blocks.js), which pedestrians walk around.
 
 const ROAD_SOURCE = gfRoadSource(GF_GEO);
+const GF_BLOCKS = createGfBlocks(GF_GEO);
 const { minX, maxX, minZ, maxZ } = ROAD_SOURCE.bounds;
 
 setCityRuntime({
@@ -23,7 +26,9 @@ setCityRuntime({
     isPointOnSidewalk: () => false,
     spawn: null
   },
-  blockAt: () => null,
+  blockAt: GF_BLOCKS.blockAt,
   getIslandBoundsAtZ: ROAD_SOURCE.shoreAt,
   streetZ: () => 0
 });
+
+export { GF_BLOCKS };
