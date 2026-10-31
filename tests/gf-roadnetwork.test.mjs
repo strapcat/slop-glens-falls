@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
-import { buildRoadNetwork, NYC_SOURCE } from '../js/road-network.js';
+import { buildRoadNetwork } from '../js/road-network.js';
+import { NYC_SOURCE } from '../js/nyc-runtime.js';
 import { DRIVE_CLASSES, driveLinks, edgeAlong, gfRoadSource, gfSpawn, polylineDistance } from '../js/gf-roadgraph.js';
 import { GF_GEO } from '../js/gf-geodata.js';
 

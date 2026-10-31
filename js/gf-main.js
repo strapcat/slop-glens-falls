@@ -1,3 +1,4 @@
+import './gf-runtime.js'; // first: installs Glens Falls in the city runtime before any shared module runs
 import * as THREE from 'three/webgpu';
 import { pass, mrt, output, normalView, positionView, metalness, roughness, vec2, smoothstep } from 'three/tsl';
 import { ssr } from 'three/addons/tsl/display/SSRNode.js';
@@ -10,8 +11,9 @@ import { TouchControls } from './touch-controls.js';
 import { GamepadControls } from './gamepad-controls.js';
 import { CameraSystem, CAMERA_PRESETS } from './cameras.js';
 import { LightingSystem } from './lighting.js';
+import { ROAD_SOURCE, PLAYER_WORLD, isTypingInField } from './city-runtime.js';
 import { GF_GEO } from './gf-geodata.js';
-import { gfRoadSource, gfSpawn } from './gf-roadgraph.js';
+import { gfSpawn } from './gf-roadgraph.js';
 import { buildGfGround } from './gf-ground.js';
 
 // Glens Falls game view (index.html?city=glensfalls): the flat town from GF_GEO (roads, water, blocks), its road graph
@@ -22,18 +24,6 @@ const NUM_CARS = 40;
 const STATE_KEY = 'gf-player-state';
 // Follow cameras only: New York's scenic cameras look at Manhattan landmarks
 const FOLLOW_CAMERAS = CAMERA_PRESETS.filter((p) => p.category === 'follow');
-const isTypingInField = (e) => e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT');
-
-// The player's world: the bbox (padded as the road source's land), flat ground at y = 0 and no sidewalks
-function gfWorld(source, spawn) {
-  return {
-    bounds: source.bounds,
-    shoreAt: source.shoreAt,
-    groundHeightAt: () => 0,
-    isPointOnSidewalk: () => false,
-    spawn
-  };
-}
 
 // HUD parts nyc-main.js wires that have nothing to do here: teleports, the map, sound, the street-name signs and
 // New York's scenic cameras
@@ -131,8 +121,7 @@ async function initApp() {
   buildGfGround(scene, GF_GEO);
   markInit('ground');
   await showLoadingStage('Creating traffic...');
-  const roadSource = gfRoadSource(GF_GEO);
-  const trafficSystem = createTrafficSystem(scene, [], [], [], { roadSource, numCars: NUM_CARS, numBuses: 0, pedestrians: false });
+  const trafficSystem = createTrafficSystem(scene, [], [], [], { roadSource: ROAD_SOURCE, numCars: NUM_CARS, numBuses: 0, pedestrians: false });
   markInit('traffic');
   await showLoadingStage('Adding road markings...');
   buildRoadPaint(scene, trafficSystem.network);
@@ -142,7 +131,11 @@ async function initApp() {
   await showLoadingStage('Preparing player, vehicles and controls...');
   const spawn = gfSpawn(trafficSystem.network, GF_GEO);
   console.info(`[gf] spawn on ${spawn.street || 'the longest edge (no Glen Street edge)'}: edge ${spawn.edge} at (${spawn.x.toFixed(1)}, ${spawn.z.toFixed(1)}), heading ${(spawn.heading * 180 / Math.PI).toFixed(1)}°`);
-  const controllerManager = new ThirdPersonControllerManager(scene, [], gfWorld(roadSource, spawn));
+  // The player's world (gf-runtime.js: the bbox, flat ground, no sidewalks), starting at the spawn
+  const controllerManager = new ThirdPersonControllerManager(scene, [], { ...PLAYER_WORLD, spawn });
+  // Glens Falls names in the HUD (controllers.js labels the car New York's yellow cab)
+  controllerManager.entities.car.label = 'Taxi';
+  controllerManager.entities.cyclist.label = 'Cyclist';
   // Reuse teleport placement so saved players return at rest, close to their last positions.
   try {
     const saved = JSON.parse(localStorage.getItem(STATE_KEY));

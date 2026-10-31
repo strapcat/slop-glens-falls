@@ -1,5 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { getBlockBounds, LANDMARK_SITES, BLOCKS } from './city-config.js';
+import { setBryantParkLawn } from './city-runtime.js';
 import {
   createPreWarBuildingMaterial,
   createCurtainWallMaterial,
@@ -695,6 +696,7 @@ function buildLandmarks(scene) {
     bpGroup.updateMatrixWorld(true);
     const lb = new THREE.Box3().setFromObject(lawn);
     bryantParkLawn = { minX: lb.min.x, maxX: lb.max.x, minZ: lb.min.z, maxZ: lb.max.z, top: lb.max.y };
+    setBryantParkLawn(bryantParkLawn); // the player stands on it and a camera frames it (city-runtime.js)
   }
 
   // =========================================================================

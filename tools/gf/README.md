@@ -14,6 +14,9 @@ node --test tests/gf-geodata.test.mjs
 ```
 
 Then open `index.html?city=glensfalls&view=debug` (or `gf.html`) through a local web server for the flat debug view.
+
+**Tests:** `node --test tests/*.test.cjs tests/*.test.mjs` runs the whole suite on Node 20, 22 and 24. (`node --test
+tests/` fails on Node 22 and later, which read the directory as a module.)
 Add `&look=x,z,distance` to start the camera looking down at a point (metres) from that distance. The screenshots in
 `screenshots/` use `look=0,-150,900` (downtown), `look=300,450,1300` (the Glen Street bridge over the Hudson) and
 `look=-1250,-1120,700` (Crandall Pond, a hole in its block).
@@ -110,12 +113,33 @@ logged, including `waterway=river|canal` centre lines, which are lines rather th
 | `index.html?city=glensfalls` | Glens Falls (`js/gf-main.js`) |
 | `index.html?city=glensfalls&view=debug` | the flat debug view (`gf.html`) |
 
+### City runtime
+
+The modules both cities share (`road-network.js`, `traffic.js`, `tsl-materials.js`, `controllers.js`, `cameras.js`,
+`gamepad-controls.js`, `pedestrian-system.js` and what they import) take their city from `js/city-runtime.js`, which
+has no imports of its own:
+
+- **The values** are live bindings, read when a function runs or an object is built, never at module scope:
+  - the land's bounds and shore (`ISLAND_BOUNDS`, `getIslandBoundsAtZ`), New York's park and far shores
+    (`CENTRAL_PARK_BOUNDS`, `NJ_SHORELINE_POLYGON`, `LONG_ISLAND_POLYGONS`) and Bryant Park's lawn (`bryantParkLawn`);
+  - `blockAt` and `streetZ`;
+  - the road network's source (`ROAD_SOURCE`) and the player's world (`PLAYER_WORLD`).
+- **Installing a city:** each city's entry imports its runtime first, which installs these values once with
+  `setCityRuntime()`:
+  - `js/nyc-runtime.js` from `city-config.js` and `nyc-geodata.js`;
+  - `js/gf-runtime.js` from `gf-geodata.js` and `gf-roadgraph.js`. It has no park, shores or blocks (`blockAt` → `null`
+    for now), and the road source's padded bbox is the land.
+- **Downloads:** Glens Falls neither evaluates nor downloads any New York module. `index.html` preloads only `main.js`
+  and the shared modules, and `main.js` preloads the chosen city's own modules (`NYC_PRELOADS`, `GF_PRELOADS`).
+- **Tests:** `tests/city-runtime.test.mjs` walks both cities' static import graphs to check this, and that each city's
+  modules are preloaded.
+
 The Glens Falls view (`js/gf-main.js`) has:
 
 - **The ground** (`js/gf-ground.js`): flat at y = 0, with a ground plane, water, a flat tint over the blocks, and road
   ribbons at their curb widths for every class. Service roads are drawn a shade lighter but not driven.
 - **The road network**: `js/road-network.js` builds it from `GF_GEO.roadGraph` through `gfRoadSource()`
-  (`js/gf-roadgraph.js`), with no avenues, cross streets or blocks, so its centreline step (4b) carries the whole town.
+  (`js/gf-roadgraph.js`, installed as `ROAD_SOURCE` by `gf-runtime.js`), with no avenues, cross streets or blocks, so its centreline step (4b) carries the whole town.
   The source:
   - keeps the links in `DRIVE_CLASSES` (every class but `service`);
   - rejoins pieces of one street that `GF_GEO` split only where a service road met it;
@@ -124,12 +148,12 @@ The Glens Falls view (`js/gf-main.js`) has:
   Lanes and right of way come from each link's width, lanes and direction. No major-road names are used.
 - **40 AI cars** (`js/traffic.js` with `numCars: 40, numBuses: 0, pedestrians: false`) and the road markings
   (`js/road-paint.js`), both from that network.
-- **The player** (`js/controllers.js` with a Glens Falls `world`):
+- **The player** (`js/controllers.js` with the Glens Falls `PLAYER_WORLD` from `gf-runtime.js`):
   - kept inside the bbox, on flat ground with no sidewalks;
   - starting in the rightmost lane of the longest Glen Street edge (`gfSpawn()`);
   - saved under the `gf-player-state` localStorage key.
-- **The HUD**: modes, the follow cameras, time of day and the OSM attribution. Teleports, the map, sound and New York's
-  scenic cameras are hidden.
+- **The HUD**: modes, the follow cameras, time of day and the OSM attribution. The car and bike are labelled `Taxi` and
+  `Cyclist`. Teleports, the map, sound and New York's scenic cameras are hidden.
 
 There are no buildings, terrain, landmarks, pedestrians or traffic signals yet. Every junction is unsignalised, with
 the widest road given right of way. `tests/gf-roadnetwork.test.mjs` checks the network: deterministic, every lane

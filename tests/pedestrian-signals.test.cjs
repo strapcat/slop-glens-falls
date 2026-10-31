@@ -9,7 +9,7 @@ function crossing() {
   const state = { walk: false, clear: true };
   const { createPedestrianSystem } = loadModule(readFileSync(join(__dirname, '../js/pedestrian-system.js'), 'utf8'), {
     imports: {
-      './city-config.js': { blockAt: () => null },
+      './city-runtime.js': { blockAt: () => null },
       './pedestrian-routes.js': { createPedestrianRoutes: () => ({ next: () => null }) },
       './pedestrians.js': {
         PersonRig: class { update() {} },
