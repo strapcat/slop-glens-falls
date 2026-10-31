@@ -32,7 +32,7 @@ function keyboardHarness(nyc = {}) {
     globals: { window, document },
     imports: {
       'three/webgpu': {},
-      './city-config.js': config,
+      './city-runtime.js': config,
       './tsl-materials.js': {},
       './cars.js': {},
       './helicopter.js': {},

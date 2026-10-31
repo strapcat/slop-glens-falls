@@ -1,3 +1,4 @@
+import './nyc-runtime.js'; // first: installs New York in the city runtime before any shared module runs
 import * as THREE from 'three/webgpu';
 import { pass, mrt, output, normalView, positionView, metalness, roughness, vec2, smoothstep } from 'three/tsl';
 import { ssr } from 'three/addons/tsl/display/SSRNode.js';

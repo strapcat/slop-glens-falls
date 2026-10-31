@@ -1,11 +1,4 @@
-import {
-  ALL_AVENUES,
-  ALL_STREETS,
-  ISLAND_BOUNDS,
-  getIslandBoundsAtZ,
-  BLOCKS
-} from './city-config.js';
-import { GEO } from './nyc-geodata.js';
+import { ROAD_SOURCE } from './city-runtime.js';
 import { polygonBoxOverlaps } from './building-collision.js';
 
 // Drivable road graph derived from the ground layout that city-grid.js actually builds: avenue corridors
@@ -21,20 +14,11 @@ const LANE_CLEAR = 1.2; // half width each lane keeps free of obstacles
 const CROSSWALK = 2.5; // depth between an intersection box and its stop lines
 const SHORE_MARGIN = 6;
 
-// The city the network is built for: its grid's avenue corridors and cross streets, its blocks (for their median
-// malls), its street centreline graph (4b), the bounds of the land and its shore at any z, and the names of major roads.
-// Manhattan by default; a city with no grid (gf-roadgraph.js) builds the whole network from its centreline graph.
-const NYC_SOURCE = {
-  avenues: ALL_AVENUES,
-  streets: ALL_STREETS,
-  blocks: BLOCKS,
-  roadGraph: GEO.roadGraph,
-  bounds: ISLAND_BOUNDS,
-  shoreAt: getIslandBoundsAtZ,
-  majorName: /\bAVE\b|AVENUE|BROADWAY|BOWERY|BLVD|PARK ROW/
-};
-
-function buildRoadNetwork(sidewalks, obstacles, signalIntersections = [], source = NYC_SOURCE) {
+// The city the network is built for (`source`, by default the city runtime's ROAD_SOURCE, see nyc-runtime.js NYC_SOURCE):
+// its grid's avenue corridors and cross streets, its blocks (for their median malls), its street centreline graph (4b),
+// the bounds of the land and its shore at any z, and the names of major roads. A city with no grid (gf-roadgraph.js)
+// builds the whole network from its centreline graph.
+function buildRoadNetwork(sidewalks, obstacles, signalIntersections = [], source = ROAD_SOURCE) {
   const { avenues: cityAvenues, streets: cityStreets, blocks: cityBlocks, roadGraph, bounds, shoreAt, majorName } = source;
   const Z_MIN = Math.floor(bounds.minZ) - 20; // the land north to south (Manhattan: the detailed island, ~129th St to the Battery)
   const Z_MAX = Math.ceil(bounds.maxZ) + 20;
@@ -1195,4 +1179,4 @@ function curvePoint(c, s, out) {
   return out;
 }
 
-export { buildRoadNetwork, NYC_SOURCE, CROSSWALK };
+export { buildRoadNetwork, CROSSWALK };

@@ -1,4 +1,4 @@
-import { blockAt } from './city-config.js';
+import { blockAt } from './city-runtime.js';
 import { createPedestrianRoutes } from './pedestrian-routes.js';
 import { PersonCrowd, PersonRig, PEDESTRIAN_DIVE_DURATION } from './pedestrians.js';
 
