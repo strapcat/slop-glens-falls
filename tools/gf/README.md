@@ -13,7 +13,7 @@ node tools/gf/build-gf-geodata.mjs      # tools/gf/data/ -> js/gf-geodata.js, pr
 node --test tests/gf-geodata.test.mjs
 ```
 
-Then open `index.html?city=glensfalls` (or `gf.html`) through a local web server for the flat debug view.
+Then open `index.html?city=glensfalls&view=debug` (or `gf.html`) through a local web server for the flat debug view.
 Add `&look=x,z,distance` to start the camera looking down at a point (metres) from that distance. The screenshots in
 `screenshots/` use `look=0,-150,900` (downtown), `look=300,450,1300` (the Glen Street bridge over the Hudson) and
 `look=-1250,-1120,700` (Crandall Pond, a hole in its block).
@@ -100,10 +100,48 @@ Closed `natural=water` / `waterway=riverbank` ways and `multipolygon` relations 
 joined into rings, and each hole goes to the outer ring around it. Anything that cannot be closed is skipped and
 logged, including `waterway=river|canal` centre lines, which are lines rather than areas.
 
+## Game view
+
+`index.html?city=glensfalls` opens Glens Falls in the game itself. `js/main.js` now only dispatches:
+
+| URL | Loads |
+| --- | --- |
+| `index.html` | New York (`js/nyc-main.js`, the former `main.js`) |
+| `index.html?city=glensfalls` | Glens Falls (`js/gf-main.js`) |
+| `index.html?city=glensfalls&view=debug` | the flat debug view (`gf.html`) |
+
+The Glens Falls view (`js/gf-main.js`) has:
+
+- **The ground** (`js/gf-ground.js`): flat at y = 0, with a ground plane, water, a flat tint over the blocks, and road
+  ribbons at their curb widths for every class. Service roads are drawn a shade lighter but not driven.
+- **The road network**: `js/road-network.js` builds it from `GF_GEO.roadGraph` through `gfRoadSource()`
+  (`js/gf-roadgraph.js`), with no avenues, cross streets or blocks, so its centreline step (4b) carries the whole town.
+  The source:
+  - keeps the links in `DRIVE_CLASSES` (every class but `service`);
+  - rejoins pieces of one street that `GF_GEO` split only where a service road met it;
+  - cuts long gentle curves at their own shape points, so no straight run strays more than 1.5 m from the street.
+
+  Lanes and right of way come from each link's width, lanes and direction. No major-road names are used.
+- **40 AI cars** (`js/traffic.js` with `numCars: 40, numBuses: 0, pedestrians: false`) and the road markings
+  (`js/road-paint.js`), both from that network.
+- **The player** (`js/controllers.js` with a Glens Falls `world`):
+  - kept inside the bbox, on flat ground with no sidewalks;
+  - starting in the rightmost lane of the longest Glen Street edge (`gfSpawn()`);
+  - saved under the `gf-player-state` localStorage key.
+- **The HUD**: modes, the follow cameras, time of day and the OSM attribution. Teleports, the map, sound and New York's
+  scenic cameras are hidden.
+
+There are no buildings, terrain, landmarks, pedestrians or traffic signals yet. Every junction is unsignalised, with
+the widest road given right of way. `tests/gf-roadnetwork.test.mjs` checks the network: deterministic, every lane
+leading on, everything inside the bbox, and every edge along a drive link. Twelve edges are listed exceptions:
+
+- the chord across the small Centennial Circle roundabout;
+- five streets that meet another road at two OSM nodes 9-13 m apart, which `road-network.js` merges into one junction.
+
 ## Source and licence
 
 Data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the
 [Open Database License (ODbL) 1.0](https://opendatacommons.org/licenses/odbl/1-0/). The raw extracts in
 `tools/gf/data/` and the derived `js/gf-geodata.js` are ODbL. The attribution "© OpenStreetMap contributors" appears
-here, in `GF_GEO.attribution` and on screen in the debug view. No other datasets are used, and no geography is placed
+here, in `GF_GEO.attribution` and on screen in the debug and game views. No other datasets are used, and no geography is placed
 by hand.
