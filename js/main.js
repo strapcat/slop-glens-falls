@@ -16,7 +16,6 @@ const NYC_PRELOADS = [
   'buildings.js',
   'building-details.js',
   'building-geodata.js',
-  'building-footprints.js',
   'fire-escapes.js',
   'landmarks.js',
   'street-details.js',
@@ -40,6 +39,9 @@ const GF_PRELOADS = [
   'gf-ground.js',
   'gf-signals.js',
   'gf-signal-heads.js',
+  'gf-buildings.js',
+  'gf-building-records.js',
+  'gf-building-meshes.js',
   'gf-main.js'
 ];
 
@@ -55,6 +57,8 @@ function preload(files, attributes) {
 
 const params = new URLSearchParams(location.search);
 if (params.get('city') === 'glensfalls') {
+  // before gf-main.js loads, so the tab never flashes index.html's New York title
+  document.title = 'Slop Glens Falls';
   if (params.get('view') === 'debug') location.replace(`./gf.html${location.search}`);
   else {
     preload(GF_PRELOADS, { rel: 'modulepreload' });

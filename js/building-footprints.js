@@ -21,14 +21,16 @@ function partyWallHeight(record, a, b, neighbours) {
 }
 
 // One merged facade/roof mesh per 1 km cell. Explicit wall coordinates keep window bays metre-sized on any angle.
-function createBuildingFootprints(material, records, getNeighbours) {
+// options.base: the height the walls stand on (default 0.22, New York's sidewalk; 0 on flat ground)
+function createBuildingFootprints(material, records, getNeighbours, options = {}) {
+  const base = options.base ?? 0.22;
   const cells = new Map();
   records.forEach((record, index) => {
     if (!(record.height > 0)) return;
     const key = Math.floor(record.cx / 1000) + ',' + Math.floor(record.cz / 1000);
     let cell = cells.get(key);
     if (!cell) cells.set(key, (cell = { positions: [], normals: [], indices: [], boxes: [], walls: [] }));
-    const height = record.height, top = height + 0.22;
+    const height = record.height, top = height + base;
     const seed = Math.floor(record.seed ?? index * 29) % 1000 + 0.1 + 0.8 * (record.tone ?? 0.5);
     const neighbours = getNeighbours && height <= 60 ? getNeighbours(record) : [];
 
@@ -53,7 +55,7 @@ function createBuildingFootprints(material, records, getNeighbours) {
           const exposedHeight = adjacentHeight ? Math.max(0, top - adjacentHeight) : height;
           // Match the positive-world-axis tangent used by the shared interior-map view ray.
           const reverse = (Math.abs(dz) >= Math.abs(dx) ? dz : dx) < 0;
-          cell.positions.push(a.x, 0.22, a.y, b.x, 0.22, b.y, a.x, top, a.y, b.x, top, b.y);
+          cell.positions.push(a.x, base, a.y, b.x, base, b.y, a.x, top, a.y, b.x, top, b.y);
           for (let k = 0; k < 4; k++) {
             cell.normals.push(-dz / width, 0, dx / width);
             // Footprint walls use the box's unused depth for the exposed height above adjoining roofs.

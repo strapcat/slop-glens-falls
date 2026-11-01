@@ -8,19 +8,22 @@ pipeline (`tools/build-geodata.mjs`), which it does not change. It shares only t
 ## Build
 
 ```sh
-bash tools/gf/fetch.sh                  # Overpass -> tools/gf/data/osm_gf_{roads,water,signals}.json (committed)
+bash tools/gf/fetch.sh                  # Overpass -> tools/gf/data/osm_gf_{roads,water,signals,buildings}.json (committed)
 node tools/gf/build-gf-geodata.mjs      # tools/gf/data/ -> js/gf-geodata.js, prints summary stats
 node tools/gf/build-gf-signals.mjs      # tools/gf/data/osm_gf_signals.json -> js/gf-signals.js
-node --test tests/gf-geodata.test.mjs tests/gf-signals.test.mjs
+node tools/gf/build-gf-buildings.mjs    # tools/gf/data/osm_gf_buildings.json -> js/gf-buildings.js, prints counts
+node --test tests/gf-geodata.test.mjs tests/gf-signals.test.mjs tests/gf-buildings.test.mjs
 ```
 
 Then open `index.html?city=glensfalls&view=debug` (or `gf.html`) through a local web server for the flat debug view.
 
 Add `&look=x,z,distance` to start the camera looking down at a point (metres) from that distance. The screenshots in
 `screenshots/` use `look=0,-150,900` (downtown), `look=300,450,1300` (the Glen Street bridge over the Hudson) and
-`look=-1250,-1120,700` (Crandall Pond, a hole in its block).
+`look=-1250,-1120,700` (Crandall Pond, a hole in its block). The game-view screenshots (`cc002*`, `cc003*`) name their
+places in the PR that added them; `cc003-downtown-glen.png`, `cc003-crandall-pond.png` and `cc003-overview.png` show
+the buildings.
 
-- `fetch.sh` runs both queries through `tools/overpass.sh`, which keeps its endpoint fallback and retries and only
+- `fetch.sh` runs each query through `tools/overpass.sh`, which keeps its endpoint fallback and retries and only
   replaces a file after a complete, valid response. The User-Agent is `OVERPASS_UA` (default
   `slop-glens-falls/0.1 ...`).
 - The raw responses are committed, so the build runs offline. It depends only on them: there are no timestamps, and
@@ -38,6 +41,7 @@ tests/` fails on Node 22 and later, which read the directory as a module.)
 | `data/osm_gf_roads.json` | `q_gf_roads.overpassql` | `highway` = motorway, trunk, primary, secondary, tertiary, unclassified, residential, service, living_street and their `_link` variants, with their nodes. Footways, paths, cycleways and steps are not fetched yet. |
 | `data/osm_gf_water.json` | `q_gf_water.overpassql` | `natural=water` and `waterway=riverbank\|river\|canal` ways and relations, with their member ways and nodes |
 | `data/osm_gf_signals.json` | `q_gf_signals.overpassql` | `highway=traffic_signals` and `crossing=traffic_signals` nodes (see Signals) |
+| `data/osm_gf_buildings.json` | `q_gf_buildings.overpassql` | `building=*` ways and relations, with their member ways and nodes (see Buildings) |
 
 Bounding box: south 43.290, west -73.680, north 43.330, east -73.610.
 
@@ -158,14 +162,17 @@ The Glens Falls view (`js/gf-main.js`) has:
 - **40 AI cars** (`js/traffic.js` with `numCars: 40, numBuses: 0`), stopping at the OSM traffic signals (see Signals),
   120 pedestrians on the sidewalks (see Pedestrians), and the road markings (`js/road-paint.js`), all from that network,
   plus the signal heads (`js/gf-signal-heads.js`).
+- **The buildings** (see Buildings): OSM footprints extruded with flat roofs. The player collides with them;
+  pedestrians walk around them; cars don't notice them.
 - **The player** (`js/controllers.js` with the Glens Falls `PLAYER_WORLD` from `gf-runtime.js`):
-  - kept inside the bbox, on flat ground with no sidewalks;
+  - kept inside the bbox, on flat ground with no sidewalks, and out of the buildings;
   - starting in the rightmost lane of the longest Glen Street edge (`gfSpawn()`);
-  - saved under the `gf-player-state` localStorage key.
+  - saved under the `gf-player-state` localStorage key. A saved position inside a building (saved before the
+    buildings stood) returns to the spawn.
 - **The HUD**: modes, the follow cameras, time of day and the OSM attribution. The car and bike are labelled `Taxi` and
   `Cyclist`. Teleports, the map, sound and New York's scenic cameras are hidden.
 
-There are no buildings, terrain or landmarks yet. Unsignalled junctions give the widest road right of way.
+There is no terrain and there are no landmarks yet. Unsignalled junctions give the widest road right of way.
 `tests/gf-roadnetwork.test.mjs` checks the network: deterministic, every lane
 leading on, everything inside the bbox, and every edge along a drive link. Twelve edges are listed exceptions:
 
@@ -211,6 +218,73 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
 - **Coverage:** 2187 of the network's 2498 edges have sidewalk tracks.
 - **Limits:** there are no crosswalks at Glens Falls junctions yet (`pedestrian-routes.js` `across()` only knows New
   York's grid corners), so pedestrians walk around their block but don't cross streets.
+
+### Buildings
+
+- **Data:** `q_gf_buildings.overpassql` fetches every `building=*` way and relation in the bbox, with their nodes, into
+  `data/osm_gf_buildings.json`. The committed file is from OSM base 2026-11-01T13:05:10Z: 7,825 buildings (7,824
+  closed ways and one multipolygon relation), sha256 `ea8ac7bd…0509`.
+- **Generator:** `build-gf-buildings.mjs` writes `js/gf-buildings.js`, about 1.05 MB, one building per line. It
+  projects each footprint into the `GF_GEO` frame at 0.1 m, joins a relation's member ways with `joinRings`, and drops
+  repeated points. It keeps a ring only with 3 or more points, 1 m² or more and no self-intersection (none is dropped
+  today). Nothing is moved, merged or clipped, and a rebuild is byte-identical.
+- **Schema:** `GF_BUILDINGS = { osmBase, attribution, storey: 3.3, heightRule, fields, buildings }`. Each row is
+  `[osm, kind, use, name, start, levels, height, src, outer, holes]`:
+  - `osm` is `w<id>` or `r<id>`; ways come first, then relations, each sorted by id;
+  - `kind` is the `building` value; `use` is `shop=…`, else `amenity=…`, else null;
+  - `name`, `start` (`start_date`) and `levels` are the raw tags or null;
+  - `src` says where the height came from (below);
+  - `outer` is a flat `[x, z, …]` ring with no closing point, and `holes` is a list of such rings.
+- **Skipped (36):**
+  - 17 `building=roof`, open canopies such as fuel-station roofs, which walls would turn into solid boxes;
+  - 1 `building=construction`;
+  - 18 whose outer ring's bounding-box centre is outside the bbox.
+
+  The 21 that straddle the edge but are centred inside are kept whole.
+- **Heights (`HEIGHT_RULE`, copied into `GF_BUILDINGS.heightRule`):**
+  1. An OSM `height` tag (m, ft or ') wins: `src` 0. No building has one today.
+  2. Else `building:levels`: levels × 3.3 + 0.6 m, `src` 1. 49 buildings.
+  3. Else **a default that is an approximation, not a survey** (`src` 2). 7,740 buildings, **99.4% of the town.**
+     - Levels by type:
+       - 1: garage, shed, outbuilding, carport, greenhouse, supermarket, industrial, warehouse, chapel and the like;
+       - 2: house, residential, commercial, retail, school, church and the like;
+       - 3: apartments, office, hospital, parking;
+       - an untyped `yes`: 1 under 40 m², else 2.
+     - Footprints of 2,000 m² or more get 7.5 m flat (one tall storey for big boxes and mills), unless they are a
+       school, hospital, apartments, office, parking or church.
+     - Otherwise a seeded draw from the OSM id (`mulberry32`) takes a level off 15% of the time, or adds one 15%
+       of the time, to multi-storey buildings that aren't a church, school or hospital.
+
+     Then height = levels × 3.3 + 0.6 m, rounded to 0.1 m. The result: 3–6 m 1,387; 6–9 m 5,140; 9–12 m 1,246;
+     12–15 m 12; 4 taller, up to 36.9 m (Herman T Stichman Towers, 11 levels tagged). The mean is 7.16 m.
+- **Records** (`js/gf-building-records.js`, pure): `createGfBuildingRecords()` turns the rows into:
+  - `createBuildingFootprints` records, each with a facade style:
+    - **stone** (37): civic buildings: schools, churches, hospitals, town hall, library, post office;
+    - **clapboard** (6,820): houses, garages and sheds, and untyped buildings under 250 m² with no shop or amenity;
+    - **brick** (932): everything else.
+  - storefronts on 150 shops, restaurants and banks of 3.5 m or more;
+  - the player's colliders;
+  - pedestrian-only obstacles for the road network.
+
+  `neighboursFor()` gives brick and stone buildings blank party walls where they adjoin a neighbour.
+- **Meshes** (`js/gf-building-meshes.js`): `building-footprints.js` with `{ base: 0 }` (walls on the flat ground; New
+  York's stand on its 0.22 m sidewalk). It makes one merged mesh per 1 km cell and style, from the pre-war masonry
+  shader on 3.3 m storeys:
+  - brick and stone take New York's two masonry presets' colours;
+  - clapboard is a light painted tone (stone `0xd6d0c2`, trim `0x5e5a52`, glass `0x1a2430`).
+- **Collision and obstacles:**
+  - The player collides with every footprint, up to its roof.
+  - Pedestrians walk around them: the walking lines inside a footprint go. That leaves 2,184 edges with tracks
+    instead of 2,187, and 9,759 tracks instead of 9,806.
+  - The car network is unchanged (tested).
+  - No drive-link centreline runs through a building (tested on segment midpoints and every 5 m).
+- **Known gaps:**
+  - every roof is flat, and only one building has a `roof:shape` tag;
+  - 99% of heights are the approximation above;
+  - **the 1993 look:** most modern big-box and plaza buildings are probably newer than 1993, but OSM dates only 5 of
+    the kept buildings, and one of those after 1993: South Glens Falls Hydroelectric, 1994 (w120878979). Clearing them
+    out is a later task.
+  - there are no landmarks, interiors or building details.
 
 ## Source and licence
 
