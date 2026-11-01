@@ -11,7 +11,12 @@ const PED_SPAWN_DISTANCE = 150;
 const PED_AVOID_INTERVAL = 0.12;
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 
-function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCross, walkOn, visible, nearView }) {
+// options: numPeds, the heights pedestrians walk at on the sidewalks and crosswalks (sidewalkY, crosswalkY: New York's
+// raised curbs and painted roadway), onSidewalk(x, z) for routes' detours and dodges where the network's own (its curb
+// rectangles) doesn't describe the sidewalks, and trackInsets, the walking lines' distances beyond the roadway
+// (pedestrian-routes.js; New York's: 1.7 and 2.8 m)
+function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCross, walkOn, visible, nearView }, options = {}) {
+  const { numPeds = NUM_PEDS, sidewalkY = 0.22, crosswalkY = 0.012, onSidewalk = null, trackInsets = null } = options;
   let clock = 0;
   let focusX = 0, focusZ = 140;
   let hasView = false;
@@ -25,13 +30,13 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
 
   // One instanced draw per level of detail; every pedestrian has a PersonRig that plants its footsteps on the
   // sidewalk (no sliding), with their own build, height, sex, hair, clothes and gait
-  const pedCrowd = new PersonCrowd(NUM_PEDS);
+  const pedCrowd = new PersonCrowd(numPeds);
   const hash = (i, salt) => {
     const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
     return v - Math.floor(v);
   };
   const peds = [];
-  for (let i = 0; i < NUM_PEDS; i++) {
+  for (let i = 0; i < numPeds; i++) {
     const female = hash(i, 1) < 0.48;
     const hairRoll = hash(i, 2);
     peds.push({
@@ -88,7 +93,8 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
   }
 
   const KERB = 1.6; // how far along a crosswalk track pedestrians wait to cross (the curb is 2 m along)
-  const pedRoutes = createPedestrianRoutes(network, blockAt);
+  const pedRoutes = createPedestrianRoutes(onSidewalk ? { walkable: network.walkable, onSidewalk } : network, blockAt,
+    trackInsets ? { insets: trackInsets } : undefined);
   const track = { ax: 0, az: 0, ux: 0, uz: 1, len: 1, node: null, side: 0, line: 0, route: null };
 
   function sidewalkTrack(e) {
@@ -577,10 +583,10 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
     }
   }
 
-  // Walking surface around a pedestrian: sidewalks are 0.22 m above the road, and crosswalk tracks start and end
-  // with 2 m of sidewalk (the rig steps down and up the curbs)
-  const SIDEWALK_Y = 0.22;
-  const CROSSWALK_Y = 0.012;
+  // Walking surface around a pedestrian: sidewalks are sidewalkY above the road (New York's curbs: 0.22 m), and
+  // crosswalk tracks start and end with 2 m of sidewalk (the rig steps down and up the curbs)
+  const SIDEWALK_Y = sidewalkY;
+  const CROSSWALK_Y = crosswalkY;
   function pedGround(p, x, z) {
     if (!p.node) return SIDEWALK_Y;
     const t = (x - p.ax) * p.ux + (z - p.az) * p.uz;
@@ -630,12 +636,12 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
 
     for (const n of walkedNodes) n.walkers.length = 0;
     walkedNodes.length = 0;
-    let pedBudget = jump ? NUM_PEDS : 6;
+    let pedBudget = jump ? numPeds : 6;
     const keepRadius = jump ? NEAR_RADIUS : PED_RADIUS;
     const keepRadiusSq = keepRadius * keepRadius;
-    for (let scanned = 0; scanned < NUM_PEDS && pedBudget > 0; scanned++) {
+    for (let scanned = 0; scanned < numPeds && pedBudget > 0; scanned++) {
       const p = peds[pedCursor];
-      pedCursor = (pedCursor + 1) % NUM_PEDS;
+      pedCursor = (pedCursor + 1) % numPeds;
       if (p.placed) {
         const dx = p.x - focusX, dz = p.z - focusZ;
         if (dx * dx + dz * dz <= keepRadiusSq) continue;
@@ -643,14 +649,14 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
       pedBudget--;
       spawnPed(p, jump ? 0 : 60, jump ? NEAR_RADIUS : 280, !jump);
     }
-    for (let i = 0; i < NUM_PEDS; i++) {
+    for (let i = 0; i < numPeds; i++) {
       const p = peds[i];
       if (p.placed) avoidPlayer(p);
     }
     meet(dt);
     gatherCurbs();
     pedCrowd.begin();
-    for (let i = 0; i < NUM_PEDS; i++) {
+    for (let i = 0; i < numPeds; i++) {
       const p = peds[i];
       if (!p.placed) continue;
       walk(p, dt);

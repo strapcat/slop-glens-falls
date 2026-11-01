@@ -8,15 +8,14 @@ pipeline (`tools/build-geodata.mjs`), which it does not change. It shares only t
 ## Build
 
 ```sh
-bash tools/gf/fetch.sh                  # Overpass -> tools/gf/data/osm_gf_{roads,water}.json (committed)
+bash tools/gf/fetch.sh                  # Overpass -> tools/gf/data/osm_gf_{roads,water,signals}.json (committed)
 node tools/gf/build-gf-geodata.mjs      # tools/gf/data/ -> js/gf-geodata.js, prints summary stats
-node --test tests/gf-geodata.test.mjs
+node tools/gf/build-gf-signals.mjs      # tools/gf/data/osm_gf_signals.json -> js/gf-signals.js
+node --test tests/gf-geodata.test.mjs tests/gf-signals.test.mjs
 ```
 
 Then open `index.html?city=glensfalls&view=debug` (or `gf.html`) through a local web server for the flat debug view.
 
-**Tests:** `node --test tests/*.test.cjs tests/*.test.mjs` runs the whole suite on Node 20, 22 and 24. (`node --test
-tests/` fails on Node 22 and later, which read the directory as a module.)
 Add `&look=x,z,distance` to start the camera looking down at a point (metres) from that distance. The screenshots in
 `screenshots/` use `look=0,-150,900` (downtown), `look=300,450,1300` (the Glen Street bridge over the Hudson) and
 `look=-1250,-1120,700` (Crandall Pond, a hole in its block).
@@ -29,12 +28,16 @@ Add `&look=x,z,distance` to start the camera looking down at a point (metres) fr
   time Overpass reported. `GF_DATA=<dir>` reads the raw JSON from another folder. An optional argument sets the
   output path.
 
+**Tests:** `node --test tests/*.test.cjs tests/*.test.mjs` runs the whole suite on Node 20, 22 and 24. (`node --test
+tests/` fails on Node 22 and later, which read the directory as a module.)
+
 ## Inputs
 
 | File | Query | Content |
 | --- | --- | --- |
 | `data/osm_gf_roads.json` | `q_gf_roads.overpassql` | `highway` = motorway, trunk, primary, secondary, tertiary, unclassified, residential, service, living_street and their `_link` variants, with their nodes. Footways, paths, cycleways and steps are not fetched yet. |
 | `data/osm_gf_water.json` | `q_gf_water.overpassql` | `natural=water` and `waterway=riverbank\|river\|canal` ways and relations, with their member ways and nodes |
+| `data/osm_gf_signals.json` | `q_gf_signals.overpassql` | `highway=traffic_signals` and `crossing=traffic_signals` nodes (see Signals) |
 
 Bounding box: south 43.290, west -73.680, north 43.330, east -73.610.
 
@@ -136,18 +139,25 @@ has no imports of its own:
 
 The Glens Falls view (`js/gf-main.js`) has:
 
-- **The ground** (`js/gf-ground.js`): flat at y = 0, with a ground plane, water, a flat tint over the blocks, and road
-  ribbons at their curb widths for every class. Service roads are drawn a shade lighter but not driven.
+- **The ground** (`js/gf-ground.js`): flat at y = 0, with a ground plane, water, the blocks (the sidewalk band in
+  concrete, the lots a shade darker), and road ribbons at their curb widths for every class. Service roads are drawn a
+  shade lighter but not driven.
 - **The road network**: `js/road-network.js` builds it from `GF_GEO.roadGraph` through `gfRoadSource()`
   (`js/gf-roadgraph.js`, installed as `ROAD_SOURCE` by `gf-runtime.js`), with no avenues, cross streets or blocks, so its centreline step (4b) carries the whole town.
   The source:
   - keeps the links in `DRIVE_CLASSES` (every class but `service`);
   - rejoins pieces of one street that `GF_GEO` split only where a service road met it;
+  - cuts a street that rejoins into a loop back to its own junction (a cul-de-sac loop) at its shape points nearest a
+    third and two thirds of the way round, into three links with distinct ends (`road-network.js` drops a link that
+    starts and ends at one junction). All six such loops (Simione Court, Dixon Court, North Court, Boylston Street, Bush
+    Street, Chelsea Way) are long enough; North Court still drops out with the dead ends at the bbox edge, its only way
+    in (Old Mill Lane) leaving the box;
   - cuts long gentle curves at their own shape points, so no straight run strays more than 1.5 m from the street.
 
   Lanes and right of way come from each link's width, lanes and direction. No major-road names are used.
-- **40 AI cars** (`js/traffic.js` with `numCars: 40, numBuses: 0, pedestrians: false`) and the road markings
-  (`js/road-paint.js`), both from that network.
+- **40 AI cars** (`js/traffic.js` with `numCars: 40, numBuses: 0`), stopping at the OSM traffic signals (see Signals),
+  120 pedestrians on the sidewalks (see Pedestrians), and the road markings (`js/road-paint.js`), all from that network,
+  plus the signal heads (`js/gf-signal-heads.js`).
 - **The player** (`js/controllers.js` with the Glens Falls `PLAYER_WORLD` from `gf-runtime.js`):
   - kept inside the bbox, on flat ground with no sidewalks;
   - starting in the rightmost lane of the longest Glen Street edge (`gfSpawn()`);
@@ -155,12 +165,52 @@ The Glens Falls view (`js/gf-main.js`) has:
 - **The HUD**: modes, the follow cameras, time of day and the OSM attribution. The car and bike are labelled `Taxi` and
   `Cyclist`. Teleports, the map, sound and New York's scenic cameras are hidden.
 
-There are no buildings, terrain, landmarks, pedestrians or traffic signals yet. Every junction is unsignalised, with
-the widest road given right of way. `tests/gf-roadnetwork.test.mjs` checks the network: deterministic, every lane
+There are no buildings, terrain or landmarks yet. Unsignalled junctions give the widest road right of way.
+`tests/gf-roadnetwork.test.mjs` checks the network: deterministic, every lane
 leading on, everything inside the bbox, and every edge along a drive link. Twelve edges are listed exceptions:
 
 - the chord across the small Centennial Circle roundabout;
 - five streets that meet another road at two OSM nodes 9-13 m apart, which `road-network.js` merges into one junction.
+
+### Signals
+
+- **Data:** `q_gf_signals.overpassql` fetches the bbox's `highway=traffic_signals` nodes (signalled junctions) and
+  `crossing=traffic_signals` nodes (signalled pedestrian crossings) into `data/osm_gf_signals.json`. The committed file
+  is from OSM base 2026-10-31T11:54:00Z: 75 nodes, sha256 `cd1b47f4…bc68`.
+- **Generator:** `build-gf-signals.mjs` projects them into the `GF_GEO` frame as they are, with no point added, moved
+  or dropped. It writes `js/gf-signals.js` (`GF_SIGNALS.junctions`: 51 `[x, z, osmId, direction|null]`;
+  `GF_SIGNALS.crossings`: 24 `[x, z, osmId]`), and a rebuild is byte-identical.
+- **Matching:** the game passes the 51 junction signals to `buildRoadNetwork`, whose step 8 signals the junction node
+  within 6 m of each, never a bend (a shape node).
+- **Result:** **41 junctions are signalled, from 42 of the 51 signals** (two signals mark one junction):
+  - **Skipped:** one lies on a bend, Quaker Ridge Blvd at a service driveway (OSM 1141401582).
+  - **Unmatched (8):** these have no network node near them, because their corridors leave the bbox and drop out with
+    its dead ends (CC-002a):
+    - Upper Glen St / Lafayette St / Foster Ave (221437271, 221437275);
+    - Upper Glen St and Aviation Rd at service driveways (1001656622, 691144630);
+    - Aviation Rd / Greenway North (221447701);
+    - Lower Warren St / Boulevard / Highland Ave (691085958);
+    - Quaker Rd / Dix Ave (221444435, 37 m away);
+    - Main St at the I-87 Exit 18 ramps (221338711).
+- **Timing:** the signals run New York's cycle (`signalPhase`). A junction's widest road (right-of-way group 0) gets
+  the avenue phase, and every other road the street phase.
+- **Signal heads:** `js/gf-signal-heads.js` draws one post with a three-lamp head per arriving road, on its right-hand
+  curb 1.5 m before the stop line.
+- **Not used yet:** the 24 signalled crossings.
+
+### Pedestrians
+
+- **Where they walk:** the sidewalk band of each block, between its curb and its lot (`GF_GEO.blocks`: the lot is 1.8 m
+  inside the curb). `js/gf-blocks.js` provides:
+  - `blockAt` (the curb outline minus its holes, under a 64 m grid index), which `gf-runtime.js` installs in the city
+    runtime;
+  - the lots, as obstacles to pedestrians only, so the car network is the same with them as without (tested);
+  - `onSidewalk` (on a block, outside its lot).
+- **Settings:** 120 pedestrians on two walking lines 0.6 and 1.2 m from the roadway (New York's lie 1.7 and 2.8 m out,
+  on its 4.6 m sidewalks), at `sidewalkY` 0.02 on the flat ground.
+- **Coverage:** 2187 of the network's 2498 edges have sidewalk tracks.
+- **Limits:** there are no crosswalks at Glens Falls junctions yet (`pedestrian-routes.js` `across()` only knows New
+  York's grid corners), so pedestrians walk around their block but don't cross streets.
 
 ## Source and licence
 

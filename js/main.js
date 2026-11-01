@@ -35,8 +35,11 @@ const NYC_PRELOADS = [
 const GF_PRELOADS = [
   'gf-geodata.js',
   'gf-roadgraph.js',
+  'gf-blocks.js',
   'gf-runtime.js',
   'gf-ground.js',
+  'gf-signals.js',
+  'gf-signal-heads.js',
   'gf-main.js'
 ];
 

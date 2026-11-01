@@ -1,4 +1,4 @@
-import './gf-runtime.js'; // first: installs Glens Falls in the city runtime before any shared module runs
+import { GF_BLOCKS } from './gf-runtime.js'; // first: installs Glens Falls in the city runtime before any shared module runs
 import * as THREE from 'three/webgpu';
 import { pass, mrt, output, normalView, positionView, metalness, roughness, vec2, smoothstep } from 'three/tsl';
 import { ssr } from 'three/addons/tsl/display/SSRNode.js';
@@ -15,12 +15,24 @@ import { ROAD_SOURCE, PLAYER_WORLD, isTypingInField } from './city-runtime.js';
 import { GF_GEO } from './gf-geodata.js';
 import { gfSpawn } from './gf-roadgraph.js';
 import { buildGfGround } from './gf-ground.js';
+import { GF_SIGNALS } from './gf-signals.js';
+import { buildGfSignalHeads } from './gf-signal-heads.js';
 
 // Glens Falls game view (index.html?city=glensfalls): the flat town from GF_GEO (roads, water, blocks), its road graph
-// driven by AI cars, road markings, and the player. Setup, shader warm-up and frame loop follow nyc-main.js, without
-// New York's city grid, boroughs, landmarks, buildings, street details, map, teleports or audio.
+// driven by AI cars stopping at the OSM traffic signals, pedestrians on the blocks' sidewalks, road markings, signal
+// heads and the player. Setup, shader warm-up and frame loop follow nyc-main.js, without New York's city grid, boroughs,
+// landmarks, buildings, street details, map, teleports or audio.
 
 const NUM_CARS = 40;
+// Pedestrians walk the sidewalk band between each block's curb and its lot (1.8 m wide), on two walking lines 0.6 and
+// 1.2 m from the roadway, on the flat ground; there are no crosswalks yet
+const PEDESTRIANS = {
+  numPeds: 120,
+  sidewalkY: 0.02,
+  crosswalkY: 0.012,
+  onSidewalk: GF_BLOCKS.onSidewalk,
+  trackInsets: [0.6, 1.2]
+};
 const STATE_KEY = 'gf-player-state';
 // Follow cameras only: New York's scenic cameras look at Manhattan landmarks
 const FOLLOW_CAMERAS = CAMERA_PRESETS.filter((p) => p.category === 'follow');
@@ -121,7 +133,13 @@ async function initApp() {
   buildGfGround(scene, GF_GEO);
   markInit('ground');
   await showLoadingStage('Creating traffic...');
-  const trafficSystem = createTrafficSystem(scene, [], [], [], { roadSource: ROAD_SOURCE, numCars: NUM_CARS, numBuses: 0, pedestrians: false });
+  // The OSM signals (gf-signals.js) as they are: the network signals the junction within 6 m of each (road-network.js 8.)
+  const signalPoints = GF_SIGNALS.junctions.map(([x, z]) => ({ x, z }));
+  const trafficSystem = createTrafficSystem(scene, [], GF_BLOCKS.lotObstacles, signalPoints, {
+    roadSource: ROAD_SOURCE, numCars: NUM_CARS, numBuses: 0, pedestrians: true, pedestrianOptions: PEDESTRIANS
+  });
+  const signalHeads = buildGfSignalHeads(scene, trafficSystem.network);
+  console.info(`[gf] ${trafficSystem.network.nodes.filter((n) => n.signal).length} signalled junctions of ${signalPoints.length} OSM signals, ${signalHeads.count} signal heads, ${PEDESTRIANS.numPeds} pedestrians`);
   markInit('traffic');
   await showLoadingStage('Adding road markings...');
   buildRoadPaint(scene, trafficSystem.network);
@@ -487,6 +505,16 @@ async function initApp() {
   // 7. Animation Loop
   let lastTime = performance.now();
   let elapsed = 0;
+  // Console / automated checks: run the clock and the traffic ahead by `seconds` (30 steps a second) without rendering,
+  // e.g. to let queues form at the signals where frames are slow
+  globalThis.slopGlensFalls.advance = (seconds) => {
+    for (let i = 0; i < seconds * 30; i++) {
+      elapsed += 1 / 30;
+      trafficSystem.update(1 / 30, elapsed, cameraSystem.currentPos, controllerManager.getActiveEntity(), controllerManager.activeMode, cameraSystem.camera);
+    }
+    signalHeads.update(elapsed);
+    return elapsed;
+  };
   let frameCount = 0;
   let fpsTimer = 0;
   let nextPlayerSave = 0;
@@ -515,6 +543,7 @@ async function initApp() {
       savePlayerState();
       nextPlayerSave = now + 5000;
     }
+    signalHeads.update(elapsed);
     lightingSystem.update(cameraSystem.currentPos);
     for (const root of dynamicRoots) root.updateMatrixWorld();
 

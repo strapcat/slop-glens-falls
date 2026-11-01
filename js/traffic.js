@@ -115,10 +115,10 @@ function createBusDestinationTexture() {
 
 const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 
-// options: roadSource (buildRoadNetwork's city source, Manhattan by default), numCars, numBuses, pedestrians (false:
-// no pedestrian system)
+// options: roadSource (buildRoadNetwork's city source, the city runtime's by default), numCars, numBuses, pedestrians
+// (false: no pedestrian system) and pedestrianOptions (pedestrian-system.js's options)
 function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, options = {}) {
-  const { roadSource, numCars = NUM_CARS, numBuses = NUM_BUSES, pedestrians = true } = options;
+  const { roadSource, numCars = NUM_CARS, numBuses = NUM_BUSES, pedestrians = true, pedestrianOptions = {} } = options;
   const group = new THREE.Group();
   group.name = 'ManhattanTrafficAndPedestrians';
   let collisionListener = null;
@@ -450,7 +450,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
   const nearSignals = [];
   const pedestrianSystem = pedestrians ? createPedestrianSystem(network, {
     player, nearEdges, nearSignals, mayCross, walkOn, visible, nearView
-  }) : noPedestrians(network);
+  }, pedestrianOptions) : noPedestrians(network);
   if (pedestrianSystem.meshes.length) group.add(...pedestrianSystem.meshes);
 
   // Add vehicle contact shadows last + pre-allocated Clustered SpotLight / PointLight pools
