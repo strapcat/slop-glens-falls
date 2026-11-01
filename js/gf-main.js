@@ -56,6 +56,20 @@ function trimHud() {
   const heading = document.querySelector('.brand-heading h1');
   if (heading) heading.textContent = 'Slop Glens Falls';
   for (const bullet of document.querySelectorAll('.loader-bullet, .brand .mta-bullet')) bullet.textContent = 'GF';
+  // The rest of index.html's New York wording, for screen readers, link previews and the hidden map parts
+  const set = (selector, attrs) => {
+    const el = document.querySelector(selector);
+    if (el) for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  };
+  set('meta[name="description"]', { content: 'Slop Glens Falls: a three.js WebGPU sim of Glens Falls and South Glens Falls, NY, '
+    + 'built from OpenStreetMap roads, signals and building footprints; a fork of mrdoob/slop-newyork.' });
+  set('#canvas-container', { 'aria-label': '3D Interactive Slop Glens Falls Viewport' });
+  set('.repo-link', { href: 'https://github.com/strapcat/slop-glens-falls/',
+    'aria-label': 'Slop Glens Falls on GitHub, a fork of mrdoob/slop-newyork (opens in a new tab)',
+    title: 'strapcat/slop-glens-falls, forked from mrdoob/slop-newyork' });
+  set('#btn-open-map', { title: 'Street map (not available in Glens Falls)', 'aria-label': 'Street map (not available in Glens Falls)' });
+  set('#minimap-card', { 'aria-label': 'Street radar minimap (not available in Glens Falls)', title: 'Street map (not available in Glens Falls)' });
+  set('#fullmap-modal', { 'aria-label': 'Street map (not available in Glens Falls)' });
   // © OpenStreetMap contributors: every road, block and pond on screen comes from OSM (ODbL)
   const credit = document.createElement('div');
   credit.id = 'gf-attribution';

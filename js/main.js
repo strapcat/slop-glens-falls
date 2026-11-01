@@ -57,6 +57,8 @@ function preload(files, attributes) {
 
 const params = new URLSearchParams(location.search);
 if (params.get('city') === 'glensfalls') {
+  // before gf-main.js loads, so the tab never flashes index.html's New York title
+  document.title = 'Slop Glens Falls';
   if (params.get('view') === 'debug') location.replace(`./gf.html${location.search}`);
   else {
     preload(GF_PRELOADS, { rel: 'modulepreload' });
