@@ -17,6 +17,9 @@ import { gfSpawn } from './gf-roadgraph.js';
 import { buildGfGround } from './gf-ground.js';
 import { GF_SIGNALS } from './gf-signals.js';
 import { buildGfSignalHeads } from './gf-signal-heads.js';
+import { GF_BUILDINGS } from './gf-buildings.js';
+import { buildGfBuildings } from './gf-building-meshes.js';
+import { polygonContains } from './building-collision.js';
 
 // Glens Falls game view (index.html?city=glensfalls): the flat town from GF_GEO (roads, water, blocks), its road graph
 // driven by AI cars stopping at the OSM traffic signals, pedestrians on the blocks' sidewalks, road markings, signal
@@ -132,10 +135,17 @@ async function initApp() {
   await showLoadingStage('Laying out roads and water...');
   buildGfGround(scene, GF_GEO);
   markInit('ground');
+  await showLoadingStage('Raising buildings...');
+  // OSM footprints, flat-roofed; most heights are gf-buildings.js's default rule (an approximation, see heightRule)
+  const buildings = buildGfBuildings(scene, GF_BUILDINGS);
+  const { records: perStyle, meshes, triangles } = buildings.stats;
+  console.info(`[gf] ${buildings.colliders.length} buildings (${Object.entries(perStyle).map(([s, n]) => `${n} ${s}`).join(', ')}): ${meshes} meshes, ${triangles} triangles`);
+  markInit('buildings');
   await showLoadingStage('Creating traffic...');
   // The OSM signals (gf-signals.js) as they are: the network signals the junction within 6 m of each (road-network.js 8.)
   const signalPoints = GF_SIGNALS.junctions.map(([x, z]) => ({ x, z }));
-  const trafficSystem = createTrafficSystem(scene, [], GF_BLOCKS.lotObstacles, signalPoints, {
+  // Lots and buildings stop pedestrians only; cars keep the road network they had without them
+  const trafficSystem = createTrafficSystem(scene, [], [...GF_BLOCKS.lotObstacles, ...buildings.obstacles], signalPoints, {
     roadSource: ROAD_SOURCE, numCars: NUM_CARS, numBuses: 0, pedestrians: true, pedestrianOptions: PEDESTRIANS
   });
   const signalHeads = buildGfSignalHeads(scene, trafficSystem.network);
@@ -149,8 +159,12 @@ async function initApp() {
   await showLoadingStage('Preparing player, vehicles and controls...');
   const spawn = gfSpawn(trafficSystem.network, GF_GEO);
   console.info(`[gf] spawn on ${spawn.street || 'the longest edge (no Glen Street edge)'}: edge ${spawn.edge} at (${spawn.x.toFixed(1)}, ${spawn.z.toFixed(1)}), heading ${(spawn.heading * 180 / Math.PI).toFixed(1)}°`);
-  // The player's world (gf-runtime.js: the bbox, flat ground, no sidewalks), starting at the spawn
-  const controllerManager = new ThirdPersonControllerManager(scene, [], { ...PLAYER_WORLD, spawn });
+  // A point inside a building's walls (below its roof): no place to start or return to
+  const insideBuilding = (x, z, y = 0) => buildings.colliders.some((c) => x >= c.minX && x <= c.maxX && z >= c.minZ && z <= c.maxZ
+    && y < c.maxY && polygonContains(c.polygon, x, z));
+  if (insideBuilding(spawn.x, spawn.z)) console.warn('[gf] the spawn point is inside a building');
+  // The player's world (gf-runtime.js: the bbox, flat ground, no sidewalks), starting at the spawn; buildings collide
+  const controllerManager = new ThirdPersonControllerManager(scene, buildings.colliders, { ...PLAYER_WORLD, spawn });
   // Glens Falls names in the HUD (controllers.js labels the car New York's yellow cab)
   controllerManager.entities.car.label = 'Taxi';
   controllerManager.entities.cyclist.label = 'Cyclist';
@@ -162,7 +176,11 @@ async function initApp() {
         const p = saved.entities?.[mode];
         if (!p || ![p.x, p.y, p.z, p.heading].every(Number.isFinite)) continue;
         controllerManager.setMode(mode);
-        controllerManager.teleportActiveTo(p.x, p.z, p.heading, p.y);
+        // A position saved before the buildings stood may now be inside one: back to the spawn
+        if (insideBuilding(p.x, p.z, p.y)) {
+          console.info(`[gf] saved ${mode} position (${p.x.toFixed(1)}, ${p.z.toFixed(1)}) is inside a building: back to the spawn`);
+          controllerManager.teleportActiveTo(spawn.x, spawn.z, spawn.heading);
+        } else controllerManager.teleportActiveTo(p.x, p.z, p.heading, p.y);
       }
       controllerManager.setMode(Object.hasOwn(controllerManager.entities, saved.activeMode) ? saved.activeMode : 'car');
     }
@@ -181,7 +199,7 @@ async function initApp() {
   const touchControls = new TouchControls(controllerManager);
   window.addEventListener('pagehide', savePlayerState);
   // For the console and automated checks (cars driving, where the player is)
-  globalThis.slopGlensFalls = { trafficSystem, controllerManager, cameraSystem, spawn };
+  globalThis.slopGlensFalls = { trafficSystem, controllerManager, cameraSystem, spawn, buildings: buildings.stats };
   document.addEventListener('visibilitychange', () => { if (document.hidden) savePlayerState(); });
   markInit('controllers');
 
