@@ -20,6 +20,8 @@ import { buildGfSignalHeads } from './gf-signal-heads.js';
 import { GF_BUILDINGS } from './gf-buildings.js';
 import { buildGfBuildings } from './gf-building-meshes.js';
 import { GF_LANDMARKS } from './gf-landmarks.js';
+import { GF_LIDAR_HEIGHTS } from './gf-lidar-heights.js';
+import { applyLidarHeights } from './gf-building-heights.js';
 import { polygonContains } from './building-collision.js';
 
 // Glens Falls game view (index.html?city=glensfalls): the flat town from GF_GEO (roads, water, blocks), its road graph
@@ -82,7 +84,7 @@ function trimHud() {
   link.rel = 'noopener';
   link.style.color = 'inherit';
   link.textContent = 'OpenStreetMap contributors';
-  credit.append('Map data © ', link, ' (ODbL)');
+  credit.append('Map data © ', link, ' (ODbL)', document.createElement('br'), GF_LIDAR_HEIGHTS.credit);
   document.body.appendChild(credit);
 }
 
@@ -151,9 +153,12 @@ async function initApp() {
   buildGfGround(scene, GF_GEO);
   markInit('ground');
   await showLoadingStage('Raising buildings...');
-  // OSM footprints, flat-roofed; most heights are gf-buildings.js's default rule (an approximation, see heightRule)
-  // CC-004: the sourced landmark overrides (gf-landmarks.js) on top, and their roof shapes and the Civil War Monument
-  const buildings = buildGfBuildings(scene, GF_BUILDINGS, GF_LANDMARKS);
+  // OSM footprints, flat-roofed. Heights: OSM height or levels where tagged; else measured from USGS 3DEP LiDAR
+  // (2022-23, gf-lidar-heights.js, src 4) where the measurement passed its quality checks; else gf-buildings.js's
+  // default rule (an approximation, see heightRule). CC-004: the sourced landmark overrides (gf-landmarks.js) go on
+  // top of those records and win, with their roof shapes and the Civil War Monument
+  const { data: gfBuildings, applied: heights } = applyLidarHeights(GF_BUILDINGS, GF_LIDAR_HEIGHTS);
+  const buildings = buildGfBuildings(scene, gfBuildings, GF_LANDMARKS);
   const { records: perStyle, meshes, triangles } = buildings.stats;
   console.info(`[gf] ${Object.values(perStyle).reduce((n, v) => n + v, 0)} buildings (${Object.entries(perStyle).map(([s, n]) => `${n} ${s}`).join(', ')}): ${meshes} meshes, ${triangles} triangles`);
   {
@@ -161,6 +166,17 @@ async function initApp() {
     const daveWaiting = pending.filter((p) => p.daveRequested);
     console.info(`[gf] landmarks: ${applied.length} buildings overridden (${applied.filter((a) => a.after.src === GF_LANDMARKS.srcCode).length} src 3 sourced heights), ${features.length} features (${Object.entries(shapes.types).map(([t, n]) => `${n} ${t}`).join(', ')}), ${pending.length} pending`);
     console.info(`[gf] landmarks pending for Dave: ${daveWaiting.map((p) => `${p.id} (${p.what})`).join('; ')}`);
+  }
+  {
+    // the final height source of every building: the LiDAR copy's, then any landmark overrides (CC-004) on top
+    const LABELS = { 0: 'tag', 1: 'levels', 3: 'landmark', [GF_LIDAR_HEIGHTS.srcCode]: GF_LIDAR_HEIGHTS.srcLabel, 2: 'default rule (approximation)' };
+    const bySrc = { ...heights.bySrc };
+    for (const a of buildings.landmarks?.applied ?? []) {
+      bySrc[a.before.src]--;
+      bySrc[a.after.src] = (bySrc[a.after.src] || 0) + 1;
+    }
+    heights.final = Object.fromEntries([0, 1, 3, GF_LIDAR_HEIGHTS.srcCode, 2].map((k) => [LABELS[k], bySrc[k] || 0]));
+    console.info(`[gf] heights: ${Object.entries(heights.final).map(([k, n]) => `${n} ${k}`).join(', ')}`);
   }
   markInit('buildings');
   await showLoadingStage('Creating traffic...');
@@ -223,6 +239,8 @@ async function initApp() {
   // For the console and automated checks (cars driving, where the player is)
   globalThis.slopGlensFalls = {
     trafficSystem, controllerManager, cameraSystem, spawn, buildings: buildings.stats,
+    // CC-003b: the count of buildings per final height source (LiDAR, landmark, OSM, default rule)
+    heights,
     // CC-004: what was applied (with sources and confidence), what is waiting on data, and the approximate shape sizes
     landmarks: {
       applied: buildings.landmarks.applied,

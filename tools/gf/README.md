@@ -13,7 +13,8 @@ node tools/gf/build-gf-geodata.mjs      # tools/gf/data/ -> js/gf-geodata.js, pr
 node tools/gf/build-gf-signals.mjs      # tools/gf/data/osm_gf_signals.json -> js/gf-signals.js
 node tools/gf/build-gf-buildings.mjs    # tools/gf/data/osm_gf_buildings.json -> js/gf-buildings.js, prints counts
 node tools/gf/build-gf-landmarks.mjs    # tools/gf/data/gf_landmarks.json -> js/gf-landmarks.js, prints applied/pending
-node --test tests/gf-geodata.test.mjs tests/gf-signals.test.mjs tests/gf-buildings.test.mjs tests/gf-landmarks.test.mjs
+node tools/gf/build-gf-lidar-heights.mjs # tools/gf/data/gf_lidar_heights.json -> js/gf-lidar-heights.js, prints counts
+node --test tests/gf-geodata.test.mjs tests/gf-signals.test.mjs tests/gf-buildings.test.mjs tests/gf-landmarks.test.mjs tests/gf-lidar-heights.test.mjs
 ```
 
 Then open `index.html?city=glensfalls&view=debug` (or `gf.html`) through a local web server for the flat debug view.
@@ -23,7 +24,8 @@ Add `&look=x,z,distance` to start the camera looking down at a point (metres) fr
 `look=-1250,-1120,700` (Crandall Pond, a hole in its block). The game-view screenshots (`cc002*`, `cc003*`) name their
 places in the PR that added them; `cc003-downtown-glen.png`, `cc003-crandall-pond.png` and `cc003-overview.png` show
 the buildings. `cc004-monument-square.png`, `cc004-civic-center.png`, `cc004-finch-pruyn.png` (unchanged, waiting on
-data) and `cc004-overview.png` show the landmarks.
+data) and `cc004-overview.png` show the landmarks. `cc003b-downtown-before.png` / `-after.png` and
+`cc003b-overview-before.png` / `-after.png` show the LiDAR heights, before and after, from identical cameras.
 
 - `fetch.sh` runs each query through `tools/overpass.sh`, which keeps its endpoint fallback and retries and only
   replaces a file after a complete, valid response. The User-Agent is `OVERPASS_UA` (default
@@ -45,6 +47,7 @@ tests/` fails on Node 22 and later, which read the directory as a module.)
 | `data/osm_gf_signals.json` | `q_gf_signals.overpassql` | `highway=traffic_signals` and `crossing=traffic_signals` nodes (see Signals) |
 | `data/osm_gf_buildings.json` | `q_gf_buildings.overpassql` | `building=*` ways and relations, with their member ways and nodes (see Buildings) |
 | `data/gf_landmarks.json` | none: compiled by Dave from web sources and OSM | sourced landmark heights, storeys, facades, roof features and the Civil War Monument (see Landmarks) |
+| `data/gf_lidar_heights.json` | none: measured by Dave from USGS 3DEP LiDAR | a height and a quality flag per GF building (see LiDAR heights) |
 
 Bounding box: south 43.290, west -73.680, north 43.330, east -73.610.
 
@@ -283,7 +286,8 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
   - No drive-link centreline runs through a building (tested on segment midpoints and every 5 m).
 - **Known gaps:**
   - every roof is flat, and only one building has a `roof:shape` tag;
-  - 99% of heights are the approximation above;
+  - 99% of these heights are the approximation above; most are now replaced by measured LiDAR heights (see LiDAR
+    heights);
   - **the 1993 look:** most modern big-box and plaza buildings are probably newer than 1993, but OSM dates only 5 of
     the kept buildings, and one of those after 1993: South Glens Falls Hydroelectric, 1994 (w120878979). Clearing them
     out is a later task.
@@ -372,10 +376,85 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
   | approximate | every other building height (CC-003's rule); the flèche's place (footprint centroid, `low`); every shape size above | `heightRule`, the `APPROX_*` constants, `slopGlensFalls.landmarks.shapes.approx` |
   | pending | Finch Pruyn heights, stacks and wood pile; Crandall's 1993 massing; Talk of the Town's size; First Presbyterian's twin towers; the Church of the Messiah's bell tower and height; the `missing[]` items of applied landmarks | `GF_LANDMARKS.pending`, `slopGlensFalls.landmarks.pending` and the `[gf] landmarks pending for Dave` log line |
 
+### LiDAR heights
+
+- **Data:** `data/gf_lidar_heights.json` came from `gf-lidar-heights.zip`, prepared by Dave on 1 Nov 2026.
+  - zip: 36,335 bytes, sha256 `f1b1a8dc…e6e5`;
+  - file: 256,592 bytes, sha256 `f4d7d4c7…42fbf`. It is not edited here.
+  - It holds one `[height_m, flag]` per GF building, keyed by OSM id, measured against the CC-003 extract (same
+    `osmBase` and sha256).
+- **Dataset:** USGS 3DEP **NY_Hudson_D22** (work unit NY_Hudson_1_D22): QL2, Sanborn, Riegl VQ-1560 II, flown
+  **leaf-off from 8 Nov 2022 to 15 Apr 2023**.
+  - [Project report](https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/NY_Hudson_D22/USGS_NY_Hudson_D22_Project_Report.pdf).
+  - Points come from the public EPT; ground from the USGS 1 m bare-earth DEM.
+  - USGS 3DEP data are **public domain**; the credit "USGS 3D Elevation Program" is requested, and the game view shows
+    it under the OSM attribution.
+- **Method:** for each OSM footprint (shrunk by 0.75 m), height = the 90th-percentile elevation of its non-ground,
+  non-noise, non-water, non-bridge points, minus the median ground point in a 2–12 m ring around it (the DEM as a
+  fallback), rounded to 0.1 m. Parapets and pitched-roof ridges count; spires and chimneys mostly don't. The dataset
+  has no building class, so trees over or beside a footprint can contaminate a value, which the flags catch.
+- **Flags** (the JSON's `rules`; the first that matches wins). Only `ok` and `reviewed` are applied:
+
+  | flag | rule | count | applied |
+  | --- | --- | --- | --- |
+  | `reviewed` | hand-checked and kept, although `tall` would flag it | 5 | yes |
+  | `sparse` | fewer than 10 roof points | 2 | no |
+  | `low` | p90 < 2.0 m: not built at flight time, demolished, or offset | 17 | no |
+  | `ground` | p50 < 2.0 m: half the footprint reads at ground level | 30 | no |
+  | `mixed` | footprint < 500 m² and p90 − p50 > 6 m: tree canopy over a small building | 446 | no |
+  | `tall` | p90 > 6 + √area: implausibly tall for the footprint, usually a tree | 13 | no |
+  | `cap` | over 60 m | 0 | no |
+  | `ok` | passes every check | 7,271 | yes |
+
+- **Reviewed:**
+  - w1191920422, a 56.9 m Lehigh Cement plant structure (tower or silo block);
+  - w823185948, a 22.7 m Lehigh plant structure;
+  - the two water towers, w302693279 and w302693280, about 37 m;
+  - Stichman Towers, w1131808794 (whose OSM levels win anyway).
+- **Matched:** 7,784 of the 7,789 GF buildings. The other five:
+  - w696012135, w799190076 and w817028882, which straddle the bbox edge;
+  - w835350997 (9 Rogers St), which fell on a tile seam;
+  - r11213302, the one relation (only ways were measured).
+- **Generator:** `build-gf-lidar-heights.mjs` writes `js/gf-lidar-heights.js`, about 177 KB: the 7,276 usable heights
+  in `GF_BUILDINGS` order, plus the dataset, dates, method, credit and counts.
+  - It throws on an unknown or duplicate id, an unknown flag, `rules.use` other than `ok, reviewed`, a usable height
+    outside 2.0–60 m, and an `osmBase` that isn't `GF_BUILDINGS`'s.
+  - A rebuild is byte-identical.
+- **Precedence** (`js/gf-building-heights.js`, pure). `applyLidarHeights()` copies `GF_BUILDINGS`, which is unchanged,
+  and replaces only default-rule rows that have a usable value. Highest first:
+  1. a sourced landmark (`src 3`, CC-004, applied on top of the records when it is merged);
+  2. an OSM `height` tag (`src 0`) or `building:levels` (`src 1`);
+  3. **LiDAR, `src 4` = `lidar 2022-23`**;
+  4. CC-003's default rule (`src 2`, an approximation).
+
+  The records, colliders, storefronts and party walls all follow the new heights. The obstacles are the same polygons,
+  so the car network and sidewalk tracks don't change.
+- **Sources:** `[src 0, 1, 2, 3, 4]` goes from `[0, 49, 7740, 0, 0]` to **`[0, 49, 509, 0, 7231]`: 92.8% measured**.
+  - 45 usable values are on buildings with OSM levels and aren't applied.
+  - The 509 still on the default rule are 506 flagged values and 3 unmatched buildings.
+  - With CC-004's landmarks on top (they win), the game's final sources are **`[0, 47, 509, 16, 7217]`**: 14 landmarks
+    that would otherwise be LiDAR and 2 that would be OSM levels (333 Glen St, Stichman Towers) are `src 3`. The two
+    style-only landmarks (Church of the Messiah, First National Bank) show their LiDAR heights, 10.7 m and 13.6 m.
+  - Where LiDAR and a landmark disagree, the landmark wins: 333 Glen St renders at 38.1 m (LiDAR 45.9–47.5 m), the
+    Civic Center at its interior-derived 19.7 m (LiDAR roof 12.1 m), First Presbyterian at 21.3 m (LiDAR 18.8 m).
+- **Heights:**
+  - the mean goes from 7.16 m to 7.29 m; the max is 56.9 m (the Lehigh plant) and the min 2.3 m;
+  - 3 m bins: 0–3 m 50, 3–6 m 1,984, 6–9 m 4,362, 9–12 m 1,206, 12–15 m 144, 15–18 m 18, 18–21 m 12, 21–24 m 5,
+    24–27 m 2, 27–30 m 1, 33–36 m 1, 36–39 m 3, 54–57 m 1;
+  - downtown changes most: Cronin 24.7 m, Queensbury 17.9 m, City Hall 22.6 m, Empire Theatre 21.8 m.
+- **Known gaps:**
+  - **Era:** the heights are as flown in **2022–23, not 1993**. Buildings built or raised since 1993 are measured as
+    they stand: 14 Hudson (w682532345, built 2016–17) is 20.0 m, and the Lehigh plant tower's date is unknown. Houses
+    built after spring 2023 (the w13590970xx subdivision) read as ground and keep the default rule. Nothing post-1993
+    is hidden or lowered yet.
+  - **Roofs:** p90 includes pitched-roof ridges, so pitched houses come out a little taller than their eaves.
+  - **Flagged and unmatched:** 506 flagged values and 3 unmatched buildings keep the approximation.
+
 ## Source and licence
 
 Data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the
 [Open Database License (ODbL) 1.0](https://opendatacommons.org/licenses/odbl/1-0/). The raw extracts in
 `tools/gf/data/` and the derived `js/gf-geodata.js` are ODbL. The attribution "© OpenStreetMap contributors" appears
-here, in `GF_GEO.attribution` and on screen in the debug and game views. No other datasets are used, and no geography is placed
-by hand.
+here, in `GF_GEO.attribution` and on screen in the debug and game views. The one other dataset is the building heights
+from USGS 3DEP LiDAR (public domain; credited "USGS 3D Elevation Program" in the game view and in
+`GF_LIDAR_HEIGHTS.credit`, see LiDAR heights). No geography is placed by hand.
