@@ -19,6 +19,7 @@ import { GF_SIGNALS } from './gf-signals.js';
 import { buildGfSignalHeads } from './gf-signal-heads.js';
 import { GF_BUILDINGS } from './gf-buildings.js';
 import { buildGfBuildings } from './gf-building-meshes.js';
+import { GF_LANDMARKS } from './gf-landmarks.js';
 import { polygonContains } from './building-collision.js';
 
 // Glens Falls game view (index.html?city=glensfalls): the flat town from GF_GEO (roads, water, blocks), its road graph
@@ -151,9 +152,16 @@ async function initApp() {
   markInit('ground');
   await showLoadingStage('Raising buildings...');
   // OSM footprints, flat-roofed; most heights are gf-buildings.js's default rule (an approximation, see heightRule)
-  const buildings = buildGfBuildings(scene, GF_BUILDINGS);
+  // CC-004: the sourced landmark overrides (gf-landmarks.js) on top, and their roof shapes and the Civil War Monument
+  const buildings = buildGfBuildings(scene, GF_BUILDINGS, GF_LANDMARKS);
   const { records: perStyle, meshes, triangles } = buildings.stats;
-  console.info(`[gf] ${buildings.colliders.length} buildings (${Object.entries(perStyle).map(([s, n]) => `${n} ${s}`).join(', ')}): ${meshes} meshes, ${triangles} triangles`);
+  console.info(`[gf] ${Object.values(perStyle).reduce((n, v) => n + v, 0)} buildings (${Object.entries(perStyle).map(([s, n]) => `${n} ${s}`).join(', ')}): ${meshes} meshes, ${triangles} triangles`);
+  {
+    const { applied, features, pending, shapes } = buildings.landmarks;
+    const daveWaiting = pending.filter((p) => p.daveRequested);
+    console.info(`[gf] landmarks: ${applied.length} buildings overridden (${applied.filter((a) => a.after.src === GF_LANDMARKS.srcCode).length} src 3 sourced heights), ${features.length} features (${Object.entries(shapes.types).map(([t, n]) => `${n} ${t}`).join(', ')}), ${pending.length} pending`);
+    console.info(`[gf] landmarks pending for Dave: ${daveWaiting.map((p) => `${p.id} (${p.what})`).join('; ')}`);
+  }
   markInit('buildings');
   await showLoadingStage('Creating traffic...');
   // The OSM signals (gf-signals.js) as they are: the network signals the junction within 6 m of each (road-network.js 8.)
@@ -213,7 +221,17 @@ async function initApp() {
   const touchControls = new TouchControls(controllerManager);
   window.addEventListener('pagehide', savePlayerState);
   // For the console and automated checks (cars driving, where the player is)
-  globalThis.slopGlensFalls = { trafficSystem, controllerManager, cameraSystem, spawn, buildings: buildings.stats };
+  globalThis.slopGlensFalls = {
+    trafficSystem, controllerManager, cameraSystem, spawn, buildings: buildings.stats,
+    // CC-004: what was applied (with sources and confidence), what is waiting on data, and the approximate shape sizes
+    landmarks: {
+      applied: buildings.landmarks.applied,
+      features: buildings.landmarks.features.map(({ polygon, ...f }) => f),
+      pending: buildings.landmarks.pending,
+      flagged: buildings.landmarks.flagged,
+      shapes: buildings.landmarks.shapes
+    }
+  };
   document.addEventListener('visibilitychange', () => { if (document.hidden) savePlayerState(); });
   markInit('controllers');
 

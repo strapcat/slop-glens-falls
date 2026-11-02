@@ -42,6 +42,10 @@ const GF_PRELOADS = [
   'gf-buildings.js',
   'gf-building-records.js',
   'gf-building-meshes.js',
+  'gf-facades.js',
+  'gf-landmarks.js',
+  'gf-landmark-records.js',
+  'gf-landmark-meshes.js',
   'gf-main.js'
 ];
 

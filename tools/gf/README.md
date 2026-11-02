@@ -12,7 +12,8 @@ bash tools/gf/fetch.sh                  # Overpass -> tools/gf/data/osm_gf_{road
 node tools/gf/build-gf-geodata.mjs      # tools/gf/data/ -> js/gf-geodata.js, prints summary stats
 node tools/gf/build-gf-signals.mjs      # tools/gf/data/osm_gf_signals.json -> js/gf-signals.js
 node tools/gf/build-gf-buildings.mjs    # tools/gf/data/osm_gf_buildings.json -> js/gf-buildings.js, prints counts
-node --test tests/gf-geodata.test.mjs tests/gf-signals.test.mjs tests/gf-buildings.test.mjs
+node tools/gf/build-gf-landmarks.mjs    # tools/gf/data/gf_landmarks.json -> js/gf-landmarks.js, prints applied/pending
+node --test tests/gf-geodata.test.mjs tests/gf-signals.test.mjs tests/gf-buildings.test.mjs tests/gf-landmarks.test.mjs
 ```
 
 Then open `index.html?city=glensfalls&view=debug` (or `gf.html`) through a local web server for the flat debug view.
@@ -21,7 +22,8 @@ Add `&look=x,z,distance` to start the camera looking down at a point (metres) fr
 `screenshots/` use `look=0,-150,900` (downtown), `look=300,450,1300` (the Glen Street bridge over the Hudson) and
 `look=-1250,-1120,700` (Crandall Pond, a hole in its block). The game-view screenshots (`cc002*`, `cc003*`) name their
 places in the PR that added them; `cc003-downtown-glen.png`, `cc003-crandall-pond.png` and `cc003-overview.png` show
-the buildings.
+the buildings. `cc004-monument-square.png`, `cc004-civic-center.png`, `cc004-finch-pruyn.png` (unchanged, waiting on
+data) and `cc004-overview.png` show the landmarks.
 
 - `fetch.sh` runs each query through `tools/overpass.sh`, which keeps its endpoint fallback and retries and only
   replaces a file after a complete, valid response. The User-Agent is `OVERPASS_UA` (default
@@ -42,6 +44,7 @@ tests/` fails on Node 22 and later, which read the directory as a module.)
 | `data/osm_gf_water.json` | `q_gf_water.overpassql` | `natural=water` and `waterway=riverbank\|river\|canal` ways and relations, with their member ways and nodes |
 | `data/osm_gf_signals.json` | `q_gf_signals.overpassql` | `highway=traffic_signals` and `crossing=traffic_signals` nodes (see Signals) |
 | `data/osm_gf_buildings.json` | `q_gf_buildings.overpassql` | `building=*` ways and relations, with their member ways and nodes (see Buildings) |
+| `data/gf_landmarks.json` | none: compiled by Dave from web sources and OSM | sourced landmark heights, storeys, facades, roof features and the Civil War Monument (see Landmarks) |
 
 Bounding box: south 43.290, west -73.680, north 43.330, east -73.610.
 
@@ -285,6 +288,89 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
     the kept buildings, and one of those after 1993: South Glens Falls Hydroelectric, 1994 (w120878979). Clearing them
     out is a later task.
   - there are no landmarks, interiors or building details.
+
+### Landmarks
+
+- **Data:** `data/gf_landmarks.json` (schema `gf-landmarks/1`; its `rules` block documents it) comes from
+  `gf-landmarks.zip`, compiled by Dave on 1 Nov 2026 from:
+  - the City of Glens Falls 2024 walking tour and the Glens Falls MRA and Queensbury Hotel NRHP forms;
+  - glensfalls.com history pages and Glens Falls Chronicle articles;
+  - the arena's 2026 promoter guide, the First Presbyterian church brochure and the Glens Falls Housing Authority;
+  - SKYDB (heights it credits to Sanborn maps where noted), Finch Paper's history and Bonacio;
+  - OSM: building ids from the CC-003 extract, and the monument node.
+
+  The file is 44,652 bytes, sha256 `37582dfb…8127`, and is not edited here.
+- **The schema:**
+  - **Values:** each is `{ value, source: [https URLs], confidence: high|medium|low, note?, unit?, basis? }`. A null
+    value means unsourced.
+  - **Entries:** `id`, `name`, `daveRequested`, `status` (`use`, `needs-data`, `no-change`, `flag-only`), `osm`, then
+    `height`, `levels`, `facade` (`value.style`: brick, stone or clapboard), `features[]`, `built`, `status1993`,
+    `missing[]` and `notes`. The monument also has `kind: 'monument'`, `node { lat, lon }` and `form`.
+- **Generator:** `build-gf-landmarks.mjs` writes `js/gf-landmarks.js`, about 10 KB: `GF_LANDMARKS = { source, sha256,
+  attribution, srcCode: 3, buildings, features, pending, flagged }`, each list sorted by id. Every applied entry keeps
+  its source URLs and the lowest confidence of what was applied.
+
+  It throws on:
+  - an unknown OSM id or a duplicate id;
+  - an unknown status, feature type or facade style;
+  - a value without an `https://` source, or a confidence other than high, medium or low;
+  - a building height outside 2.5–60 m or a feature height outside 1–80 m;
+  - non-positive levels;
+  - a node without a numeric lat/lon.
+
+  A rebuild is byte-identical.
+- **Precedence, for `use` buildings:**
+  1. `height.value` (metres) wins.
+  2. Else `levels.value` × 3.3 + 0.6 m (CC-003's storey rule).
+  3. Else the CC-003 height stays.
+
+  A height from 1 or 2 is **`src 3`, a sourced landmark**. A sourced facade style replaces the CC-003 style.
+- **Applied at run time:** `js/gf-landmark-records.js` applies the layer on top of the CC-003 records.
+  `js/gf-buildings.js` and `js/gf-building-records.js` are unchanged. An overridden record and its collider are copies
+  with the new height, `src` and style. Pedestrian and car obstacles are untouched, so the road network and the
+  sidewalk tracks are CC-003's. Party walls see the new heights.
+- **Applied today:** 18 buildings (16 with a sourced height, 2 with only a facade style), First Presbyterian's flèche
+  and the Civil War Monument.
+- **Placeholders stay placeholders:** `needs-data`, `no-change` and `flag-only` entries apply nothing. A feature that is
+  `needs-data`, or has no sourced height or (unless anchored) position, is skipped. Every skip and every `missing[]`
+  item is listed in `GF_LANDMARKS.pending`, Dave-requested first; `flagged` lists the post-1993 buildings (14 Hudson,
+  South Glens Falls Hydroelectric), reported only.
+- **Shapes** (`js/gf-landmark-meshes.js`): simple procedural geometry, one mesh per material, in the stone and trim
+  colours of the feature's facade style (`js/gf-facades.js`). No textures. Only a feature's base and top (and the
+  monument's position) are sourced; every other size is a named constant, **approximate, not sourced**:
+
+  | shape | drawn as | approximate sizes |
+  | --- | --- | --- |
+  | spire (steeple) | square pyramid from the roof to the top, a cross making up its top 2.1 m (First Presbyterian's 7 ft cross) | base 4.0 m (`APPROX_SPIRE_BASE`); cross arm 1.2 m, bars 0.22 m (`APPROX_CROSS`) |
+  | tower | square prism from the roof | 5.0 m wide (`APPROX_TOWER_W`) |
+  | clock tower | a tower with four clock faces in the trim colour | faces 2.4 m (`APPROX_CLOCK_D`) |
+  | dome | half ellipsoid from the roof to the top | 8.0 m across (`APPROX_DOME_D`) unless given |
+  | smokestack | tapered cylinder from the ground | radius 2.0 → 1.2 m (`APPROX_STACK_R`) |
+  | gable, hip | roof over the footprint's minimum-area rectangle; skipped when the footprint fills under 90% of it | none |
+  | obelisk | plinth, tapered shaft, pyramidion and an eagle stand-in block; exactly the sourced total | plinth 3.0 × 1.8 m, shaft 1.4 → 1.0 m, pyramidion 1.0 m, eagle block 0.8 m (`APPROX_OBELISK`) |
+
+  No dome, clock tower, gable or hip is sourced on any landmark yet; tests exercise them on fixtures.
+- **The Civil War Monument:**
+  - an obelisk at OSM node n1354280283, local (−192.2, −167.4), 12.8 m (42 ft) high, in the stone tone;
+  - inside no building and 8.0 m from the nearest drive link (Bay St);
+  - the player collides with its plinth. It is no pedestrian obstacle; the nearest sidewalk track is 8.6 m away.
+- **Dave-requested:**
+
+  | landmark | OSM | CC-004 |
+  | --- | --- | --- |
+  | Glens Falls Civic Center (Harding Mazzotti Arena) | w120878994 | 19.7 m, `low` (interior-derived: high beam to floor 64′6″); roof flat |
+  | Finch Pruyn paper mill | w187195024 | pending: no sourced heights; smokestacks and wood pile not placed |
+  | Sandy's Clam Bar, 41 South St | w301593952 | 3 storeys → 10.5 m, `medium` |
+  | Crandall Public Library | w120878969 | pending: the 1993 massing (1931 building plus 1969 addition) is unsourced |
+  | Talk of the Town, 74 Hudson Ave | w695870843 | pending: identity and place sourced, size not |
+  | Civil War Monument | n1354280283 | 12.8 m obelisk |
+- **Sourced vs approximate vs pending:**
+
+  | | what | where it shows |
+  | --- | --- | --- |
+  | sourced | 16 heights (`src 3`), 8 facade styles, the flèche top (44.8 m), the monument's height and position | `GF_LANDMARKS.buildings` and `features`, with URLs and confidence |
+  | approximate | every other building height (CC-003's rule); the flèche's place (footprint centroid, `low`); every shape size above | `heightRule`, the `APPROX_*` constants, `slopGlensFalls.landmarks.shapes.approx` |
+  | pending | Finch Pruyn heights, stacks and wood pile; Crandall's 1993 massing; Talk of the Town's size; First Presbyterian's twin towers; the Church of the Messiah's bell tower and height; the `missing[]` items of applied landmarks | `GF_LANDMARKS.pending`, `slopGlensFalls.landmarks.pending` and the `[gf] landmarks pending for Dave` log line |
 
 ## Source and licence
 
