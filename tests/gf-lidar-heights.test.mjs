@@ -192,11 +192,17 @@ test('cars and pedestrians: the same obstacles, network and sidewalk tracks as C
   assert.deepEqual([all.filter((l) => l.length).length, all.reduce((n, l) => n + l.length, 0)], [2184, 9759]);
 });
 
-test('CC-003 untouched: its data, records, meshes and generator are byte-identical', () => {
+test('CC-003 and CC-004 untouched: their data, records, meshes and generators are byte-identical', () => {
   assert.equal(sha('js/gf-buildings.js'), '8486cea1552c174aa2158d7e446eff474acb913fe7f47b42c3acc90aed05519f');
   assert.equal(sha('js/gf-building-records.js'), '46aee4052b02f2b83f2f550f5b26f8df9cb5e7cf052e79cdd85ed6e9c33d210b');
-  assert.equal(sha('js/gf-building-meshes.js'), 'b83797187c62cbaaad7b4f0b92405d93f43541d6a0830edf0502d222d9682010');
   assert.equal(sha('tools/gf/build-gf-buildings.mjs'), 'f0917f5b1b13847962d9487476da87b34ea10d4bb69ad7f0858af3f9d7acb08a');
+  // gf-building-meshes.js as CC-004 left it (with its landmarks argument)
+  assert.equal(sha('js/gf-building-meshes.js'), 'b331ca04cb78655388c802e093debd32e9472c90d87c4f687f11458425ed0d4f');
+  assert.equal(sha('js/gf-landmarks.js'), '74db713effd5cb58fc046287b487003fef406e6f9a585e107734974200a3ed46');
+  assert.equal(sha('js/gf-landmark-records.js'), '491ebb86fd14446fed666107df16c4685593d3695e8de07e03dcf6092d3c1c64');
+  assert.equal(sha('js/gf-landmark-meshes.js'), '5e0159b02a2a7e806883ba9e0faa12a1b4dacb2f83769af09ea91d78f2bd158a');
+  assert.equal(sha('tools/gf/build-gf-landmarks.mjs'), '9856eb4bdbfacd29ef60bb556bbba853ddb0b3897f4b2c81776efdec891bdf89');
+  assert.equal(sha('tools/gf/data/gf_landmarks.json'), '37582dfb01e52366ca620a8ecb394f06389708a937cd9f3afc1eb22235528127');
 });
 
 // With CC-004 (sourced landmarks) merged, its landmarks go on top of the LiDAR records and win
