@@ -1,0 +1,1273 @@
+{
+  "schema": "gf-landmarks/1",
+  "compiled": "2026-11-01",
+  "purpose": "Sourced overrides for notable Glens Falls landmarks (CC-004). Only sourced values; anything unsourced is null and the loader skips it.",
+  "rules": {
+    "field": "Every value is {value, source: [https URLs], confidence: high|medium|low, note?}. value null means unsourced: skipped.",
+    "status": "use = apply the non-null fields; needs-data = placeholder, nothing applied until Dave supplies data; no-change = matched and documented, nothing to apply; flag-only = documented (e.g. post-1993), nothing applied in CC-004.",
+    "height": "height.value in metres wins (basis measured or lower-bound); else levels x 3.3 + 0.6 m (the CC-003 storey rule, labelled approximate metres from sourced storeys); else the building keeps its CC-003 height.",
+    "confidence": "high = primary/official source, several agreeing, or a specific figure from a reliable local source; medium = one secondary source, inference, or a conflict noted; low = placement or shape stand-in.",
+    "osm": "OSM ids from tools/gf/data/osm_gf_buildings.json (CC-003 extract, osm_base 2026-11-01T13:05:10Z); the monument node from an Overpass query on 2026-11-01 (osm_base 2026-11-01T20:47:06Z, overpass-api.de, Overpass API 0.7.62.11)."
+  },
+  "attribution": "OSM ids and the monument node position: © OpenStreetMap contributors, ODbL 1.0",
+  "landmarks": [
+    {
+      "id": "civic-center",
+      "name": "Glens Falls Civic Center (today Harding Mazzotti Arena)",
+      "daveRequested": true,
+      "status": "use",
+      "osm": "w120878994",
+      "osmMatch": {
+        "value": "OSM way named Harding Mazzotti Arena, 41 Glen St, start_date 1979; Wikipedia coordinates 43.308169,-73.641782 fall on this footprint",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://en.wikipedia.org/wiki/Harding_Mazzotti_Arena"
+        ],
+        "confidence": "high"
+      },
+      "height": {
+        "value": 19.7,
+        "unit": "m",
+        "basis": "lower-bound",
+        "source": [
+          "https://www.hardingmazzottiarena.com/s/HMA-2026-Promoters-Guide.pdf"
+        ],
+        "confidence": "low",
+        "note": "INTERIOR-DERIVED: the 2026 promoter guide gives high beam to floor 64 ft 6 in (19.7 m). If the arena floor is at street level the exterior roof is at least this high; if the floor is sunk below grade it is lower. The exterior height is not sourced: Dave to confirm."
+      },
+      "levels": null,
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": "ground broken 1977-08-15; opened 1979-05-18",
+        "source": [
+          "https://en.wikipedia.org/wiki/Harding_Mazzotti_Arena",
+          "https://www.glensfalls.com/history/buildings/glens-falls-civic-center/"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing",
+        "source": [
+          "https://en.wikipedia.org/wiki/Harding_Mazzotti_Arena",
+          "https://www.glensfalls.com/history/buildings/glens-falls-civic-center/"
+        ],
+        "confidence": "high"
+      },
+      "missing": [
+        "exterior roof height",
+        "roof shape (left flat)",
+        "facade material/colour (left at the default style)"
+      ],
+      "notes": "Designed by Crandell Associates / Donald McNeice; 4,794 seats (Wikipedia)."
+    },
+    {
+      "id": "finch-pruyn-mill",
+      "name": "Finch, Pruyn & Co. paper mill (OSM \"Finch Paper\")",
+      "daveRequested": true,
+      "status": "needs-data",
+      "osm": "w187195024",
+      "osmMatch": {
+        "value": "OSM way named Finch Paper, 1 Glen St (22,205 m2 main footprint)",
+        "source": [
+          "https://www.openstreetmap.org/"
+        ],
+        "confidence": "high"
+      },
+      "height": null,
+      "levels": null,
+      "facade": null,
+      "features": [
+        {
+          "type": "smokestack",
+          "status": "needs-data",
+          "position": null,
+          "height": null,
+          "note": "No man_made=chimney in OSM in the area; no sourced stack position or height. Dave to pinpoint count, positions and heights."
+        },
+        {
+          "type": "woodpile",
+          "status": "needs-data",
+          "position": null,
+          "height": null,
+          "note": "No OSM polygon for the log/wood yard. Dave to pinpoint the area."
+        }
+      ],
+      "built": {
+        "value": "company founded 1865; paper made on the site since 1905; 4th paper machine 1965; largest machine rebuilt and a larger warehouse added in the 1990s (exact years and which footprint not sourced)",
+        "source": [
+          "https://www.finchpaper.com/history",
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/9579/Pruyns-Path-Interpretive-Signs-final"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing (mill operating)",
+        "source": [
+          "https://www.finchpaper.com/history",
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/9579/Pruyns-Path-Interpretive-Signs-final"
+        ],
+        "confidence": "high"
+      },
+      "missing": [
+        "building heights",
+        "smokestack count/positions/heights",
+        "wood pile area",
+        "which mill buildings post-date 1993 (1990s warehouse)",
+        "OSM id of the 1911 Finch, Pruyn office building"
+      ],
+      "notes": "OSM also has w1122218893 (building=industrial, 2,385 m2, unnamed) next to the mill and landuse w1088635047 \"Finch Paper\" (a 29 MW biomass power plant, start 1987-06) which is not a building. The 1911 Finch, Pruyn office (Henry Forbes Bigelow, limestone Georgian Revival) is in the MRA nomination but not matched in OSM."
+    },
+    {
+      "id": "sandys-clam-bar",
+      "name": "Sandy's Clam Bar (41 South St)",
+      "daveRequested": true,
+      "status": "use",
+      "osm": "w301593952",
+      "osmMatch": {
+        "value": "41 South St, NE corner of South & Elm; OSM way addr 41 South Street",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://www.glensfallschronicle.com/bonacio-buys-sandys-building-for-305000/",
+          "https://www.glensfallschronicle.com/bonacio-under-contract-to-buy-sandys-building-on-south-street/"
+        ],
+        "confidence": "high"
+      },
+      "height": null,
+      "levels": {
+        "value": 3,
+        "source": [
+          "https://www.glensfallschronicle.com/bonacio-update-sandys-clam-bar-hotshots-incubator/"
+        ],
+        "confidence": "medium",
+        "note": "Inferred: the Bonacio renovation \"replaced the stairs to the second and third floors\"."
+      },
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": null,
+        "note": "construction date unsourced"
+      },
+      "status1993": {
+        "value": "standing; the bar was a nightlife hub in the 1980s (1993 operation not directly dated)",
+        "source": [
+          "https://www.glensfallschronicle.com/remembering-their-heyday-rich-mozal-sandys-clam-bar/",
+          "https://www.glensfallschronicle.com/bonacio-under-contract-to-buy-sandys-building-on-south-street/"
+        ],
+        "confidence": "medium"
+      },
+      "missing": [
+        "construction date",
+        "facade material/colour",
+        "whether Sandy's was still open in 1993 (Dave)"
+      ],
+      "notes": "Later vacant; bought by Bonacio in 2019; renovation started 2024."
+    },
+    {
+      "id": "crandall-library",
+      "name": "Crandall Public Library (251 Glen St)",
+      "daveRequested": true,
+      "status": "needs-data",
+      "osm": "w120878969",
+      "osmMatch": {
+        "value": "OSM way named Crandall Public Library, 251 Glen St",
+        "source": [
+          "https://www.openstreetmap.org/"
+        ],
+        "confidence": "high"
+      },
+      "height": null,
+      "levels": null,
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": "1931 Charles Platt building (Colonial Revival); 1969-70 addition (14,028 sq ft); 2008 expansion (Ann Beha with JMZ) demolished the 1969 addition and added a three-storey glass, metal and brick wing toward Glen St",
+        "source": [
+          "https://crandalllibrary.org/about-us/history/",
+          "https://www.glensfalls.com/history/buildings/crandall-library/",
+          "https://poststar.com/news/local/article_ca1302fb-9041-57b5-8671-d4790fca5747.html",
+          "https://www.annumarchitects.com/projects/crandall-public-library/",
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "altered after 1993: in 1993 the 1931 building plus the 1969-70 addition stood; the OSM footprint is very probably the post-2008 shape",
+        "source": [
+          "https://crandalllibrary.org/about-us/history/",
+          "https://poststar.com/news/local/article_ca1302fb-9041-57b5-8671-d4790fca5747.html"
+        ],
+        "confidence": "medium"
+      },
+      "missing": [
+        "1993 footprint (not in OSM)",
+        "storeys/height of the 1931 building and the 1969 addition",
+        "whether to keep the modern footprint as a stand-in"
+      ],
+      "notes": "The three-storey figure belongs to the 2008 wing, so it is NOT applied to a 1993 scene."
+    },
+    {
+      "id": "talk-of-the-town",
+      "name": "Talk of the Town (restaurant/pizzeria, 74 Hudson Ave)",
+      "daveRequested": true,
+      "status": "needs-data",
+      "osm": "w695870843",
+      "osmMatch": {
+        "value": "OSM way named Talk of the Town, amenity=restaurant, 74 Hudson Avenue",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://www.glensfallschronicle.com/harts-3rd-generation-steps-up/",
+          "https://www.talkofthetownpizzeria.com/about-us"
+        ],
+        "confidence": "high"
+      },
+      "height": null,
+      "levels": null,
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": "Hart family moved Hart's Cafe to this site in 1948; renamed Talk of the Town in 1980",
+        "source": [
+          "https://www.glensfallschronicle.com/harts-3rd-generation-steps-up/",
+          "https://www.glensfalls.com/glensfallsbusinessjournal/2014/02/bullpen-readies-to-reopen/",
+          "https://www.talkofthetownpizzeria.com/about-us"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing, operating as Talk of the Town",
+        "source": [
+          "https://www.glensfallschronicle.com/harts-3rd-generation-steps-up/",
+          "https://www.talkofthetownpizzeria.com/about-us"
+        ],
+        "confidence": "high"
+      },
+      "missing": [
+        "storeys/height",
+        "facade",
+        "Dave to confirm this is the Talk of the Town he means (it is ~1 km west of downtown, not on Glen St)"
+      ],
+      "notes": null
+    },
+    {
+      "id": "civil-war-monument",
+      "name": "Civil War Monument (Monument Square)",
+      "daveRequested": true,
+      "status": "use",
+      "osm": "n1354280283",
+      "osmMatch": {
+        "value": "OSM node historic=monument, name Civil War Monument, at 43.311007,-73.6463689 (local about -192.2, -167.4; 8.0 m from the nearest drive-link centreline, Bay St)",
+        "source": [
+          "https://www.openstreetmap.org/"
+        ],
+        "confidence": "high"
+      },
+      "height": {
+        "value": 12.8,
+        "unit": "m",
+        "basis": "measured",
+        "source": [
+          "https://www.glensfallschronicle.com/civil-war-monument-in-glens-falls-marks-150-years-some-history-facts/"
+        ],
+        "confidence": "high",
+        "note": "\"the 42-foot-high column\" (eagle at the peak)"
+      },
+      "levels": null,
+      "facade": {
+        "value": {
+          "material": "Vermont sandstone",
+          "style": "stone"
+        },
+        "source": [
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF",
+          "https://www.glensfalls.com/history/civil-war-monument/"
+        ],
+        "confidence": "high",
+        "note": "Colour of the sandstone unsourced: use the existing stone facade tone, labelled approximate."
+      },
+      "features": [],
+      "built": {
+        "value": "erected 1868, dedicated 1872, by R.T. Baxter; 120 tons",
+        "source": [
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF",
+          "https://www.glensfallschronicle.com/civil-war-monument-in-glens-falls-marks-150-years-some-history-facts/"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing (restored 1999, when the eagle was replaced by a terra cotta replica)",
+        "source": [
+          "https://www.glensfallschronicle.com/civil-war-monument-in-glens-falls-marks-150-years-some-history-facts/"
+        ],
+        "confidence": "high"
+      },
+      "missing": [
+        "base/plinth width and shaft proportions (approximate in code)",
+        "exact eagle size"
+      ],
+      "notes": "A second, unnamed historic=monument node n8291779709 (local about 30.1, 10.4) is not used.",
+      "kind": "monument",
+      "node": {
+        "lat": 43.311007,
+        "lon": -73.6463689
+      },
+      "form": {
+        "value": {
+          "type": "obelisk",
+          "topper": "eagle on a draped flag",
+          "extras_not_modelled": [
+            "two stone soldiers",
+            "eight cannons",
+            "medallions"
+          ]
+        },
+        "source": [
+          "https://www.glensfallschronicle.com/civil-war-monument-in-glens-falls-marks-150-years-some-history-facts/",
+          "https://www.glensfalls.com/history/civil-war-monument/"
+        ],
+        "confidence": "high"
+      }
+    },
+    {
+      "id": "monument-square-333-glen",
+      "name": "333 Glen St office tower (\"Travelers building\", OSM name \"Monument Square\")",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w126823063",
+      "osmMatch": {
+        "value": "OSM office way, building:levels=10; SKYDB lists 333 Glen Street",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://www.skydb.net/building/92656698/travelers-building/"
+        ],
+        "confidence": "high"
+      },
+      "height": {
+        "value": 38.1,
+        "unit": "m",
+        "basis": "measured",
+        "source": [
+          "https://www.skydb.net/building/92656698/travelers-building/"
+        ],
+        "confidence": "medium",
+        "note": "SKYDB main roof height, which SKYDB attributes to a Sanborn Map."
+      },
+      "levels": {
+        "value": 10,
+        "source": [
+          "https://www.glensfallschronicle.com/333-glen-for-sale-15-million/",
+          "https://www.skydb.net/building/92656698/travelers-building/"
+        ],
+        "confidence": "medium",
+        "note": "OSM, SKYDB and one Chronicle article say 10 storeys; another Chronicle article says \"nine-story\". Height above wins anyway."
+      },
+      "facade": {
+        "value": {
+          "material": "granite panels that look like marble",
+          "style": "stone"
+        },
+        "source": [
+          "https://www.glensfallschronicle.com/aiming-to-make-333-glen-pay-for-itself-again/"
+        ],
+        "confidence": "medium"
+      },
+      "features": [],
+      "built": {
+        "value": "c. 1972-73, for Continental Insurance",
+        "source": [
+          "https://www.glensfallschronicle.com/aiming-to-make-333-glen-pay-for-itself-again/",
+          "https://www.skydb.net/building/92656698/travelers-building/"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing",
+        "source": [
+          "https://www.glensfallschronicle.com/aiming-to-make-333-glen-pay-for-itself-again/",
+          "https://www.skydb.net/building/92656698/travelers-building/"
+        ],
+        "confidence": "high"
+      },
+      "missing": [],
+      "notes": "Glens Falls' only high-rise office building (Chronicle). The 1912 five-storey Glens Falls Insurance Co. building on the corner was razed in 1976 (lawn since), so nothing to add for 1993."
+    },
+    {
+      "id": "stichman-towers",
+      "name": "Herman T. Stichman Towers",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w1131808794",
+      "osmMatch": {
+        "value": "OSM name match, levels=11",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://www.skydb.net/building/124994446/stichman-towers/"
+        ],
+        "confidence": "high"
+      },
+      "height": null,
+      "levels": {
+        "value": 11,
+        "source": [
+          "https://glensfallshousingauthority.org/stichman-towers/",
+          "https://www.skydb.net/building/124994446/stichman-towers/",
+          "https://skyscraperpage.com/b104127/glens-falls/stichman-towers"
+        ],
+        "confidence": "high"
+      },
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": "started 1969, occupied 1971 (GFHA); SKYDB says 1972",
+        "source": [
+          "https://www.glensfallshousingauthority.org/HISTORY.htm",
+          "https://www.skydb.net/building/124994446/stichman-towers/"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing",
+        "source": [
+          "https://www.glensfallshousingauthority.org/HISTORY.htm"
+        ],
+        "confidence": "high"
+      },
+      "missing": [],
+      "notes": null
+    },
+    {
+      "id": "cronin-high-rise",
+      "name": "Robert J. Cronin High Rise (43 Ridge St)",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w126823060",
+      "osmMatch": {
+        "value": "OSM name match (Robert J Cronin Building)",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://www.skydb.net/building/907643599/cronin-high-rise/"
+        ],
+        "confidence": "high"
+      },
+      "height": {
+        "value": 24.4,
+        "unit": "m",
+        "basis": "measured",
+        "source": [
+          "https://www.skydb.net/building/907643599/cronin-high-rise/"
+        ],
+        "confidence": "medium",
+        "note": "SKYDB, attributed to a Sanborn Map"
+      },
+      "levels": {
+        "value": 9,
+        "source": [
+          "https://www.skydb.net/building/907643599/cronin-high-rise/"
+        ],
+        "confidence": "medium"
+      },
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": "started 1979, occupied 1981",
+        "source": [
+          "https://www.glensfallshousingauthority.org/HISTORY.htm",
+          "https://www.skydb.net/building/907643599/cronin-high-rise/"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing",
+        "source": [
+          "https://www.glensfallshousingauthority.org/HISTORY.htm"
+        ],
+        "confidence": "high"
+      },
+      "missing": [],
+      "notes": null
+    },
+    {
+      "id": "queensbury-hotel",
+      "name": "The Queensbury Hotel (88 Ridge St)",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w126823062",
+      "osmMatch": {
+        "value": "OSM name match",
+        "source": [
+          "https://www.openstreetmap.org/"
+        ],
+        "confidence": "high"
+      },
+      "height": {
+        "value": 19.5,
+        "unit": "m",
+        "basis": "measured",
+        "source": [
+          "https://www.skydb.net/building/101497291/queensbury-hotel/"
+        ],
+        "confidence": "medium",
+        "note": "SKYDB main roof height (no measurement source given)"
+      },
+      "levels": {
+        "value": 5,
+        "source": [
+          "https://npgallery.nps.gov/GetAsset/b3e1d2b0-dfba-4488-8473-df23f046cbee",
+          "https://www.skydb.net/building/101497291/queensbury-hotel/"
+        ],
+        "confidence": "high"
+      },
+      "facade": {
+        "value": {
+          "material": "red brick (common bond) with cast-stone trim over steel and concrete",
+          "style": "brick"
+        },
+        "source": [
+          "https://npgallery.nps.gov/GetAsset/b3e1d2b0-dfba-4488-8473-df23f046cbee"
+        ],
+        "confidence": "high"
+      },
+      "features": [],
+      "built": {
+        "value": "1924-26; additions 1929 and 1985 (1-3 storeys, rear/north); ballroom expansion 2022",
+        "source": [
+          "https://npgallery.nps.gov/GetAsset/b3e1d2b0-dfba-4488-8473-df23f046cbee",
+          "https://www.thequeensburyhotel.com/explore/history/"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing (1985 addition included)",
+        "source": [
+          "https://npgallery.nps.gov/GetAsset/b3e1d2b0-dfba-4488-8473-df23f046cbee"
+        ],
+        "confidence": "high"
+      },
+      "missing": [],
+      "notes": "The OSM footprint includes the lower rear additions (and maybe the 2022 ballroom), so 5 storeys over the whole footprint overstates those parts."
+    },
+    {
+      "id": "city-hall",
+      "name": "Glens Falls City Hall (42 Ridge St)",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w120878995",
+      "osmMatch": {
+        "value": "OSM name match",
+        "source": [
+          "https://www.openstreetmap.org/"
+        ],
+        "confidence": "high"
+      },
+      "height": null,
+      "levels": {
+        "value": 3,
+        "source": [
+          "https://www.skydb.net/building/369862080/glens-falls-city-hall/"
+        ],
+        "confidence": "medium",
+        "note": "SKYDB, \"visual check\""
+      },
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": "1900 as Village Hall (Fuller & Pitcher); City Hall from 1908; Roman Revival / Neoclassical",
+        "source": [
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF",
+          "https://www.glensfalls.com/history/buildings/city-hall/"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing",
+        "source": [
+          "https://www.glensfalls.com/history/buildings/city-hall/"
+        ],
+        "confidence": "high"
+      },
+      "missing": [],
+      "notes": "Decorative eagle atop the cornice (not modelled). No dome or clock tower is sourced."
+    },
+    {
+      "id": "first-presbyterian",
+      "name": "First Presbyterian Church (400 Glen St)",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w732804477",
+      "osmMatch": {
+        "value": "OSM building=church at 400 Glen St (unnamed); NRHP lists 402-410 Glen St",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://en.wikipedia.org/wiki/First_Presbyterian_Church_(Glens_Falls,_New_York)"
+        ],
+        "confidence": "medium"
+      },
+      "height": {
+        "value": 21.3,
+        "unit": "m",
+        "basis": "lower-bound",
+        "source": [
+          "https://docest.com/doc/342537/the-organs-in-first-presbyterian-church-glens-falls-new-york"
+        ],
+        "confidence": "medium",
+        "note": "LOWER BOUND for the nave: interior height to the ridge 70 ft. The footprint also covers lower parts, which this over-states. Roof drawn flat."
+      },
+      "levels": null,
+      "facade": {
+        "value": {
+          "material": "Indiana limestone and Massachusetts granite",
+          "style": "stone"
+        },
+        "source": [
+          "https://docest.com/doc/342537/the-organs-in-first-presbyterian-church-glens-falls-new-york"
+        ],
+        "confidence": "high"
+      },
+      "features": [
+        {
+          "type": "spire",
+          "status": "use",
+          "name": "copper fleche",
+          "height": {
+            "value": 44.8,
+            "unit": "m",
+            "source": [
+              "https://docest.com/doc/342537/the-organs-in-first-presbyterian-church-glens-falls-new-york"
+            ],
+            "confidence": "high",
+            "note": "Fleche 140 ft above grade plus a 7 ft Celtic cross = 147 ft (44.8 m) to the top."
+          },
+          "anchor": {
+            "value": "footprint centroid",
+            "confidence": "low",
+            "note": "Placement approximate (a fleche normally sits over the crossing); Dave can correct."
+          }
+        },
+        {
+          "type": "tower",
+          "status": "needs-data",
+          "name": "twin turreted towers",
+          "height": {
+            "value": 23.8,
+            "unit": "m",
+            "source": [
+              "https://docest.com/doc/342537/the-organs-in-first-presbyterian-church-glens-falls-new-york"
+            ],
+            "confidence": "high",
+            "note": "78 ft above grade"
+          },
+          "position": null,
+          "note": "Positions unsourced, so skipped until Dave places them."
+        }
+      ],
+      "built": {
+        "value": "cornerstone 1926, dedicated 1929; Ralph Adams Cram",
+        "source": [
+          "https://docest.com/doc/342537/the-organs-in-first-presbyterian-church-glens-falls-new-york",
+          "https://en.wikipedia.org/wiki/First_Presbyterian_Church_(Glens_Falls,_New_York)"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing",
+        "source": [
+          "https://en.wikipedia.org/wiki/First_Presbyterian_Church_(Glens_Falls,_New_York)"
+        ],
+        "confidence": "high"
+      },
+      "missing": [],
+      "notes": null
+    },
+    {
+      "id": "church-of-the-messiah",
+      "name": "Church of the Messiah (Episcopal, 296 Glen St)",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w301403364",
+      "osmMatch": {
+        "value": "OSM way at 296 Glen St (unnamed building=yes)",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://www.glensfalls.com/history/buildings/church-of-the-messiah/"
+        ],
+        "confidence": "medium"
+      },
+      "height": null,
+      "levels": null,
+      "facade": {
+        "value": {
+          "material": "stone, Gothic Revival",
+          "style": "stone"
+        },
+        "source": [
+          "https://www.glensfalls.com/history/buildings/church-of-the-messiah/",
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF"
+        ],
+        "confidence": "high"
+      },
+      "features": [
+        {
+          "type": "tower",
+          "status": "needs-data",
+          "name": "bell tower",
+          "height": null,
+          "position": null,
+          "note": "The bell tower exists (restoration began 2025) but its height and position are unsourced."
+        }
+      ],
+      "built": {
+        "value": "1854-1865, consecrated 1866; John W. Summers",
+        "source": [
+          "https://www.glensfalls.com/history/buildings/church-of-the-messiah/",
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing",
+        "source": [
+          "https://www.glensfalls.com/history/buildings/church-of-the-messiah/"
+        ],
+        "confidence": "high"
+      },
+      "missing": [
+        "height",
+        "bell tower height and position"
+      ],
+      "notes": null
+    },
+    {
+      "id": "st-marys-church",
+      "name": "St. Mary's Church (Catholic, 61 Warren St)",
+      "daveRequested": false,
+      "status": "no-change",
+      "osm": "w187527430",
+      "osmMatch": {
+        "value": "OSM church \"St. Mary's Church\", 59-65 Warren St; the walking tour gives 61 Warren St",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF"
+        ],
+        "confidence": "medium"
+      },
+      "height": null,
+      "levels": null,
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": "cornerstone 1867, completed 1869 (Nichols & Brown), Gothic Revival",
+        "source": [
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF",
+          "https://storymaps.arcgis.com/stories/9e4164f8db2947948e21e39fa1582400"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing, WITHOUT its original pointed steeple (removed in the 1930s), so no spire in 1993",
+        "source": [
+          "https://kentingley.substack.com/p/chapmans-walking-tour-illuminates",
+          "https://storymaps.arcgis.com/stories/9e4164f8db2947948e21e39fa1582400"
+        ],
+        "confidence": "medium"
+      },
+      "missing": [
+        "height"
+      ],
+      "notes": "OSM also has w697247409 \"Saint Mary Catholic Church\" at 60-64 Warren St (south side, 360 m2). The walking tour puts the former post office (1915) at 62 Warren St on the south side, so that way may be the former post office: Dave to confirm."
+    },
+    {
+      "id": "st-marys-academy",
+      "name": "St. Mary's Academy building (10 Church St)",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w187527429",
+      "osmMatch": {
+        "value": "OSM \"St. Mary's School\" at Church St",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://www.glensfalls.com/history/buildings/st-marys-st-alphonsus/"
+        ],
+        "confidence": "medium"
+      },
+      "height": null,
+      "levels": {
+        "value": 3,
+        "source": [
+          "https://www.glensfalls.com/history/buildings/st-marys-st-alphonsus/"
+        ],
+        "confidence": "high",
+        "note": "The OSM footprint (2,899 m2) may include other wings."
+      },
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": "1930-32 (sources differ), Ralph Adams Cram, Neogothic",
+        "source": [
+          "https://www.glensfalls.com/history/buildings/st-marys-st-alphonsus/",
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing",
+        "source": [
+          "https://www.glensfalls.com/history/buildings/st-marys-st-alphonsus/"
+        ],
+        "confidence": "high"
+      },
+      "missing": [],
+      "notes": null
+    },
+    {
+      "id": "ordway-hall",
+      "name": "Ordway Hall / former YMCA (\"Professional Building\", 221 Glen St)",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w186123053",
+      "osmMatch": {
+        "value": "OSM \"Ordway Hall\", 221 Glen St; SKYDB \"Professional Building\" 221-227 Glen St; walking tour YMCA 221 Glen St",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://www.skydb.net/building/357827860/professional-building/",
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF"
+        ],
+        "confidence": "high"
+      },
+      "height": {
+        "value": 19.8,
+        "unit": "m",
+        "basis": "measured",
+        "source": [
+          "https://www.skydb.net/building/357827860/professional-building/"
+        ],
+        "confidence": "medium",
+        "note": "SKYDB roof height (no measurement source given)"
+      },
+      "levels": {
+        "value": 4,
+        "source": [
+          "https://www.skydb.net/building/357827860/professional-building/"
+        ],
+        "confidence": "medium"
+      },
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": "1891, Romanesque Revival",
+        "source": [
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF",
+          "https://www.skydb.net/building/357827860/professional-building/"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing (renovated 1995)",
+        "source": [
+          "https://www.skydb.net/building/357827860/professional-building/"
+        ],
+        "confidence": "medium"
+      },
+      "missing": [],
+      "notes": null
+    },
+    {
+      "id": "colvin-building",
+      "name": "Colvin Building (206 Glen St)",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w1095429994",
+      "osmMatch": {
+        "value": "OSM name match only (no address on the way); SKYDB gives 206-214 Glen St",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://www.skydb.net/building/39848165/colvin-building/"
+        ],
+        "confidence": "medium"
+      },
+      "height": {
+        "value": 17.1,
+        "unit": "m",
+        "basis": "measured",
+        "source": [
+          "https://www.skydb.net/building/39848165/colvin-building/"
+        ],
+        "confidence": "medium",
+        "note": "SKYDB"
+      },
+      "levels": {
+        "value": 5,
+        "source": [
+          "https://www.skydb.net/building/39848165/colvin-building/"
+        ],
+        "confidence": "medium",
+        "note": "SKYDB \"visual check\""
+      },
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": null,
+        "note": "construction date unsourced"
+      },
+      "status1993": {
+        "value": null,
+        "note": "unsourced (an old downtown block, but not dated)"
+      },
+      "missing": [],
+      "notes": null
+    },
+    {
+      "id": "rogers-building",
+      "name": "Rogers Building (21 Bay St)",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w126823058",
+      "osmMatch": {
+        "value": "OSM name match",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://www.glensfalls.com/glensfallsbusinessjournal/2013/02/bay-street-building-renovation/"
+        ],
+        "confidence": "high"
+      },
+      "height": null,
+      "levels": {
+        "value": 4,
+        "source": [
+          "https://www.glensfalls.com/glensfallsbusinessjournal/2013/02/bay-street-building-renovation/"
+        ],
+        "confidence": "high",
+        "note": "\"the four-story structure at 21 Bay Street\""
+      },
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": null,
+        "note": "1926-27 per Wikipedia (Three Squares HD), not independently checked"
+      },
+      "status1993": {
+        "value": "standing",
+        "source": [
+          "https://www.glensfalls.com/glensfallsbusinessjournal/2013/02/bay-street-building-renovation/"
+        ],
+        "confidence": "medium"
+      },
+      "missing": [],
+      "notes": null
+    },
+    {
+      "id": "empire-theatre",
+      "name": "Empire Theatre (11-17 South St)",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w301593962",
+      "osmMatch": {
+        "value": "OSM address 11-17 South Street",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://www.glensfalls.com/history/buildings/empire-theatre/"
+        ],
+        "confidence": "high"
+      },
+      "height": null,
+      "levels": {
+        "value": 3,
+        "source": [
+          "https://www.glensfalls.com/history/buildings/empire-theatre/"
+        ],
+        "confidence": "high",
+        "note": "\"a three story neo-classical building\""
+      },
+      "facade": {
+        "value": {
+          "material": "brick, Warren County granite and a terra cotta front",
+          "style": "brick"
+        },
+        "source": [
+          "https://www.glensfalls.com/history/buildings/empire-theatre/"
+        ],
+        "confidence": "medium"
+      },
+      "features": [],
+      "built": {
+        "value": "1898-99 (J.B. McElfatrick); renovated 1950 and 2008 (Empire Theatre Plaza)",
+        "source": [
+          "https://www.glensfalls.com/history/buildings/empire-theatre/",
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing",
+        "source": [
+          "https://www.glensfalls.com/history/buildings/empire-theatre/"
+        ],
+        "confidence": "high"
+      },
+      "missing": [],
+      "notes": "The \"metal ventilation dome\" was the third-floor ballroom ceiling, so it is not modelled as a roof dome."
+    },
+    {
+      "id": "first-national-bank",
+      "name": "First National Bank Building (237 Glen St)",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w186123056",
+      "osmMatch": {
+        "value": "OSM name match",
+        "source": [
+          "https://www.openstreetmap.org/"
+        ],
+        "confidence": "high"
+      },
+      "height": null,
+      "levels": null,
+      "facade": {
+        "value": {
+          "material": "granite and Vermont marble over a steel frame, Beaux-Arts",
+          "style": "stone"
+        },
+        "source": [
+          "https://www.glensfalls.com/history/buildings/first-national-bank/",
+          "https://npgallery.nps.gov/NRHP/GetAsset/NRHP/64000551_text"
+        ],
+        "confidence": "high"
+      },
+      "features": [],
+      "built": {
+        "value": "1914-15 (Mowbray & Uffinger)",
+        "source": [
+          "https://www.glensfalls.com/history/buildings/first-national-bank/"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing",
+        "source": [
+          "https://www.glensfalls.com/history/buildings/first-national-bank/"
+        ],
+        "confidence": "high"
+      },
+      "missing": [
+        "storeys/height"
+      ],
+      "notes": null
+    },
+    {
+      "id": "davidson-brothers",
+      "name": "Davidson Brothers building (184 Glen St)",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w300084746",
+      "osmMatch": {
+        "value": "OSM address 184 Glen Street",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://www.glensfalls.com/history/buildings/davidson-brothers/"
+        ],
+        "confidence": "high"
+      },
+      "height": null,
+      "levels": {
+        "value": 3,
+        "source": [
+          "https://www.glensfalls.com/history/buildings/davidson-brothers/"
+        ],
+        "confidence": "high",
+        "note": "\"The three-story building at 184 Glen Street\""
+      },
+      "facade": {
+        "value": {
+          "material": "brick (Italianate; window ironwork replaced in the early 1900s)",
+          "style": "brick"
+        },
+        "source": [
+          "https://www.glensfalls.com/history/buildings/davidson-brothers/"
+        ],
+        "confidence": "high"
+      },
+      "features": [],
+      "built": {
+        "value": "1865",
+        "source": [
+          "https://www.glensfalls.com/history/buildings/davidson-brothers/"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing",
+        "source": [
+          "https://www.glensfalls.com/history/buildings/davidson-brothers/"
+        ],
+        "confidence": "medium"
+      },
+      "missing": [],
+      "notes": null
+    },
+    {
+      "id": "hyde-house",
+      "name": "Hyde House (The Hyde Collection, 161 Warren St)",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w244907795",
+      "osmMatch": {
+        "value": "OSM name match",
+        "source": [
+          "https://www.openstreetmap.org/"
+        ],
+        "confidence": "high"
+      },
+      "height": null,
+      "levels": {
+        "value": 2,
+        "source": [
+          "https://www.glensfalls.com/history/buildings/hyde-house/",
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF"
+        ],
+        "confidence": "medium",
+        "note": "glensfalls.com: two-story; the walking tour: \"two-and-a-half story stucco\""
+      },
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": "1910-12, Henry Forbes Bigelow; Education Wing (Edward Larrabee Barnes) 1989",
+        "source": [
+          "https://www.glensfalls.com/history/buildings/hyde-house/",
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing",
+        "source": [
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF"
+        ],
+        "confidence": "high"
+      },
+      "missing": [],
+      "notes": null
+    },
+    {
+      "id": "mcechron-house",
+      "name": "McEchron House (65 Ridge St)",
+      "daveRequested": false,
+      "status": "use",
+      "osm": "w741473065",
+      "osmMatch": {
+        "value": "OSM name and address match",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://www.glensfalls.com/history/buildings/mcechron-house/"
+        ],
+        "confidence": "high"
+      },
+      "height": null,
+      "levels": {
+        "value": 2.5,
+        "source": [
+          "https://www.glensfalls.com/history/buildings/mcechron-house/"
+        ],
+        "confidence": "high",
+        "note": "\"a 2 1/2 story\" building"
+      },
+      "facade": {
+        "value": {
+          "material": "stone framework; first storey random ashlar sandstone",
+          "style": "stone"
+        },
+        "source": [
+          "https://www.glensfalls.com/history/buildings/mcechron-house/"
+        ],
+        "confidence": "medium"
+      },
+      "features": [],
+      "built": {
+        "value": "1891",
+        "source": [
+          "https://www.glensfalls.com/history/buildings/mcechron-house/",
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "standing",
+        "source": [
+          "https://www.cityofglensfallsny.gov/DocumentCenter/View/8487/City-of-Glens-Falls-Self-Guided-Historical-Walking-Tour-2024-PDF"
+        ],
+        "confidence": "medium"
+      },
+      "missing": [],
+      "notes": null
+    },
+    {
+      "id": "14-hudson",
+      "name": "14 Hudson (Bonacio mixed-use)",
+      "daveRequested": false,
+      "status": "flag-only",
+      "osm": "w682532345",
+      "osmMatch": {
+        "value": "OSM name/address 14 Hudson Avenue",
+        "source": [
+          "https://www.openstreetmap.org/",
+          "https://bonacio.com/portfolio/14-hudson-apartments/"
+        ],
+        "confidence": "high"
+      },
+      "height": null,
+      "levels": null,
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": "2016-17",
+        "source": [
+          "https://bonacio.com/portfolio/14-hudson-apartments/",
+          "https://www.glensfalls.com/glensfallsbusinessjournal/2015/12/as-bonacio-project-gets-under-way-head-of-edc-sees-significant-impact-on-downtown/"
+        ],
+        "confidence": "high"
+      },
+      "status1993": {
+        "value": "absent (post-1993)",
+        "source": [
+          "https://bonacio.com/portfolio/14-hudson-apartments/",
+          "https://www.glensfalls.com/glensfallsbusinessjournal/2015/12/as-bonacio-project-gets-under-way-head-of-edc-sees-significant-impact-on-downtown/"
+        ],
+        "confidence": "high"
+      },
+      "missing": [],
+      "notes": "Flag only: whether to hide post-1993 buildings is a later 1993-cleanup decision."
+    },
+    {
+      "id": "sgf-hydro",
+      "name": "South Glens Falls Hydroelectric",
+      "daveRequested": false,
+      "status": "flag-only",
+      "osm": "w120878979",
+      "osmMatch": {
+        "value": "OSM name match",
+        "source": [
+          "https://www.openstreetmap.org/"
+        ],
+        "confidence": "high"
+      },
+      "height": null,
+      "levels": null,
+      "facade": null,
+      "features": [],
+      "built": {
+        "value": "1994-08 (OSM start_date only)",
+        "source": [
+          "https://www.openstreetmap.org/"
+        ],
+        "confidence": "medium"
+      },
+      "status1993": {
+        "value": "absent (post-1993) per the OSM tag",
+        "source": [
+          "https://www.openstreetmap.org/"
+        ],
+        "confidence": "medium"
+      },
+      "missing": [],
+      "notes": null
+    }
+  ]
+}
