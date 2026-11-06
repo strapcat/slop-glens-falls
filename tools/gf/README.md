@@ -335,6 +335,26 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
   sidewalk tracks are CC-003's. Party walls see the new heights.
 - **Applied today:** 18 buildings (16 with a sourced height, 2 with only a facade style), First Presbyterian's flèche
   and the Civil War Monument.
+- **CC-004b, LiDAR exterior roofs:** nine landmark heights that disagreed with the measured USGS 3DEP LiDAR roof (see
+  LiDAR heights) by more than about 2 m now use that LiDAR value in `gf_landmarks.json`, still as `src 3`, sourced to the
+  USGS project report:
+
+  | landmark | OSM | was | now |
+  | --- | --- | --- | --- |
+  | civic-center | w120878994 | 19.7 m (interior high beam to floor) | 12.1 m |
+  | monument-square-333-glen | w126823063 | 38.1 m (SKYDB) | 47.5 m (p90; main roof p50 about 45.9 m) |
+  | city-hall | w120878995 | 10.5 m (3 storeys) | 22.6 m |
+  | empire-theatre | w301593962 | 10.5 m (3 storeys) | 21.8 m |
+  | st-marys-academy | w187527429 | 10.5 m (3 storeys) | 20.4 m |
+  | mcechron-house | w741473065 | 8.9 m (2½ storeys) | 13.0 m |
+  | colvin-building | w1095429994 | 17.1 m (SKYDB) | 20.5 m |
+  | hyde-house | w244907795 | 7.2 m (2 storeys) | 9.5 m |
+  | first-presbyterian | w732804477 | 21.3 m (nave interior lower bound) | 18.8 m (the flèche now starts there) |
+
+  These are **2022–23 exterior measurements**, not 1993 reconstructions. For these long-standing downtown buildings
+  that is acceptable in a prototype inspired by 1993. Overlays within about 2 m of LiDAR (Cronin, Queensbury, Ordway,
+  Rogers, Stichman, Sandy's, Davidson) were left alone, as were the style-only rows, the monument and every pending
+  placeholder.
 - **Placeholders stay placeholders:** `needs-data`, `no-change` and `flag-only` entries apply nothing. A feature that is
   `needs-data`, or has no sourced height or (unless anchored) position, is skipped. Every skip and every `missing[]`
   item is listed in `GF_LANDMARKS.pending`, Dave-requested first; `flagged` lists the post-1993 buildings (14 Hudson,
@@ -362,7 +382,7 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
 
   | landmark | OSM | CC-004 |
   | --- | --- | --- |
-  | Glens Falls Civic Center (Harding Mazzotti Arena) | w120878994 | 19.7 m, `low` (interior-derived: high beam to floor 64′6″); roof flat |
+  | Glens Falls Civic Center (Harding Mazzotti Arena) | w120878994 | 12.1 m, `high`: the LiDAR exterior roof (CC-004b; CC-004 had 19.7 m, interior-derived from high beam to floor 64′6″); roof flat |
   | Finch Pruyn paper mill | w187195024 | pending: no sourced heights; smokestacks and wood pile not placed |
   | Sandy's Clam Bar, 41 South St | w301593952 | 3 storeys → 10.5 m, `medium` |
   | Crandall Public Library | w120878969 | pending: the 1993 massing (1931 building plus 1969 addition) is unsourced |
@@ -435,8 +455,9 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
   - With CC-004's landmarks on top (they win), the game's final sources are **`[0, 47, 509, 16, 7217]`**: 14 landmarks
     that would otherwise be LiDAR and 2 that would be OSM levels (333 Glen St, Stichman Towers) are `src 3`. The two
     style-only landmarks (Church of the Messiah, First National Bank) show their LiDAR heights, 10.7 m and 13.6 m.
-  - Where LiDAR and a landmark disagree, the landmark wins: 333 Glen St renders at 38.1 m (LiDAR 45.9–47.5 m), the
-    Civic Center at its interior-derived 19.7 m (LiDAR roof 12.1 m), First Presbyterian at 21.3 m (LiDAR 18.8 m).
+  - Where LiDAR and a landmark disagree, the landmark wins. Since CC-004b the nine landmarks that disagreed by more
+    than about 2 m carry the LiDAR value themselves (see Landmarks), so the remaining differences are within about
+    2 m.
 - **Heights:**
   - the mean goes from 7.16 m to 7.29 m; the max is 56.9 m (the Lehigh plant) and the min 2.3 m;
   - 3 m bins: 0–3 m 50, 3–6 m 1,984, 6–9 m 4,362, 9–12 m 1,206, 12–15 m 144, 15–18 m 18, 18–21 m 12, 21–24 m 5,
