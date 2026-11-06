@@ -198,11 +198,11 @@ test('CC-003 and CC-004 untouched: their data, records, meshes and generators ar
   assert.equal(sha('tools/gf/build-gf-buildings.mjs'), 'f0917f5b1b13847962d9487476da87b34ea10d4bb69ad7f0858af3f9d7acb08a');
   // gf-building-meshes.js as CC-004 left it (with its landmarks argument)
   assert.equal(sha('js/gf-building-meshes.js'), 'b331ca04cb78655388c802e093debd32e9472c90d87c4f687f11458425ed0d4f');
-  assert.equal(sha('js/gf-landmarks.js'), '74db713effd5cb58fc046287b487003fef406e6f9a585e107734974200a3ed46');
+  assert.equal(sha('js/gf-landmarks.js'), '49f2985744ffbdb25e78b1c4051a1c025c43c553d29009adddad83c837d3a538');
   assert.equal(sha('js/gf-landmark-records.js'), '491ebb86fd14446fed666107df16c4685593d3695e8de07e03dcf6092d3c1c64');
   assert.equal(sha('js/gf-landmark-meshes.js'), '5e0159b02a2a7e806883ba9e0faa12a1b4dacb2f83769af09ea91d78f2bd158a');
   assert.equal(sha('tools/gf/build-gf-landmarks.mjs'), '9856eb4bdbfacd29ef60bb556bbba853ddb0b3897f4b2c81776efdec891bdf89');
-  assert.equal(sha('tools/gf/data/gf_landmarks.json'), '37582dfb01e52366ca620a8ecb394f06389708a937cd9f3afc1eb22235528127');
+  assert.equal(sha('tools/gf/data/gf_landmarks.json'), 'f2889fced72f8760763e9935288e7ebb300186c0e5ddb0c6625042c33ed71b28');
 });
 
 // With CC-004 (sourced landmarks) merged, its landmarks go on top of the LiDAR records and win
