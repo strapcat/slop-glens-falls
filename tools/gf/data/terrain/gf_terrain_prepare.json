@@ -1,0 +1,58 @@
+{
+  "script": "tools/gf/prepare-gf-terrain.mjs",
+  "sources": [
+    {
+      "name": "USGS_1M_18_x60y480_NY_Hudson_D22.tif",
+      "url": "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/NY_Hudson_D22/TIFF/USGS_1M_18_x60y480_NY_Hudson_D22.tif",
+      "bytes": 353057146,
+      "sha256": "e7a48ffc968e370dbd84c827e96c07f80ed5e8089e06242676e30c1867beb2a3",
+      "verified": true
+    },
+    {
+      "name": "USGS_1M_18_x61y480_NY_Hudson_D22.tif",
+      "url": "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/NY_Hudson_D22/TIFF/USGS_1M_18_x61y480_NY_Hudson_D22.tif",
+      "bytes": 375244353,
+      "sha256": "76e5f1f374bf55de4373e9846288f4a383e7f6a4958a7ec591d26d94bee99933",
+      "verified": true
+    }
+  ],
+  "lattice": {
+    "originE": 606554,
+    "originN": 4798846,
+    "pixelM": 1,
+    "cols": 6672,
+    "rows": 5432,
+    "minNavd88": 21.85380744934082,
+    "maxNavd88": 145.89454650878906,
+    "missing": 0,
+    "rule": "each 1 m reference pixel centre takes the source pixel it falls in (floor), x60 then x61 (x61 wins in the overlap), valid samples only"
+  },
+  "frozenInputsCheck": {
+    "candidate": {
+      "file": "gf-dem-candidate-2m.tif",
+      "sha256": "e426b023887118606511fbfec34cc9d948aff69e553d3a526ee8dd5f9e57698e",
+      "pixels": 6663900,
+      "equal": 6663900,
+      "maxDiffM": 0
+    },
+    "patches": {
+      "file": "gf-dem-refinement-patches-1m.tif",
+      "sha256": "790ffcc4fa02a5a1d9c31b6a9530bfdc43b416a63b96dd20b6ec87c03604d073",
+      "validPixels": 8236080,
+      "equal": 8236080,
+      "maxDiffM": 0
+    }
+  },
+  "ring": {
+    "file": "gf_dem_ring_8m.f32",
+    "sha256": "371d726cf63fd36cb2502615083abf197334273029a9ffa63db5cfb68db3e806",
+    "bytes": 2265144,
+    "format": "raw float32 little-endian, row-major, north row first",
+    "stepM": 8,
+    "cols": 834,
+    "rows": 679,
+    "firstCentreE": 606558,
+    "firstCentreN": 4798842,
+    "method": "8 x 8 mean of the aligned 1 m lattice"
+  }
+}
