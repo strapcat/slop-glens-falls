@@ -15,7 +15,10 @@ const TREE_MODELS = [
 // so the same tree gets the same shape on every load. Shares of the shapes, in order: elm, plane, locust.
 const SPECIES_MIX = [[2, 0.4], [0, 0.35], [1, 0.25]];
 const SPREAD = [0.6, 1.6]; // clamp of the crown stretch (sx = sz) against the model's own spread
-const TIER = 1; // createTreeField draw distance 1 (1,600 m)
+// createTreeField draw-distance tier (MAX_DIST 3000 / 1600 / 950 m): 2, 950 m, for every tree. Tier 1 (1,600 m) nearly
+// doubled the frame time over the town from 300 m up (headless: 1.47 -> 2.85 s, 108 -> 929 draw calls); tier 2 for the
+// trees under 12 m alone gained little (2.62 s); tier 2 for all brings it to 1.87 s (487 draw calls). No tree is dropped.
+const TIER = 2;
 const TRUNK = { minHalf: 0.25, halfPerM: 0.03, maxTop: 4, topPerM: 0.35 }; // player trunk collider: half-side, top
 
 // A position hash in [0, 1), the same on every load (the sin-fract hash js/trees.js uses, with its own constants)

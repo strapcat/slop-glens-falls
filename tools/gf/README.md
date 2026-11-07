@@ -519,7 +519,9 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
     `R` are the renderer model's height and crown half-width at scale 1 (plane 12.61 / 5.00 m, locust 9.88 / 4.79 m,
     elm 13.50 / 5.57 m, measured from `trees.js`'s LOD-0 geometry). So a drawn tree is about as tall and wide as
     measured.
-  - Every tree is draw-distance tier 1 (1,600 m).
+  - Every tree is draw-distance tier 2 (950 m). Tier 1 (1,600 m) nearly doubled the frame time of the overview from
+    300 m (headless WebGL2: 1.47 s → 2.85 s a frame, 108 → 929 draw calls); tier 2 for the trees under 12 m alone gave
+    2.62 s; tier 2 for all gives 1.87 s (487 draw calls). No tree is dropped from the data.
 - **Renderer:** the shared `js/trees.js`, unchanged, with no New York tree data. GF never loads `tree-geodata.js` or
   `tree-placements.js`.
   - It gets no building colliders: the data already keeps tops about 1 m off every wall, and real crowns overhang
