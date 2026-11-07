@@ -657,8 +657,8 @@ Cole's Woods relief, with every road, car, walker, building, tree and pond on it
 - **Uncertainties:** deck heights are inferred (abutment to abutment); the WGS84 / NAD83 mapping is consistent, not
   survey-grade; building bases are one level per footprint (the mills on the gorge are the worst fit); the dam faces
   and falls are only as sharp as the 1 m DEM; ring terrain (beyond the play area) is 8 m.
-- **Screenshots:** `screenshots/cc005b-{downtown,river,hill,overview}-{before,after}.png` (helicopter views; the same
-  camera height above the ground before and after).
+- **Screenshots:** `screenshots/cc005b-{downtown,river,hill,overview}-{before,after}.png` (helicopter views from the
+  same teleports: x, z, heading and altitude over what is beneath, so the camera is lower or higher where the ground is).
 
 ## Source and licence
 
