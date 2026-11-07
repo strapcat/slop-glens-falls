@@ -46,7 +46,9 @@ const PEDESTRIANS = {
   crosswalkY: ROAD_LIFT + 0.012,
   onSidewalk: GF_BLOCKS.onSidewalk,
   trackInsets: [0.6, 1.2],
-  groundAt: (x, z, ux, uz) => GF_SURFACE.road(x, z, ux, uz)
+  groundAt: (x, z, ux, uz) => GF_SURFACE.road(x, z, ux, uz),
+  // the WebGL 2 fallback reads the crowd poses from a data texture (its plain-attribute read ignores the bone index)
+  textureFallback: true
 };
 // The drawn asphalt (draped ribbons, gf-drape.js) for a vehicle heading (dirX, dirZ) that last stood at lastY: deck or
 // ground, plus ROAD_LIFT

@@ -967,14 +967,19 @@ function createPersonMaterial(pose, detail = 1) {
 class PersonCrowd {
   /**
    * @param {number} maxCount - most people drawn at once
-   * @param {{ farDistance?: number, castShadow?: boolean }} options - beyond farDistance (m) people use the far LOD
+   * @param {{ farDistance?: number, castShadow?: boolean, textureFallback?: boolean }} options - beyond farDistance (m)
+   *   people use the far LOD. `textureFallback` (opt-in): where storage buffers are unavailable (the WebGL 2 fallback)
+   *   read the poses from a data texture (three.js PBO), so the indexed bone reads are honoured; without it that
+   *   backend reads the buffer as a plain vertex attribute, which ignores the index. WebGPU is unaffected either way.
    */
-  constructor(maxCount, { farDistance = 34, castShadow = true } = {}) {
+  constructor(maxCount, { farDistance = 34, castShadow = true, textureFallback = false } = {}) {
     this.farDistance = farDistance;
     this.updates = 0;
+    this.textureFallback = textureFallback;
     const levels = Number.isFinite(farDistance) ? [1, 0] : [1];
     this.lods = levels.map((detail) => {
-      const pose = attributeArray(maxCount * STRIDE, 'vec4').toReadOnly();
+      const array = attributeArray(maxCount * STRIDE, 'vec4');
+      const pose = (textureFallback ? array.setPBO(true) : array).toReadOnly();
       const mesh = new THREE.Mesh(buildPersonGeometry(detail), createPersonMaterial(pose, detail));
       mesh.name = detail ? 'PeopleNear' : 'PeopleFar';
       mesh.count = 1; // one (degenerate) person until warm-up finishes, so the pipelines compile up front
@@ -1009,6 +1014,7 @@ class PersonCrowd {
             attr.clearUpdateRanges();
             attr.addUpdateRange(0, STRIDE * 4);
             attr.needsUpdate = true;
+            if (this.textureFallback && attr.pbo) attr.pbo.needsUpdate = true;
             l.hasZero = true;
           }
           l.mesh.count = 1;
@@ -1026,6 +1032,8 @@ class PersonCrowd {
       attr.clearUpdateRanges();
       attr.addUpdateRange(0, l.count * STRIDE * 4);
       attr.needsUpdate = true;
+      // the fallback's data texture (created when the material first compiles) shares the attribute's array
+      if (this.textureFallback && attr.pbo) attr.pbo.needsUpdate = true;
     }
   }
 }

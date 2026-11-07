@@ -17,7 +17,7 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 // (pedestrian-routes.js; New York's: 1.7 and 2.8 m), and groundAt(x, z, ux, uz), the ground those heights are above for
 // someone walking along (ux, uz) (a city on a terrain, e.g. Glens Falls; none: New York's streets, at y = 0)
 function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCross, walkOn, visible, nearView }, options = {}) {
-  const { numPeds = NUM_PEDS, sidewalkY = 0.22, crosswalkY = 0.012, onSidewalk = null, trackInsets = null, groundAt = null } = options;
+  const { numPeds = NUM_PEDS, sidewalkY = 0.22, crosswalkY = 0.012, onSidewalk = null, trackInsets = null, groundAt = null, textureFallback = false } = options;
   let clock = 0;
   let focusX = 0, focusZ = 140;
   let hasView = false;
@@ -31,7 +31,7 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
 
   // One instanced draw per level of detail; every pedestrian has a PersonRig that plants its footsteps on the
   // sidewalk (no sliding), with their own build, height, sex, hair, clothes and gait
-  const pedCrowd = new PersonCrowd(numPeds);
+  const pedCrowd = new PersonCrowd(numPeds, { textureFallback });
   const hash = (i, salt) => {
     const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
     return v - Math.floor(v);
