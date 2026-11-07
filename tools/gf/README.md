@@ -609,8 +609,8 @@ Cole's Woods relief, with every road, car, walker, building, tree and pond on it
   level 1 to ~154 m; …). Coarser levels are a decimation (their error: 2 m p95 0.078 m, 4 m 0.14 m, 8 m 0.30 m) and take
   a larger depth offset, so overlays on the exact surface stay on top. Where a chunk borders a coarser one its border
   vertices are moved onto that neighbour's edge (stitched), so seams never open, with no skirts. The visible chunks of
-  each level are merged into one mesh (about 7 draw calls in all). Up to 450 chunks are cached. Vertex colours are the old block and
-  lot tints.
+  each level are merged into one mesh (about 7 draw calls in all). Up to 450 chunks are cached. Vertex colours are the
+  old block and lot tints.
 - **The surface contract** (`js/gf-surface.js`, one instance in `gf-runtime.js`, `slopGlensFalls.terrain.surface`):
   `ground(x, z)` (bare earth), `deckAt(x, z, { dir })`, `support(x, z, nearY)` (what stands there: a deck within 1 m
   above nearY, else the ground), `road(x, z, dirX, dirZ, nearY)` (a deck the vehicle runs along, or the level it is on),
@@ -638,7 +638,11 @@ Cole's Woods relief, with every road, car, walker, building, tree and pond on it
   - landmark features keep their CC-004 / CC-004b heights: the First Presbyterian spire from its church's roof (26 m), the
     Civil War Monument on the ground at its node (12.8 m);
   - trees (CC-005 data unchanged): each site's y and its trunk's vertical range follow the bare earth, nothing else;
-  - signal posts on the ground.
+  - signal posts on the ground;
+  - the WebGL 2 fallback (no WebGPU) draws the street crowd from a data texture (`pedestrians.js` /
+    `pedestrian-system.js` opt-in `textureFallback`): that backend reads a storage buffer as a plain vertex attribute,
+    ignoring the bone index, which drew the people below y = 0 as sky-sized triangles. WebGPU is unaffected; New York
+    keeps the default.
 - **Bridges** (`js/gf-bridges.js` from the OSM `bridge=yes` ways, matched to their road-graph segments): a bare-earth
   DEM does not measure decks, so a deck runs straight between the terrain at its two abutments (or the ground, where
   that stands higher right by them): 16 decks from 17 ways, Cooper's Cave Bridge ~20 m above the water below the falls,
@@ -653,6 +657,8 @@ Cole's Woods relief, with every road, car, walker, building, tree and pond on it
 - **Uncertainties:** deck heights are inferred (abutment to abutment); the WGS84 / NAD83 mapping is consistent, not
   survey-grade; building bases are one level per footprint (the mills on the gorge are the worst fit); the dam faces
   and falls are only as sharp as the 1 m DEM; ring terrain (beyond the play area) is 8 m.
+- **Screenshots:** `screenshots/cc005b-{downtown,river,hill,overview}-{before,after}.png` (helicopter views; the same
+  camera height above the ground before and after).
 
 ## Source and licence
 
