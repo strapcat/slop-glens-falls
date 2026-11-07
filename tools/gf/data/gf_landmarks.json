@@ -26,14 +26,15 @@
         "confidence": "high"
       },
       "height": {
-        "value": 19.7,
+        "value": 12.1,
         "unit": "m",
-        "basis": "lower-bound",
+        "basis": "measured",
         "source": [
-          "https://www.hardingmazzottiarena.com/s/HMA-2026-Promoters-Guide.pdf"
+          "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/NY_Hudson_D22/USGS_NY_Hudson_D22_Project_Report.pdf",
+          "https://s3-us-west-2.amazonaws.com/usgs-lidar-public/NY_Hudson_1_D22/ept.json"
         ],
-        "confidence": "low",
-        "note": "INTERIOR-DERIVED: the 2026 promoter guide gives high beam to floor 64 ft 6 in (19.7 m). If the arena floor is at street level the exterior roof is at least this high; if the floor is sunk below grade it is lower. The exterior height is not sourced: Dave to confirm."
+        "confidence": "high",
+        "note": "Exterior roof from USGS 3DEP NY_Hudson_D22 airborne LiDAR (leaf-off, 8 Nov 2022 - 15 Apr 2023): 90th-percentile roof points inside the footprint minus nearby ground, the same value as CC-003b src 4 (gf_lidar_heights.json, flag ok). A 2022-23 measurement, not a 1993 reconstruction (CC-004b). Replaces the earlier interior high-beam-to-floor figure (19.7 m, 2026 promoter guide)."
       },
       "levels": null,
       "facade": null,
@@ -55,7 +56,6 @@
         "confidence": "high"
       },
       "missing": [
-        "exterior roof height",
         "roof shape (left flat)",
         "facade material/colour (left at the default style)"
       ],
@@ -343,14 +343,15 @@
         "confidence": "high"
       },
       "height": {
-        "value": 38.1,
+        "value": 47.5,
         "unit": "m",
         "basis": "measured",
         "source": [
-          "https://www.skydb.net/building/92656698/travelers-building/"
+          "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/NY_Hudson_D22/USGS_NY_Hudson_D22_Project_Report.pdf",
+          "https://s3-us-west-2.amazonaws.com/usgs-lidar-public/NY_Hudson_1_D22/ept.json"
         ],
-        "confidence": "medium",
-        "note": "SKYDB main roof height, which SKYDB attributes to a Sanborn Map."
+        "confidence": "high",
+        "note": "Exterior roof from USGS 3DEP NY_Hudson_D22 airborne LiDAR (leaf-off, 8 Nov 2022 - 15 Apr 2023): 90th-percentile roof points inside the footprint minus nearby ground, the same value as CC-003b src 4 (gf_lidar_heights.json, flag ok). A 2022-23 measurement, not a 1993 reconstruction (CC-004b). p90 47.5 m applied; the p50 / main-roof cluster is about 45.9 m. Replaces the earlier SKYDB main roof height (38.1 m)."
       },
       "levels": {
         "value": 10,
@@ -559,7 +560,17 @@
         ],
         "confidence": "high"
       },
-      "height": null,
+      "height": {
+        "value": 22.6,
+        "unit": "m",
+        "basis": "measured",
+        "source": [
+          "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/NY_Hudson_D22/USGS_NY_Hudson_D22_Project_Report.pdf",
+          "https://s3-us-west-2.amazonaws.com/usgs-lidar-public/NY_Hudson_1_D22/ept.json"
+        ],
+        "confidence": "high",
+        "note": "Exterior roof from USGS 3DEP NY_Hudson_D22 airborne LiDAR (leaf-off, 8 Nov 2022 - 15 Apr 2023): 90th-percentile roof points inside the footprint minus nearby ground, the same value as CC-003b src 4 (gf_lidar_heights.json, flag ok). A 2022-23 measurement, not a 1993 reconstruction (CC-004b). Replaces the earlier 3-storey estimate (10.5 m); levels kept below for the record."
+      },
       "levels": {
         "value": 3,
         "source": [
@@ -603,14 +614,15 @@
         "confidence": "medium"
       },
       "height": {
-        "value": 21.3,
+        "value": 18.8,
         "unit": "m",
-        "basis": "lower-bound",
+        "basis": "measured",
         "source": [
-          "https://docest.com/doc/342537/the-organs-in-first-presbyterian-church-glens-falls-new-york"
+          "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/NY_Hudson_D22/USGS_NY_Hudson_D22_Project_Report.pdf",
+          "https://s3-us-west-2.amazonaws.com/usgs-lidar-public/NY_Hudson_1_D22/ept.json"
         ],
-        "confidence": "medium",
-        "note": "LOWER BOUND for the nave: interior height to the ridge 70 ft. The footprint also covers lower parts, which this over-states. Roof drawn flat."
+        "confidence": "high",
+        "note": "Exterior roof from USGS 3DEP NY_Hudson_D22 airborne LiDAR (leaf-off, 8 Nov 2022 - 15 Apr 2023): 90th-percentile roof points inside the footprint minus nearby ground, the same value as CC-003b src 4 (gf_lidar_heights.json, flag ok). A 2022-23 measurement, not a 1993 reconstruction (CC-004b). Replaces the earlier interior nave lower bound (70 ft to the ridge, 21.3 m)."
       },
       "levels": null,
       "facade": {
@@ -789,7 +801,17 @@
         ],
         "confidence": "medium"
       },
-      "height": null,
+      "height": {
+        "value": 20.4,
+        "unit": "m",
+        "basis": "measured",
+        "source": [
+          "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/NY_Hudson_D22/USGS_NY_Hudson_D22_Project_Report.pdf",
+          "https://s3-us-west-2.amazonaws.com/usgs-lidar-public/NY_Hudson_1_D22/ept.json"
+        ],
+        "confidence": "high",
+        "note": "Exterior roof from USGS 3DEP NY_Hudson_D22 airborne LiDAR (leaf-off, 8 Nov 2022 - 15 Apr 2023): 90th-percentile roof points inside the footprint minus nearby ground, the same value as CC-003b src 4 (gf_lidar_heights.json, flag ok). A 2022-23 measurement, not a 1993 reconstruction (CC-004b). Replaces the earlier 3-storey estimate (10.5 m); levels kept below for the record."
+      },
       "levels": {
         "value": 3,
         "source": [
@@ -885,14 +907,15 @@
         "confidence": "medium"
       },
       "height": {
-        "value": 17.1,
+        "value": 20.5,
         "unit": "m",
         "basis": "measured",
         "source": [
-          "https://www.skydb.net/building/39848165/colvin-building/"
+          "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/NY_Hudson_D22/USGS_NY_Hudson_D22_Project_Report.pdf",
+          "https://s3-us-west-2.amazonaws.com/usgs-lidar-public/NY_Hudson_1_D22/ept.json"
         ],
-        "confidence": "medium",
-        "note": "SKYDB"
+        "confidence": "high",
+        "note": "Exterior roof from USGS 3DEP NY_Hudson_D22 airborne LiDAR (leaf-off, 8 Nov 2022 - 15 Apr 2023): 90th-percentile roof points inside the footprint minus nearby ground, the same value as CC-003b src 4 (gf_lidar_heights.json, flag ok). A 2022-23 measurement, not a 1993 reconstruction (CC-004b). Replaces the earlier SKYDB height (17.1 m)."
       },
       "levels": {
         "value": 5,
@@ -968,7 +991,17 @@
         ],
         "confidence": "high"
       },
-      "height": null,
+      "height": {
+        "value": 21.8,
+        "unit": "m",
+        "basis": "measured",
+        "source": [
+          "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/NY_Hudson_D22/USGS_NY_Hudson_D22_Project_Report.pdf",
+          "https://s3-us-west-2.amazonaws.com/usgs-lidar-public/NY_Hudson_1_D22/ept.json"
+        ],
+        "confidence": "high",
+        "note": "Exterior roof from USGS 3DEP NY_Hudson_D22 airborne LiDAR (leaf-off, 8 Nov 2022 - 15 Apr 2023): 90th-percentile roof points inside the footprint minus nearby ground, the same value as CC-003b src 4 (gf_lidar_heights.json, flag ok). A 2022-23 measurement, not a 1993 reconstruction (CC-004b). Replaces the earlier \"three story\" estimate (10.5 m); levels kept below for the record."
+      },
       "levels": {
         "value": 3,
         "source": [
@@ -1116,7 +1149,17 @@
         ],
         "confidence": "high"
       },
-      "height": null,
+      "height": {
+        "value": 9.5,
+        "unit": "m",
+        "basis": "measured",
+        "source": [
+          "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/NY_Hudson_D22/USGS_NY_Hudson_D22_Project_Report.pdf",
+          "https://s3-us-west-2.amazonaws.com/usgs-lidar-public/NY_Hudson_1_D22/ept.json"
+        ],
+        "confidence": "high",
+        "note": "Exterior roof from USGS 3DEP NY_Hudson_D22 airborne LiDAR (leaf-off, 8 Nov 2022 - 15 Apr 2023): 90th-percentile roof points inside the footprint minus nearby ground, the same value as CC-003b src 4 (gf_lidar_heights.json, flag ok). A 2022-23 measurement, not a 1993 reconstruction (CC-004b). Replaces the earlier 2-storey estimate (7.2 m); levels kept below for the record."
+      },
       "levels": {
         "value": 2,
         "source": [
@@ -1160,7 +1203,17 @@
         ],
         "confidence": "high"
       },
-      "height": null,
+      "height": {
+        "value": 13,
+        "unit": "m",
+        "basis": "measured",
+        "source": [
+          "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/NY_Hudson_D22/USGS_NY_Hudson_D22_Project_Report.pdf",
+          "https://s3-us-west-2.amazonaws.com/usgs-lidar-public/NY_Hudson_1_D22/ept.json"
+        ],
+        "confidence": "high",
+        "note": "Exterior roof from USGS 3DEP NY_Hudson_D22 airborne LiDAR (leaf-off, 8 Nov 2022 - 15 Apr 2023): 90th-percentile roof points inside the footprint minus nearby ground, the same value as CC-003b src 4 (gf_lidar_heights.json, flag ok). A 2022-23 measurement, not a 1993 reconstruction (CC-004b). Replaces the earlier 2 1/2-storey estimate (8.9 m); levels kept below for the record."
+      },
       "levels": {
         "value": 2.5,
         "source": [
