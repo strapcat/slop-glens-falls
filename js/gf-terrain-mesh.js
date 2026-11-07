@@ -6,11 +6,9 @@ import * as THREE from 'three/webgpu';
 // the mesh is the surface things stand on, exactly. Coarser levels take every 2nd, 4th ... node (a decimation, no
 // smoothing) and draw with a larger depth offset per level, so the road and water overlays, which follow the exact
 // surface, stay on top of them where a decimated chunk bows above it. Where a chunk borders a coarser one, its border
-// vertices are lowered or raised onto that neighbour's edge (stitched), so no crack opens at the seam. Every chunk
-// hangs skirts down from its edges so the seams between levels never open; the skirts draw with a depth offset beyond
-// every level's, so they fill a crack and never show in front of a neighbour. A skirt quad is drawn in both windings,
-// one-sided, with its edge vertex's normal and colour: whichever face shows shades as the surface beside it (a
-// double-sided face seen from behind has its normal flipped, which drew the filled cracks as dark dashes). The chunks a level selects are merged
+// vertices are lowered or raised onto that neighbour's edge (stitched), so no crack opens at the seam. (No skirts: a
+// vertical skirt facing the camera takes almost none of a depth offset's slope term, so it showed through the water
+// in front of it, whose offset at a grazing angle is large.) The chunks a level selects are merged
 // into one mesh (rebuilt only when that level's selection changes): about one draw call per level. Chunk data are
 // built on first use and kept (up to CACHE chunks). Vertex colours carry the old flat layers: the blocks' sidewalk band
 // in concrete, their lots darker, open ground green.
@@ -22,7 +20,6 @@ const RING_MIN_LEVEL = 3; // outside the lattice the ring is 8 m data: no finer 
 const REFINE = 1.2; // a chunk splits while the camera is nearer than REFINE x its size (level 0 within ~77 m)
 const CACHE = 450;
 const LEVEL_OFFSET = (l) => ({ factor: 5 + 2 * l, units: 20 + 16 * l }); // polygon offset by level
-const SKIRT_OFFSET = { factor: 5 + 2 * (ROOT_LEVEL + 2), units: 20 + 16 * (ROOT_LEVEL + 2) };
 const COLORS = [new THREE.Color(0x4f5a44), new THREE.Color(0x8f8c83), new THREE.Color(0x6b6a61)]; // ground, sidewalk, lot
 
 // classify(x, z): 0 ground, 1 a block's sidewalk band, 2 a lot
@@ -32,12 +29,11 @@ function createGfTerrainMesh(terrain, { classify = () => 0, refine = REFINE } = 
   const ANCHOR = terrain.ANCHOR;
   const group = new THREE.Group();
   group.name = 'GlensFallsTerrain';
-  const material = (o, side = THREE.DoubleSide) => new THREE.MeshStandardMaterial({
-    vertexColors: true, roughness: 0.95, metalness: 0, side, polygonOffset: true, polygonOffsetFactor: o.factor, polygonOffsetUnits: o.units
+  const material = (o) => new THREE.MeshStandardMaterial({
+    vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: o.factor, polygonOffsetUnits: o.units
   });
-  const skirtMaterial = material(SKIRT_OFFSET, THREE.FrontSide);
   const levels = Array.from({ length: ROOT_LEVEL + 1 }, (_, l) => {
-    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), [material(LEVEL_OFFSET(l)), skirtMaterial]);
+    const mesh = new THREE.Mesh(new THREE.BufferGeometry(), material(LEVEL_OFFSET(l)));
     mesh.name = `TerrainLevel-${l}`;
     mesh.receiveShadow = true;
     mesh.matrixAutoUpdate = false;
@@ -46,8 +42,7 @@ function createGfTerrainMesh(terrain, { classify = () => 0, refine = REFINE } = 
     return { mesh, keys: '' };
   });
 
-  // A chunk's triangles: the grid's two per cell (up-facing, the query's diagonal), then its skirt quads (edge vertex to
-  // the copy below it, both windings) round the four edges
+  // A chunk's triangles: the grid's two per cell (up-facing, the query's diagonal)
   const N = CELLS + 1;
   const surface = [];
   for (let b = 0; b < CELLS; b++) {
@@ -56,19 +51,7 @@ function createGfTerrainMesh(terrain, { classify = () => 0, refine = REFINE } = 
       surface.push(v00, v11, v10, v00, v01, v11);
     }
   }
-  const edge = [];
-  for (let a = 0; a < CELLS; a++) edge.push([a, a + 1]); // north edge (b = 0)
-  for (let b = 0; b < CELLS; b++) edge.push([b * N + CELLS, (b + 1) * N + CELLS]); // east
-  for (let a = CELLS; a > 0; a--) edge.push([CELLS * N + a, CELLS * N + a - 1]); // south
-  for (let b = CELLS; b > 0; b--) edge.push([b * N, (b - 1) * N]); // west
-  const ring0 = edge.map((e) => e[0]);
-  const skirtOf = new Map(ring0.map((v, k) => [v, N * N + k]));
-  const skirt = [];
-  for (const [p, q] of edge) {
-    const sp = skirtOf.get(p), sq = skirtOf.get(q);
-    skirt.push(p, sp, q, q, sp, sq, p, q, sp, q, sq, sp);
-  }
-  const vertexCount = N * N + ring0.length;
+  const vertexCount = N * N;
 
   const inHull = (e, n) => e >= hull.e0 && e <= hull.e1 && n >= hull.n0 && n <= hull.n1;
   const clampRing = (e, n) => [Math.min(ring.e1, Math.max(ring.e0, e)), Math.min(ring.n1, Math.max(ring.n0, n))];
@@ -109,12 +92,6 @@ function createGfTerrainMesh(terrain, { classify = () => 0, refine = REFINE } = 
         col[v * 3] = c.r; col[v * 3 + 1] = c.g; col[v * 3 + 2] = c.b;
       }
     }
-    const depth = 2 + s;
-    ring0.forEach((v, k) => {
-      const w = N * N + k;
-      pos[w * 3] = pos[v * 3]; pos[w * 3 + 1] = pos[v * 3 + 1] - depth; pos[w * 3 + 2] = pos[v * 3 + 2];
-      for (let c = 0; c < 3; c++) { nor[w * 3 + c] = nor[v * 3 + c]; col[w * 3 + c] = col[v * 3 + c]; }
-    });
     builds++;
     return { pos, nor, col, used: 0 };
   }
@@ -161,25 +138,22 @@ function createGfTerrainMesh(terrain, { classify = () => 0, refine = REFINE } = 
     });
   }
 
-  // One level's selected chunks as one geometry: their surfaces (group 0), then their skirts (group 1)
+  // One level's selected chunks as one geometry
   function merge(chunks) {
     const n = chunks.length;
     const pos = new Float32Array(n * vertexCount * 3), nor = new Float32Array(n * vertexCount * 3), col = new Float32Array(n * vertexCount * 3);
-    const index = new Uint32Array(n * (surface.length + skirt.length));
+    const index = new Uint32Array(n * surface.length);
     chunks.forEach((c, k) => {
       pos.set(c.pos, k * vertexCount * 3); nor.set(c.nor, k * vertexCount * 3); col.set(c.col, k * vertexCount * 3);
       if (c.stitch) stitchInto(pos, k * vertexCount, c.l, c.kx, c.ky, c.stitch);
       const o = k * vertexCount;
       for (let i = 0; i < surface.length; i++) index[k * surface.length + i] = surface[i] + o;
-      for (let i = 0; i < skirt.length; i++) index[n * surface.length + k * skirt.length + i] = skirt[i] + o;
     });
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));
     g.setIndex(new THREE.BufferAttribute(index, 1));
-    g.addGroup(0, n * surface.length, 0);
-    g.addGroup(n * surface.length, n * skirt.length, 1);
     g.computeBoundingSphere();
     return g;
   }
@@ -243,8 +217,8 @@ function createGfTerrainMesh(terrain, { classify = () => 0, refine = REFINE } = 
 
   return {
     group, update, levels,
-    stats: () => ({ chunks: selected.length, cached: cache.size, builds, drawCalls: levels.filter((lv) => lv.mesh.visible).length * 2,
-      triangles: selected.length * (surface.length + skirt.length) / 3 })
+    stats: () => ({ chunks: selected.length, cached: cache.size, builds, drawCalls: levels.filter((lv) => lv.mesh.visible).length,
+      triangles: selected.length * surface.length / 3 })
   };
 }
 

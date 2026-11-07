@@ -607,9 +607,9 @@ Cole's Woods relief, with every road, car, walker, building, tree and pond on it
 - **The mesh** (`js/gf-terrain-mesh.js`): a quadtree of 32 × 32-cell chunks, level n every 2ⁿ-th node, chosen by
   distance (a chunk splits while the camera is nearer than 1.2 × its size: level 0, the surface itself, within ~77 m;
   level 1 to ~154 m; …). Coarser levels are a decimation (their error: 2 m p95 0.078 m, 4 m 0.14 m, 8 m 0.30 m) and take
-  a larger depth offset, so overlays on the exact surface stay on top. Chunk seams are closed by skirts drawn with a depth
-  offset beyond every level, so a skirt never shows over a neighbouring surface. The visible chunks of each level are
-  merged into one mesh (about 14 draw calls in all). Up to 450 chunks are cached. Vertex colours are the old block and
+  a larger depth offset, so overlays on the exact surface stay on top. Where a chunk borders a coarser one its border
+  vertices are moved onto that neighbour's edge (stitched), so seams never open, with no skirts. The visible chunks of
+  each level are merged into one mesh (about 7 draw calls in all). Up to 450 chunks are cached. Vertex colours are the old block and
   lot tints.
 - **The surface contract** (`js/gf-surface.js`, one instance in `gf-runtime.js`, `slopGlensFalls.terrain.surface`):
   `ground(x, z)` (bare earth), `deckAt(x, z, { dir })`, `support(x, z, nearY)` (what stands there: a deck within 1 m
