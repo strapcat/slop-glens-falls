@@ -23,6 +23,9 @@ import { GF_LANDMARKS } from './gf-landmarks.js';
 import { GF_LIDAR_HEIGHTS } from './gf-lidar-heights.js';
 import { applyLidarHeights } from './gf-building-heights.js';
 import { polygonContains } from './building-collision.js';
+import { createTreeField } from './trees.js';
+import { GF_TREES } from './gf-trees.js';
+import { placeGfTrees } from './gf-tree-placements.js';
 
 // Glens Falls game view (index.html?city=glensfalls): the flat town from GF_GEO (roads, water, blocks), its road graph
 // driven by AI cars stopping at the OSM traffic signals, pedestrians on the blocks' sidewalks, road markings, signal
@@ -84,7 +87,7 @@ function trimHud() {
   link.rel = 'noopener';
   link.style.color = 'inherit';
   link.textContent = 'OpenStreetMap contributors';
-  credit.append('Map data © ', link, ' (ODbL)', document.createElement('br'), GF_LIDAR_HEIGHTS.credit);
+  credit.append('Map data © ', link, ' (ODbL)', document.createElement('br'), GF_LIDAR_HEIGHTS.credit.replace(/^Building heights:/, 'Building heights and trees:'));
   document.body.appendChild(credit);
 }
 
@@ -179,6 +182,21 @@ async function initApp() {
     console.info(`[gf] heights: ${Object.entries(heights.final).map(([k, n]) => `${n} ${k}`).join(', ')}`);
   }
   markInit('buildings');
+  await showLoadingStage('Planting trees...');
+  // CC-005: one tree per usable LiDAR canopy top (gf-trees.js, USGS 3DEP 2022-23), at its measured height and about its
+  // measured spread, drawn by the shared renderer (trees.js; no New York tree data). The species slot is a visual
+  // shape mix, not a surveyed species. No building colliders go to the renderer: the data already keeps tops about
+  // 1 m off every wall, and real crowns do overhang roofs (slopGlensFalls.trees.diagnoseBuildingColliders() counts
+  // how many trees they would drop).
+  const treePlan = placeGfTrees(GF_TREES, { buildings: GF_BUILDINGS, geo: GF_GEO });
+  const treeField = createTreeField(scene, treePlan.sites, []);
+  scene.add(treeField.group);
+  {
+    const { water, road, building } = treePlan.skipped;
+    const mix = treePlan.speciesCounts.map((n, s) => `${['plane', 'locust', 'elm'][s]}-shape ${n}`).join(', ');
+    console.info(`[gf] trees: ${treeField.stats.trees} of ${GF_TREES.counts.usable} LiDAR tops (skipped water ${water}, road ${road}, building ${building}), ${treeField.group.children.length} cells, species mix ${mix} (visual only)`);
+  }
+  markInit('trees');
   await showLoadingStage('Creating traffic...');
   // The OSM signals (gf-signals.js) as they are: the network signals the junction within 6 m of each (road-network.js 8.)
   const signalPoints = GF_SIGNALS.junctions.map(([x, z]) => ({ x, z }));
@@ -202,7 +220,8 @@ async function initApp() {
     && y < c.maxY && polygonContains(c.polygon, x, z));
   if (insideBuilding(spawn.x, spawn.z)) console.warn('[gf] the spawn point is inside a building');
   // The player's world (gf-runtime.js: the bbox, flat ground, no sidewalks), starting at the spawn; buildings collide
-  const controllerManager = new ThirdPersonControllerManager(scene, buildings.colliders, { ...PLAYER_WORLD, spawn });
+  // ... and tree trunks (gf-tree-placements.js), which the player bumps into and flies over
+  const controllerManager = new ThirdPersonControllerManager(scene, [...buildings.colliders, ...treePlan.trunks], { ...PLAYER_WORLD, spawn });
   // Glens Falls names in the HUD (controllers.js labels the car New York's yellow cab)
   controllerManager.entities.car.label = 'Taxi';
   controllerManager.entities.cyclist.label = 'Cyclist';
@@ -248,6 +267,17 @@ async function initApp() {
       pending: buildings.landmarks.pending,
       flagged: buildings.landmarks.flagged,
       shapes: buildings.landmarks.shapes
+    },
+    // CC-005: the LiDAR tree field (renderer stats) and the trees the placement skipped as a safety net
+    trees: {
+      stats: { ...treeField.stats, placed: treePlan.sites.length, usable: GF_TREES.counts.usable, cells: treeField.group.children.length, speciesCounts: treePlan.speciesCounts },
+      skipped: treePlan.skipped,
+      // Diagnostic only: how many trees createTreeField would drop if it were given the building colliders. Builds a
+      // second, throwaway field, so it runs only when called.
+      diagnoseBuildingColliders: () => {
+        const probe = createTreeField(null, treePlan.sites, buildings.colliders);
+        return { placed: treePlan.sites.length, kept: probe.stats.trees, wouldDrop: treePlan.sites.length - probe.stats.trees };
+      }
     }
   };
   document.addEventListener('visibilitychange', () => { if (document.hidden) savePlayerState(); });
@@ -581,6 +611,7 @@ async function initApp() {
       trafficSystem.update(1 / 30, elapsed, cameraSystem.currentPos, controllerManager.getActiveEntity(), controllerManager.activeMode, cameraSystem.camera);
     }
     signalHeads.update(elapsed);
+    treeField.update(cameraSystem.currentPos);
     return elapsed;
   };
   let frameCount = 0;
@@ -599,6 +630,7 @@ async function initApp() {
     gamepadControls.update(dt);
     controllerManager.update(dt, elapsed, cameraSystem.initialized ? cameraSystem.currentPos : null);
     cameraSystem.update(dt, elapsed);
+    treeField.update(cameraSystem.currentPos);
     trafficSystem.update(
       dt,
       elapsed,

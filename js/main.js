@@ -48,6 +48,9 @@ const GF_PRELOADS = [
   'gf-landmark-meshes.js',
   'gf-lidar-heights.js',
   'gf-building-heights.js',
+  'trees.js',
+  'gf-trees.js',
+  'gf-tree-placements.js',
   'gf-main.js'
 ];
 

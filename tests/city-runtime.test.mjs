@@ -32,7 +32,7 @@ const nycGraph = staticGraph('nyc-main.js');
 test('Glens Falls statically imports none of New York\'s modules', () => {
   const deny = ['nyc-geodata.js', 'city-config.js', 'nyc-runtime.js', 'landmarks.js', 'city-grid.js', 'boroughs.js',
     'buildings.js', 'street-details.js', 'nyc-main.js', 'nyc-map.js'];
-  const leaks = [...gfGraph].filter((f) => deny.includes(f) || /^audio-.*\.js$/.test(f) || /^tree.*\.js$/.test(f));
+  const leaks = [...gfGraph].filter((f) => deny.includes(f) || /^audio-.*\.js$/.test(f) || (/^tree.*\.js$/.test(f) && f !== 'trees.js'));
   assert.deepEqual(leaks, []);
   assert.ok(gfGraph.has('city-runtime.js') && gfGraph.has('traffic.js'), 'the walk reaches the shared modules');
   assert.ok(nycGraph.has('city-config.js') && nycGraph.has('landmarks.js'), 'and New York\'s');
