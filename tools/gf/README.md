@@ -538,6 +538,9 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
     one.
   - **Street trees:** 2,340 real street trees whose crown peak overhangs the road are left out (`in-road`), not moved
     to the verge. Some trees hugging houses are lost as `building-edge`.
+  - **Draw distance:** at tier 2 no tree is drawn beyond 950 m from the camera, so from high up the canopy ends in a
+    visible line (see `screenshots/cc005-overview-after.png`). The trees are still in the data and reappear as the
+    camera nears.
   - **Pedestrians:** 1,278 placed trunks stand in the 1.8 m sidewalk band (by `gf-blocks.js` `onSidewalk`; about 1,276
     by the data's own count), and pedestrians can walk through them; trees are not pedestrian obstacles yet.
 
