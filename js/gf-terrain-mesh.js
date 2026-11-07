@@ -7,7 +7,9 @@ import * as THREE from 'three/webgpu';
 // smoothing) and draw with a larger depth offset per level (no geometric step at a seam), so the road and water
 // overlays, which follow the exact surface, stay on top of them where a decimated chunk bows above it. Every chunk
 // hangs skirts down from its edges so the seams between levels never open; the skirts draw with a depth offset beyond
-// every level's, so they fill a crack and never show in front of a neighbour. The chunks a level selects are merged
+// every level's, so they fill a crack and never show in front of a neighbour. A skirt quad is drawn in both windings,
+// one-sided, with its edge vertex's normal and colour: whichever face shows shades as the surface beside it (a
+// double-sided face seen from behind has its normal flipped, which drew the filled cracks as dark dashes). The chunks a level selects are merged
 // into one mesh (rebuilt only when that level's selection changes): about one draw call per level. Chunk data are
 // built on first use and kept (up to CACHE chunks). Vertex colours carry the old flat layers: the blocks' sidewalk band
 // in concrete, their lots darker, open ground green.
@@ -29,10 +31,10 @@ function createGfTerrainMesh(terrain, { classify = () => 0, refine = REFINE } = 
   const ANCHOR = terrain.ANCHOR;
   const group = new THREE.Group();
   group.name = 'GlensFallsTerrain';
-  const material = (o) => new THREE.MeshStandardMaterial({
-    vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: o.factor, polygonOffsetUnits: o.units
+  const material = (o, side = THREE.DoubleSide) => new THREE.MeshStandardMaterial({
+    vertexColors: true, roughness: 0.95, metalness: 0, side, polygonOffset: true, polygonOffsetFactor: o.factor, polygonOffsetUnits: o.units
   });
-  const skirtMaterial = material(SKIRT_OFFSET);
+  const skirtMaterial = material(SKIRT_OFFSET, THREE.FrontSide);
   const levels = Array.from({ length: ROOT_LEVEL + 1 }, (_, l) => {
     const mesh = new THREE.Mesh(new THREE.BufferGeometry(), [material(LEVEL_OFFSET(l)), skirtMaterial]);
     mesh.name = `TerrainLevel-${l}`;
@@ -44,7 +46,7 @@ function createGfTerrainMesh(terrain, { classify = () => 0, refine = REFINE } = 
   });
 
   // A chunk's triangles: the grid's two per cell (up-facing, the query's diagonal), then its skirt quads (edge vertex to
-  // the copy below it) round the four edges
+  // the copy below it, both windings) round the four edges
   const N = CELLS + 1;
   const surface = [];
   for (let b = 0; b < CELLS; b++) {
@@ -63,7 +65,7 @@ function createGfTerrainMesh(terrain, { classify = () => 0, refine = REFINE } = 
   const skirt = [];
   for (const [p, q] of edge) {
     const sp = skirtOf.get(p), sq = skirtOf.get(q);
-    skirt.push(p, sp, q, q, sp, sq);
+    skirt.push(p, sp, q, q, sp, sq, p, q, sp, q, sq, sp);
   }
   const vertexCount = N * N + ring0.length;
 
