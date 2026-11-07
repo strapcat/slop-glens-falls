@@ -217,7 +217,8 @@ test('Glens Falls loads the shared renderer and its own tree data, never New Yor
   for (const f of ['trees.js', 'gf-trees.js', 'gf-tree-placements.js']) assert.ok(gf.has(f), f);
   for (const f of ['tree-geodata.js', 'tree-placements.js', 'street-details.js']) assert.ok(!gf.has(f), f);
   assert.ok(!fs.readFileSync(path.join(root, 'js/gf-main.js'), 'utf8').includes('tree-geodata.bin'));
-  // the shared renderer and its materials are unchanged
+  // the shared renderer and its materials are unchanged (CC-005b: tsl-materials.js gains only the opt-in footprintBase
+  // option, 319df9cd... -> 534b8cff...; tests/gf-terrain.test.mjs checks undoing it gives back 319df9cd...)
   assert.equal(sha('js/trees.js'), '7303a1d5ccca950bf78a5fa69bef5c9d295a597f9806d2ff54d19ea38d5514f8');
-  assert.equal(sha('js/tsl-materials.js'), '319df9cd77768172933de0d1e384d36d4a8d35529fc3c7c1e475fb39f4a7f587');
+  assert.equal(sha('js/tsl-materials.js'), '534b8cff86d76c7cb4fac1c5992190f4053c77d3563e8050143e3067304b1cf8');
 });

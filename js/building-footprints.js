@@ -2,6 +2,8 @@ import * as THREE from 'three/webgpu';
 import { WALL_KINDS } from './tsl-materials.js';
 import { polygonContains } from './building-collision.js';
 
+// The roof heights compared are absolute where a neighbour gives its `top` (buildings on their own bases, see
+// options.footprintBase), else its height (every wall on one base)
 function partyWallHeight(record, a, b, neighbours) {
   const dx = b.x - a.x, dz = b.y - a.y, length = Math.hypot(dx, dz);
   let height = 0;
@@ -12,7 +14,7 @@ function partyWallHeight(record, a, b, neighbours) {
     for (const n of neighbours) {
       if (n.polygons === record.polygons || n.height <= 0 ||
         x < n.x0 || x > n.x1 || z < n.z0 || z > n.z1) continue;
-      if (n.polygons.some(p => polygonContains(p, x, z))) roof = Math.max(roof, n.height);
+      if (n.polygons.some(p => polygonContains(p, x, z))) roof = Math.max(roof, n.top ?? n.height);
     }
     if (!roof) return 0;
     height = Math.max(height, roof);
@@ -21,15 +23,22 @@ function partyWallHeight(record, a, b, neighbours) {
 }
 
 // One merged facade/roof mesh per 1 km cell. Explicit wall coordinates keep window bays metre-sized on any angle.
-// options.base: the height the walls stand on (default 0.22, New York's sidewalk; 0 on flat ground)
+// options.base: the height the walls stand on (default 0.22, New York's sidewalk; 0 on flat ground).
+// options.footprintBase (a city on a terrain): each record stands on its own record.base instead (its roof at base +
+// height, level), its walls reaching down to record.foundation (<= base) where the ground falls away under it, and
+// every vertex carries a 'facadeBase' attribute (the record's base) for a material made with footprintBase, whose
+// storeys then count up from the base
 function createBuildingFootprints(material, records, getNeighbours, options = {}) {
-  const base = options.base ?? 0.22;
+  const sharedBase = options.base ?? 0.22;
+  const ownBase = !!options.footprintBase;
   const cells = new Map();
   records.forEach((record, index) => {
     if (!(record.height > 0)) return;
     const key = Math.floor(record.cx / 1000) + ',' + Math.floor(record.cz / 1000);
     let cell = cells.get(key);
-    if (!cell) cells.set(key, (cell = { positions: [], normals: [], indices: [], boxes: [], walls: [] }));
+    if (!cell) cells.set(key, (cell = { positions: [], normals: [], indices: [], boxes: [], walls: [], bases: [] }));
+    const base = ownBase ? record.base : sharedBase;
+    const foot = ownBase ? Math.min(base, record.foundation ?? base) : base;
     const height = record.height, top = height + base;
     const seed = Math.floor(record.seed ?? index * 29) % 1000 + 0.1 + 0.8 * (record.tone ?? 0.5);
     const neighbours = getNeighbours && height <= 60 ? getNeighbours(record) : [];
@@ -55,12 +64,13 @@ function createBuildingFootprints(material, records, getNeighbours, options = {}
           const exposedHeight = adjacentHeight ? Math.max(0, top - adjacentHeight) : height;
           // Match the positive-world-axis tangent used by the shared interior-map view ray.
           const reverse = (Math.abs(dz) >= Math.abs(dx) ? dz : dx) < 0;
-          cell.positions.push(a.x, base, a.y, b.x, base, b.y, a.x, top, a.y, b.x, top, b.y);
+          cell.positions.push(a.x, foot, a.y, b.x, foot, b.y, a.x, top, a.y, b.x, top, b.y);
           for (let k = 0; k < 4; k++) {
             cell.normals.push(-dz / width, 0, dx / width);
             // Footprint walls use the box's unused depth for the exposed height above adjoining roofs.
             cell.boxes.push(width, height, exposedHeight, seed);
-            cell.walls.push(reverse ? 1 - k % 2 : k % 2, k < 2 ? height : 0, kind);
+            cell.walls.push(reverse ? 1 - k % 2 : k % 2, k < 2 ? top - foot : 0, kind);
+            cell.bases.push(base);
           }
           cell.indices.push(offset, offset + 1, offset + 2, offset + 2, offset + 1, offset + 3);
         }
@@ -72,6 +82,7 @@ function createBuildingFootprints(material, records, getNeighbours, options = {}
         cell.normals.push(0, 1, 0);
         cell.boxes.push(1, height, height, seed);
         cell.walls.push(0, 0, WALL_KINDS.front);
+        cell.bases.push(base);
       }
       for (const [a, b, c] of triangles) cell.indices.push(offset + a, offset + c, offset + b);
     }
@@ -87,6 +98,7 @@ function createBuildingFootprints(material, records, getNeighbours, options = {}
     geometry.setAttribute('normal', new THREE.Float32BufferAttribute(cell.normals, 3));
     geometry.setAttribute('box', new THREE.Float32BufferAttribute(cell.boxes, 4));
     geometry.setAttribute('facadeWall', new THREE.Float32BufferAttribute(cell.walls, 3));
+    if (ownBase) geometry.setAttribute('facadeBase', new THREE.Float32BufferAttribute(cell.bases, 1));
     geometry.setIndex(cell.indices);
     geometry.computeBoundingSphere();
     const mesh = new THREE.Mesh(geometry, material);

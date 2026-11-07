@@ -13,7 +13,8 @@ const LAMPS = ['red', 'amber', 'green'];
 const LIT = { red: new THREE.Color(0xff2a1a), amber: new THREE.Color(0xffa41c), green: new THREE.Color(0x2bff6e) };
 const DIM = { red: new THREE.Color(0x2a0c0a), amber: new THREE.Color(0x2a1d08), green: new THREE.Color(0x0a2a14) };
 
-function buildGfSignalHeads(scene, network) {
+// ground(x, z): the terrain the posts stand on (CC-005b; none: the flat ground, y = 0)
+function buildGfSignalHeads(scene, network, ground = null) {
   const group = new THREE.Group();
   group.name = 'GlensFallsSignalHeads';
   const heads = []; // { x, z, dx, dz, avenue }
@@ -50,10 +51,11 @@ function buildGfSignalHeads(scene, network) {
   const one = new THREE.Vector3(1, 1, 1);
   const p = new THREE.Vector3();
   heads.forEach((h, i) => {
-    // the head's face (+z) turned towards the arriving traffic, which travels along (dx, dz)
+    // the head's face (+z) turned towards the arriving traffic, which travels along (dx, dz); the post on the ground
     q.setFromAxisAngle(up, Math.atan2(-h.dx, -h.dz));
-    posts.setMatrixAt(i, m.compose(p.set(h.x, 0, h.z), q, one));
-    const top = POST_H - HEAD_H / 2;
+    const g = ground ? ground(h.x, h.z) : 0;
+    posts.setMatrixAt(i, m.compose(p.set(h.x, g, h.z), q, one));
+    const top = g + POST_H - HEAD_H / 2;
     boxes.setMatrixAt(i, m.compose(p.set(h.x, top, h.z), q, one));
     LAMPS.forEach((_, k) => {
       const y = top + (1 - k) * 0.29;

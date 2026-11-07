@@ -1,4 +1,4 @@
-import { GF_BLOCKS } from './gf-runtime.js'; // first: installs Glens Falls in the city runtime before any shared module runs
+import { GF_BLOCKS, GF_SURFACE, GF_TERRAIN } from './gf-runtime.js'; // first: installs Glens Falls in the city runtime before any shared module runs
 import * as THREE from 'three/webgpu';
 import { pass, mrt, output, normalView, positionView, metalness, roughness, vec2, smoothstep } from 'three/tsl';
 import { ssr } from 'three/addons/tsl/display/SSRNode.js';
@@ -14,11 +14,14 @@ import { LightingSystem } from './lighting.js';
 import { ROAD_SOURCE, PLAYER_WORLD, isTypingInField } from './city-runtime.js';
 import { GF_GEO } from './gf-geodata.js';
 import { gfSpawn } from './gf-roadgraph.js';
-import { buildGfGround } from './gf-ground.js';
+import { buildGfTerrainGround, ROAD_LIFT } from './gf-ground.js';
+import { DRAPE_TOL } from './gf-drape.js';
+import { GF_BRIDGES } from './gf-bridges.js';
+import { GF_TERRAIN_BYTES } from './gf-terrain-data.js';
 import { GF_SIGNALS } from './gf-signals.js';
 import { buildGfSignalHeads } from './gf-signal-heads.js';
 import { GF_BUILDINGS } from './gf-buildings.js';
-import { buildGfBuildings } from './gf-building-meshes.js';
+import { buildGfBuildingsOnTerrain } from './gf-building-terrain.js';
 import { GF_LANDMARKS } from './gf-landmarks.js';
 import { GF_LIDAR_HEIGHTS } from './gf-lidar-heights.js';
 import { applyLidarHeights } from './gf-building-heights.js';
@@ -27,21 +30,26 @@ import { createTreeField } from './trees.js';
 import { GF_TREES } from './gf-trees.js';
 import { placeGfTrees } from './gf-tree-placements.js';
 
-// Glens Falls game view (index.html?city=glensfalls): the flat town from GF_GEO (roads, water, blocks), its road graph
+// Glens Falls game view (index.html?city=glensfalls): the town from GF_GEO (roads, water, blocks) on its sourced terrain
+// (CC-005b: USGS 3DEP bare earth, gf-terrain.js, asked through gf-surface.js by everything that stands on it), its road graph
 // driven by AI cars stopping at the OSM traffic signals, pedestrians on the blocks' sidewalks, road markings, signal
 // heads and the player. Setup, shader warm-up and frame loop follow nyc-main.js, without New York's city grid, boroughs,
 // landmarks, buildings, street details, map, teleports or audio.
 
 const NUM_CARS = 40;
 // Pedestrians walk the sidewalk band between each block's curb and its lot (1.8 m wide), on two walking lines 0.6 and
-// 1.2 m from the roadway, on the flat ground; there are no crosswalks yet
+// 1.2 m from the roadway, on the terrain (a deck where their track runs along a bridge); there are no crosswalks yet.
+// Their sidewalk is the ground's own (2 cm above it); crossing a road they walk on its draped asphalt
 const PEDESTRIANS = {
   numPeds: 120,
   sidewalkY: 0.02,
-  crosswalkY: 0.012,
+  crosswalkY: ROAD_LIFT + 0.012,
   onSidewalk: GF_BLOCKS.onSidewalk,
-  trackInsets: [0.6, 1.2]
+  trackInsets: [0.6, 1.2],
+  groundAt: (x, z, ux, uz) => GF_SURFACE.road(x, z, ux, uz)
 };
+// The drawn asphalt (draped ribbons, gf-drape.js) for a vehicle heading (dirX, dirZ): deck or ground, plus ROAD_LIFT
+const roadSurface = (x, z, dirX, dirZ) => GF_SURFACE.road(x, z, dirX, dirZ) + ROAD_LIFT;
 const STATE_KEY = 'gf-player-state';
 // Follow cameras only: New York's scenic cameras look at Manhattan landmarks
 const FOLLOW_CAMERAS = CAMERA_PRESETS.filter((p) => p.category === 'follow');
@@ -151,9 +159,14 @@ async function initApp() {
   const lightingSystem = new LightingSystem(scene, renderer);
   markInit('lighting');
 
-  // 3. Flat town, road graph & traffic, road markings
-  await showLoadingStage('Laying out roads and water...');
-  buildGfGround(scene, GF_GEO);
+  // 3. The terrain, roads, water and bridge decks; road graph & traffic, road markings
+  await showLoadingStage('Laying out the terrain, roads and water...');
+  const ground = buildGfTerrainGround(scene, GF_GEO, GF_SURFACE, GF_BLOCKS, GF_BRIDGES);
+  {
+    const h = GF_TERRAIN.header;
+    const waterTypes = GF_SURFACE.water.bodies.reduce((o, b) => ({ ...o, [b.type]: (o[b.type] || 0) + 1 }), {});
+    console.info(`[gf] terrain: USGS 3DEP ${h.base.cols} x ${h.base.rows} at 2 m + ${h.patches.tilesKept} native 1 m tiles + ${h.ring.cols} x ${h.ring.rows} ring at 8 m (${GF_TERRAIN_BYTES.download} bytes); anchor OSM ${h.anchor.osmNode} at ${h.anchor.navd88.toFixed(3)} m NAVD88 = y 0; ${GF_SURFACE.decks.length} bridge decks, water ${Object.entries(waterTypes).map(([t, n]) => `${n} ${t}`).join(', ')}; roads ${ground.stats.roadTriangles} triangles in ${ground.stats.roadChunks} chunks`);
+  }
   markInit('ground');
   await showLoadingStage('Raising buildings...');
   // OSM footprints, flat-roofed. Heights: OSM height or levels where tagged; else measured from USGS 3DEP LiDAR
@@ -161,7 +174,8 @@ async function initApp() {
   // default rule (an approximation, see heightRule). CC-004: the sourced landmark overrides (gf-landmarks.js) go on
   // top of those records and win, with their roof shapes and the Civil War Monument
   const { data: gfBuildings, applied: heights } = applyLidarHeights(GF_BUILDINGS, GF_LIDAR_HEIGHTS);
-  const buildings = buildGfBuildings(scene, gfBuildings, GF_LANDMARKS);
+  // CC-005b: each building on its own base on the terrain (gf-building-terrain.js), its height above that base
+  const buildings = buildGfBuildingsOnTerrain(scene, gfBuildings, GF_LANDMARKS, GF_SURFACE.ground);
   const { records: perStyle, meshes, triangles } = buildings.stats;
   console.info(`[gf] ${Object.values(perStyle).reduce((n, v) => n + v, 0)} buildings (${Object.entries(perStyle).map(([s, n]) => `${n} ${s}`).join(', ')}): ${meshes} meshes, ${triangles} triangles`);
   {
@@ -180,6 +194,8 @@ async function initApp() {
     }
     heights.final = Object.fromEntries([0, 1, 3, GF_LIDAR_HEIGHTS.srcCode, 2].map((k) => [LABELS[k], bySrc[k] || 0]));
     console.info(`[gf] heights: ${Object.entries(heights.final).map(([k, n]) => `${n} ${k}`).join(', ')}`);
+    const t = buildings.stats.terrain;
+    console.info(`[gf] building bases on the terrain: ${t.foundationsOver1m} with the ground falling > 1 m under their walls (> 3 m: ${t.foundationsOver3m}, deepest ${t.maxFoundation.toFixed(1)} m), ${t.buriedOver1m} with it rising > 1 m (> 3 m: ${t.buriedOver3m}, most ${t.maxBurial.toFixed(1)} m)`);
   }
   markInit('buildings');
   await showLoadingStage('Planting trees...');
@@ -188,7 +204,7 @@ async function initApp() {
   // shape mix, not a surveyed species. No building colliders go to the renderer: the data already keeps tops about
   // 1 m off every wall, and real crowns do overhang roofs (slopGlensFalls.trees.diagnoseBuildingColliders() counts
   // how many trees they would drop).
-  const treePlan = placeGfTrees(GF_TREES, { buildings: GF_BUILDINGS, geo: GF_GEO });
+  const treePlan = placeGfTrees(GF_TREES, { buildings: GF_BUILDINGS, geo: GF_GEO, ground: GF_SURFACE.ground });
   const treeField = createTreeField(scene, treePlan.sites, []);
   scene.add(treeField.group);
   {
@@ -202,26 +218,31 @@ async function initApp() {
   const signalPoints = GF_SIGNALS.junctions.map(([x, z]) => ({ x, z }));
   // Lots and buildings stop pedestrians only; cars keep the road network they had without them
   const trafficSystem = createTrafficSystem(scene, [], [...GF_BLOCKS.lotObstacles, ...buildings.obstacles], signalPoints, {
-    roadSource: ROAD_SOURCE, numCars: NUM_CARS, numBuses: 0, pedestrians: true, pedestrianOptions: PEDESTRIANS
+    roadSource: ROAD_SOURCE, numCars: NUM_CARS, numBuses: 0, pedestrians: true, pedestrianOptions: PEDESTRIANS, surfaceAt: roadSurface
   });
-  const signalHeads = buildGfSignalHeads(scene, trafficSystem.network);
+  const signalHeads = buildGfSignalHeads(scene, trafficSystem.network, GF_SURFACE.ground);
   console.info(`[gf] ${trafficSystem.network.nodes.filter((n) => n.signal).length} signalled junctions of ${signalPoints.length} OSM signals, ${signalHeads.count} signal heads, ${PEDESTRIANS.numPeds} pedestrians`);
   markInit('traffic');
   await showLoadingStage('Adding road markings...');
-  buildRoadPaint(scene, trafficSystem.network);
+  // on the draped asphalt, high enough above it to clear the ribbon wherever its chord bows up (DRAPE_TOL)
+  buildRoadPaint(scene, trafficSystem.network, null, { surfaceAt: roadSurface, lift: 0.012 + DRAPE_TOL });
   markInit('roadPaint');
 
   // 4. Player (Person, Car, Cyclist, Helicopter) & cameras
   await showLoadingStage('Preparing player, vehicles and controls...');
   const spawn = gfSpawn(trafficSystem.network, GF_GEO);
   console.info(`[gf] spawn on ${spawn.street || 'the longest edge (no Glen Street edge)'}: edge ${spawn.edge} at (${spawn.x.toFixed(1)}, ${spawn.z.toFixed(1)}), heading ${(spawn.heading * 180 / Math.PI).toFixed(1)}°`);
-  // A point inside a building's walls (below its roof): no place to start or return to
-  const insideBuilding = (x, z, y = 0) => buildings.colliders.some((c) => x >= c.minX && x <= c.maxX && z >= c.minZ && z <= c.maxZ
-    && y < c.maxY && polygonContains(c.polygon, x, z));
+  // A point inside a building's walls (below its roof, above its foundation): no place to start or return to. On the
+  // terrain a walker or a car is where the ground puts it, so that is the height tested
+  const insideBuilding = (x, z, y = GF_SURFACE.support(x, z)) => buildings.colliders.some((c) => x >= c.minX && x <= c.maxX && z >= c.minZ && z <= c.maxZ
+    && y < c.maxY && y >= c.minY - 0.5 && polygonContains(c.polygon, x, z));
   if (insideBuilding(spawn.x, spawn.z)) console.warn('[gf] the spawn point is inside a building');
-  // The player's world (gf-runtime.js: the bbox, flat ground, no sidewalks), starting at the spawn; buildings collide
-  // ... and tree trunks (gf-tree-placements.js), which the player bumps into and flies over
-  const controllerManager = new ThirdPersonControllerManager(scene, [...buildings.colliders, ...treePlan.trunks], { ...PLAYER_WORLD, spawn });
+  // The player's world (gf-runtime.js: the bbox, the terrain, no raised sidewalks), starting at the spawn; buildings
+  // collide ... and tree trunks (gf-tree-placements.js), which the player bumps into and flies over, and the bridge
+  // railings (gf-ground.js), which keep the player on a deck
+  const controllerManager = new ThirdPersonControllerManager(scene, [...buildings.colliders, ...treePlan.trunks, ...ground.deckColliders], { ...PLAYER_WORLD, spawn });
+  // The terrain's chunks round the start, built now so that the shader warm-up sees them
+  ground.terrain.update({ x: spawn.x, y: GF_SURFACE.ground(spawn.x, spawn.z) + 3, z: spawn.z });
   // Glens Falls names in the HUD (controllers.js labels the car New York's yellow cab)
   controllerManager.entities.car.label = 'Taxi';
   controllerManager.entities.cyclist.label = 'Cyclist';
@@ -233,8 +254,11 @@ async function initApp() {
         const p = saved.entities?.[mode];
         if (!p || ![p.x, p.y, p.z, p.heading].every(Number.isFinite)) continue;
         controllerManager.setMode(mode);
+        // The saved height picks the deck or the ground under it (a save from the flat town, y about 0, takes
+        // whichever is nearer 0; it is put on the ground either way, never left under it)
+        if (mode !== 'helicopter') PLAYER_WORLD.setNear(mode, p.y);
         // A position saved before the buildings stood may now be inside one: back to the spawn
-        if (insideBuilding(p.x, p.z, p.y)) {
+        if (insideBuilding(p.x, p.z, mode === 'helicopter' ? p.y : GF_SURFACE.support(p.x, p.z, p.y))) {
           console.info(`[gf] saved ${mode} position (${p.x.toFixed(1)}, ${p.z.toFixed(1)}) is inside a building: back to the spawn`);
           controllerManager.teleportActiveTo(spawn.x, spawn.z, spawn.heading);
         } else controllerManager.teleportActiveTo(p.x, p.z, p.heading, p.y);
@@ -267,6 +291,17 @@ async function initApp() {
       pending: buildings.landmarks.pending,
       flagged: buildings.landmarks.flagged,
       shapes: buildings.landmarks.shapes
+    },
+    // CC-005b: the terrain and its one surface contract (ground, decks, support, road, water, info at any x, z), the
+    // ground meshes and how the buildings sit on it
+    terrain: {
+      surface: GF_SURFACE,
+      info: (x, z) => GF_SURFACE.info(x, z),
+      header: GF_TERRAIN.header,
+      bytes: GF_TERRAIN_BYTES,
+      mesh: ground.terrain.stats,
+      ground: ground.stats,
+      buildings: buildings.stats.terrain
     },
     // CC-005: the LiDAR tree field (renderer stats) and the trees the placement skipped as a safety net
     trees: {
@@ -616,6 +651,7 @@ async function initApp() {
   };
   let frameCount = 0;
   let fpsTimer = 0;
+  const shadowFocus = new THREE.Vector3();
   let nextPlayerSave = 0;
   let warmedUp = false;
 
@@ -630,6 +666,7 @@ async function initApp() {
     gamepadControls.update(dt);
     controllerManager.update(dt, elapsed, cameraSystem.initialized ? cameraSystem.currentPos : null);
     cameraSystem.update(dt, elapsed);
+    ground.terrain.update(cameraSystem.camera.position);
     treeField.update(cameraSystem.currentPos);
     trafficSystem.update(
       dt,
@@ -644,7 +681,10 @@ async function initApp() {
       nextPlayerSave = now + 5000;
     }
     signalHeads.update(elapsed);
-    lightingSystem.update(cameraSystem.currentPos);
+    // the shadow distance grows with the camera's height above the ground (not above y = 0, which the terrain is not)
+    const cam = cameraSystem.currentPos, below = GF_SURFACE.ground(cam.x, cam.z);
+    shadowFocus.set(cam.x, cam.y - (Number.isFinite(below) ? below : 0), cam.z);
+    lightingSystem.update(shadowFocus);
     for (const root of dynamicRoots) root.updateMatrixWorld();
 
     if (!warmedUp) {
@@ -689,7 +729,8 @@ async function initApp() {
       const activeEnt = controllerManager.getActiveEntity();
       const mode = controllerManager.activeMode;
       const mph = Math.round(Math.abs(activeEnt.speed) * 2.237);
-      const altFt = Math.max(0, Math.round(activeEnt.position.y * 3.281));
+      const groundY = GF_SURFACE.ground(activeEnt.position.x, activeEnt.position.z);
+      const altFt = Math.max(0, Math.round((activeEnt.position.y - (Number.isFinite(groundY) ? groundY : 0)) * 3.281));
       if (elFps) {
         elFps.textContent = String(currentFps);
         elFps.className = currentFps >= 50 ? 'fps-ok' : currentFps >= 30 ? 'fps-warn' : 'fps-bad';

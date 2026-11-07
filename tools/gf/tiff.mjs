@@ -108,7 +108,7 @@ function openTiff(file) {
   const width = one(256), height = one(257), bits = one(258), compression = one(259, 1), predictor = one(317, 1);
   const spp = one(277, 1), format = one(339, 1), planar = one(284, 1);
   if (bits !== 32 || format !== 3 || spp !== 1) throw new Error(`${file}: not one float32 band (bits ${bits}, format ${format}, samples ${spp})`);
-  if (planar !== 1) throw new Error(`${file}: planar configuration ${planar}`);
+  if (planar !== 1 && spp !== 1) throw new Error(`${file}: planar configuration ${planar}`); // one band: 1 and 2 are the same layout
   if (!tags[322]) throw new Error(`${file}: not tiled`);
   if (![1, 5, 8, 32946].includes(compression)) throw new Error(`${file}: compression ${compression}`);
   const tileW = one(322), tileH = one(323), offsets = tags[324], counts = tags[325];

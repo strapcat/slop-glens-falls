@@ -20,6 +20,36 @@ function sha256File(file) {
   return h.digest('hex');
 }
 
+// Copies tile `t` ({ width, height, nodata, readWindow }) into the W x H lattice, its pixel (c0 + c, r0 + r) on lattice
+// pixel (c, r): valid samples only (never its nodata, never a non-finite value), over whatever an earlier tile put there
+// (so the later of two overlapping tiles wins where it has data). Returns how many it copied.
+function copySource(lattice, W, H, t, c0, r0) {
+  const ca = Math.max(0, c0), cb = Math.min(t.width, c0 + W), ra = Math.max(0, r0), rb = Math.min(t.height, r0 + H);
+  let copied = 0;
+  for (let r = ra; r < rb; r += 512) {
+    const rows = Math.min(512, rb - r);
+    const win = t.readWindow(ca, r, cb - ca, rows);
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cb - ca; x++) {
+        const v = win[y * (cb - ca) + x];
+        if (v === t.nodata || !Number.isFinite(v)) continue;
+        lattice[(r + y - r0) * W + (ca + x - c0)] = v;
+        copied++;
+      }
+    }
+  }
+  return copied;
+}
+// { missing (pixels no tile filled), lo, hi } of a lattice
+function completeness(lattice) {
+  let missing = 0, lo = Infinity, hi = -Infinity;
+  for (const v of lattice) {
+    if (Number.isNaN(v)) missing++;
+    else { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  }
+  return { missing, lo, hi };
+}
+
 // { lattice: Float32Array, W, H, X0, Y1, sources, lo, hi } over the bundle rectangle padded by `pad` metres
 function loadUsgsLattice({ usgsDir, prov, pad = 0, log = () => {} }) {
   const [E0, N0, E1, N1] = prov.paddedProjectedBounds;
@@ -42,31 +72,14 @@ function loadUsgsLattice({ usgsDir, prov, pad = 0, log = () => {} }) {
     if (sx !== 1 || sy !== 1) throw new Error(`${s.name}: pixel ${sx} x ${sy} m`);
     if (ex !== s.transform[2] || ny !== s.transform[5]) throw new Error(`${s.name}: tie point ${ex}, ${ny} is not the provenance transform`);
     const c0 = Math.floor(X0 + 0.5 - ex), r0 = Math.floor(ny - (Y1 - 0.5));
-    const ca = Math.max(0, c0), cb = Math.min(t.width, c0 + W), ra = Math.max(0, r0), rb = Math.min(t.height, r0 + H);
-    let copied = 0;
-    for (let r = ra; r < rb; r += 512) {
-      const rows = Math.min(512, rb - r);
-      const win = t.readWindow(ca, r, cb - ca, rows);
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cb - ca; x++) {
-          const v = win[y * (cb - ca) + x];
-          if (v === t.nodata || !Number.isFinite(v)) continue;
-          lattice[(r + y - r0) * W + (ca + x - c0)] = v;
-          copied++;
-        }
-      }
-    }
+    const copied = copySource(lattice, W, H, t, c0, r0);
     log(`${s.name}: ${copied} valid samples into the lattice, encoded lattice shift ${(X0 + 0.5 - ex - c0 - 0.5).toExponential(3)} m E, ${(ny - (Y1 - 0.5) - r0 - 0.5).toExponential(3)} m N`);
     t.close();
   }
-  let missing = 0, lo = Infinity, hi = -Infinity;
-  for (const v of lattice) {
-    if (Number.isNaN(v)) missing++;
-    else { lo = Math.min(lo, v); hi = Math.max(hi, v); }
-  }
+  const { missing, lo, hi } = completeness(lattice);
   if (missing) throw new Error(`${missing} reference pixels have no valid source sample: stop (no nodata fill)`);
   log(`lattice ${W} x ${H}, every pixel valid, ${lo.toFixed(3)}-${hi.toFixed(3)} m NAVD88`);
   return { lattice, W, H, X0, Y1, sources, lo, hi };
 }
 
-export { loadUsgsLattice, sha256File };
+export { loadUsgsLattice, copySource, completeness, sha256File };

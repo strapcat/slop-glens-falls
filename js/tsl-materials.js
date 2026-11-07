@@ -396,7 +396,9 @@ const WALL_KINDS = { shop: 0, front: 1, rear: 2, lotLine: 3 };
  * supply wall dimensions to fit whole window bays between the corners. `cornerPier` reserves solid masonry
  * at each end above the ground-floor shops. Partial storeys and the coping remain solid at each wall's top.
  */
-function facadeCell(windowWidth, floorHeight, boxLocal, cornerPier = 0, footprintLocal = false) {
+// footprintBase: footprint walls carry a per-vertex 'facadeBase' attribute, the height their building stands on (a city
+// on a terrain, e.g. Glens Falls), and the facade's storeys count up from it rather than from y = 0
+function facadeCell(windowWidth, floorHeight, boxLocal, cornerPier = 0, footprintLocal = false, footprintBase = false) {
   // Local walls use geometry normals; world-space walls use the stable facade frame.
   const nWall = boxLocal ? normalGeometry : facadeWorldNormal;
   const nW = abs(nWall);
@@ -450,7 +452,7 @@ function facadeCell(windowWidth, floorHeight, boxLocal, cornerPier = 0, footprin
     uCoord = gridU.mul(bayWidth);
   }
 
-  const vCoord = positionWorld.y;
+  const vCoord = footprintBase ? positionWorld.y.sub(attribute('facadeBase', 'float')) : positionWorld.y;
   const gridV = vCoord.div(floorHeight);
   const cellId = vec2(floor(gridU), floor(gridV));
   const cellUV = vec2(fract(gridU), fract(gridV));
@@ -867,10 +869,11 @@ function createPreWarBuildingMaterial(opts = {}) {
     seed = 42.0,
     boxLocal = false,
     footprintLocal = false,
+    footprintBase = false, // footprints standing on their own 'facadeBase' heights (see facadeCell)
     cornerPier = 1.2 // solid masonry at both ends of every wall above the shopfronts (box-local mode)
   } = opts;
 
-  const cacheKey = `${stoneColor}_${trimColor}_${windowWidth}_${floorHeight}_${litProbability}_${warmth}_${crownGlowHeight}_${seed}_${boxLocal}_${footprintLocal}_${cornerPier}`;
+  const cacheKey = `${stoneColor}_${trimColor}_${windowWidth}_${floorHeight}_${litProbability}_${warmth}_${crownGlowHeight}_${seed}_${boxLocal}_${footprintLocal}_${cornerPier}${footprintBase ? '_base' : ''}`;
   if (_preWarCache.has(cacheKey)) {
     return _preWarCache.get(cacheKey);
   }
@@ -901,7 +904,7 @@ function createPreWarBuildingMaterial(opts = {}) {
 
   // The facade cell, the window opening and the apartment behind it are built once and shared by every output below,
   // so the shader carries a single copy of them (and evaluates the interior mapping once per pixel)
-  const facade = facadeCell(uWindowWidth, uFloorHeight, boxLocal || footprintLocal, cornerPier, footprintLocal);
+  const facade = facadeCell(uWindowWidth, uFloorHeight, boxLocal || footprintLocal, cornerPier, footprintLocal, footprintBase);
   const { isRoof, uCoord, vCoord, gridV, cellId, cellUV, fw, bayWidth, isGroundFloor, solid, back, blank, tone, coping } = facade;
   const { wallS, wallW, wallH, exposedHeight, fromTop, boxSeed } = facade;
   const open = float(1.0).sub(solid);

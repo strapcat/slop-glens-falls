@@ -96,8 +96,10 @@ function segmentDistance(s, x, z) {
 }
 
 // { sites, trunks, skipped: { water, road, building }, speciesCounts } of GF_TREES, against GF_BUILDINGS footprints
-// and GF_GEO's water and roads
-function placeGfTrees(trees, { buildings, geo }) {
+// and GF_GEO's water and roads. CC-005b: with ground(x, z) (gf-surface.js, the bare earth), each tree stands on the
+// ground at its top's x, z (site y) and its trunk collider rises from there; nothing else about it changes (x, z,
+// height, spread, shape, the skips), and its height stays its height above that ground.
+function placeGfTrees(trees, { buildings, geo, ground = null }) {
   const bAt = Object.fromEntries(buildings.fields.map((f, i) => [f, i]));
   const footprints = buildings.buildings.map((row) => ({ outer: row[bAt.outer], holes: row[bAt.holes], ...boundsOf(row[bAt.outer]) }));
   const buildingsNear = gridIndex(footprints, 64);
@@ -119,11 +121,12 @@ function placeGfTrees(trees, { buildings, geo }) {
     const model = TREE_MODELS[species];
     const scale = h / model.H;
     const spread = Math.min(SPREAD[1], Math.max(SPREAD[0], r / (model.R * scale)));
-    sites.push({ x, y: 0, z, scale, species, sx: spread, sz: spread, tier: TIER });
+    const y = ground ? ground(x, z) : 0;
+    sites.push({ x, y, z, scale, species, sx: spread, sz: spread, tier: TIER });
     speciesCounts[species]++;
     const half = Math.max(TRUNK.minHalf, TRUNK.halfPerM * h);
     const outer = [{ x: x - half, z: z - half }, { x: x + half, z: z - half }, { x: x + half, z: z + half }, { x: x - half, z: z + half }];
-    trunks.push({ minX: x - half, maxX: x + half, minZ: z - half, maxZ: z + half, minY: 0, maxY: Math.min(TRUNK.maxTop, TRUNK.topPerM * h), polygon: { outer, holes: [] } });
+    trunks.push({ minX: x - half, maxX: x + half, minZ: z - half, maxZ: z + half, minY: y, maxY: y + Math.min(TRUNK.maxTop, TRUNK.topPerM * h), polygon: { outer, holes: [] } });
   }
   return { sites, trunks, skipped, speciesCounts };
 }
