@@ -14,6 +14,7 @@ node tools/gf/build-gf-signals.mjs      # tools/gf/data/osm_gf_signals.json -> j
 node tools/gf/build-gf-buildings.mjs    # tools/gf/data/osm_gf_buildings.json -> js/gf-buildings.js, prints counts
 node tools/gf/build-gf-landmarks.mjs    # tools/gf/data/gf_landmarks.json -> js/gf-landmarks.js, prints applied/pending
 node tools/gf/build-gf-lidar-heights.mjs # tools/gf/data/gf_lidar_heights.json -> js/gf-lidar-heights.js, prints counts
+node tools/gf/build-gf-trees.mjs        # tools/gf/data/gf_lidar_trees.json -> js/gf-trees.js, prints counts
 node --test tests/gf-geodata.test.mjs tests/gf-signals.test.mjs tests/gf-buildings.test.mjs tests/gf-landmarks.test.mjs tests/gf-lidar-heights.test.mjs
 ```
 
@@ -48,6 +49,7 @@ tests/` fails on Node 22 and later, which read the directory as a module.)
 | `data/osm_gf_buildings.json` | `q_gf_buildings.overpassql` | `building=*` ways and relations, with their member ways and nodes (see Buildings) |
 | `data/gf_landmarks.json` | none: compiled by Dave from web sources and OSM | sourced landmark heights, storeys, facades, roof features and the Civil War Monument (see Landmarks) |
 | `data/gf_lidar_heights.json` | none: measured by Dave from USGS 3DEP LiDAR | a height and a quality flag per GF building (see LiDAR heights) |
+| `data/gf_lidar_trees.json` | none: detected by Dave in USGS 3DEP LiDAR | one row per canopy top: position, height, crown radius and a quality flag (see Trees) |
 
 Bounding box: south 43.290, west -73.680, north 43.330, east -73.610.
 
@@ -471,11 +473,82 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
   - **Roofs:** p90 includes pitched-roof ridges, so pitched houses come out a little taller than their eaves.
   - **Flagged and unmatched:** 506 flagged values and 3 unmatched buildings keep the approximation.
 
+### Trees
+
+- **Data:** `data/gf_lidar_trees.json` came from `gf-lidar-trees.zip`, prepared by Dave.
+  - zip: 719,521 bytes, sha256 `8e70dc7d…f580`;
+  - file: 3,357,577 bytes, sha256 `d52158dd…35fd`. It is not edited here.
+  - Each row is `[lon, lat, height_m, crown_r_m, flag]`, one per canopy top.
+- **Source:** USGS 3DEP **NY_Hudson_D22** airborne LiDAR, flown **leaf-off from 8 Nov 2022 to 15 Apr 2023**, with the
+  USGS 1 m bare-earth DEM as the ground. It is public domain, and the credit "USGS 3D Elevation Program (3DEP),
+  NY_Hudson_D22 LiDAR, 2022-23" is requested. The building masks used in preparation are © OpenStreetMap contributors
+  (ODbL 1.0) and Overture Maps buildings.
+- **Method:** the point cloud has no vegetation or building class, so vegetation was inferred.
+  - Points 2–50 m above the DEM, off every building footprint (grown 1 m), make a 1 m canopy height model.
+  - Its local maxima are the tree tops. Each top gets its height (the highest return near the peak) and a crown
+    radius (the equal-area radius of its canopy).
+  - Each top gets one flag; the full method is in the JSON's `meta.method` and `meta.params`.
+- **Flags:** only `ok` is drawn.
+
+  | flag | count |
+  | --- | --- |
+  | `ok` | 77,976 |
+  | `building-edge` | 2,775 |
+  | `in-road` | 2,340 |
+  | `sparse` | 1,603 |
+  | `structure` | 1,550 |
+  | `water` | 453 |
+  | `small` | 369 |
+  | `near-wall` | 154 |
+  | `low` | 138 |
+  | `tall` | 114 |
+  | `linear` | 31 |
+
+  That's 87,503 candidates. Usable heights run 3.0–40.0 m (median 19.7 m), and crown radii 1.5–8.8 m (median 4.4 m).
+- **Generator:** `build-gf-trees.mjs` writes `js/gf-trees.js`, about 1.79 MB (0.53 MB gzipped): the usable rows only,
+  in JSON order, as a flat `[x, z, h, r, …]` array at 0.1 m.
+  - It throws, naming the row or value, on: `rules.use` ≠ `["ok"]`, unexpected `fields`, an unknown flag, a usable
+    row outside the bbox, a usable height outside 3–40 m, a usable crown outside 1.5–9 m, two rows at one lon/lat, and
+    counts that don't match the rows.
+  - A rebuild is byte-identical.
+- **Placement** (`js/gf-tree-placements.js`, pure): one renderer site per usable top, where it was measured. As a
+  safety net it skips, and never moves, a trunk in water, in a carriageway or inside a building footprint.
+  - Today that skips the **6** bank trees whose rounded positions fall just inside the river, the reservoir or a pond,
+    and nothing else: **77,970 trees are placed**.
+  - Each site's `scale` is `h / H` and its crown stretch `sx = sz` is `r / (R · scale)`, clamped to 0.6–1.6. `H` and
+    `R` are the renderer model's height and crown half-width at scale 1 (plane 12.61 / 5.00 m, locust 9.88 / 4.79 m,
+    elm 13.50 / 5.57 m, measured from `trees.js`'s LOD-0 geometry). So a drawn tree is about as tall and wide as
+    measured.
+  - Every tree is draw-distance tier 2 (950 m). Tier 1 (1,600 m) nearly doubled the frame time of the overview from
+    300 m (headless WebGL2: 1.47 s → 2.85 s a frame, 108 → 929 draw calls); tier 2 for the trees under 12 m alone gave
+    2.62 s; tier 2 for all gives 1.87 s (487 draw calls). No tree is dropped from the data.
+- **Renderer:** the shared `js/trees.js`, unchanged, with no New York tree data. GF never loads `tree-geodata.js` or
+  `tree-placements.js`.
+  - It gets no building colliders: the data already keeps tops about 1 m off every wall, and real crowns overhang
+    roofs. `slopGlensFalls.trees.diagnoseBuildingColliders()` counts what colliders would drop.
+  - The player bumps into a small trunk collider per tree (half-side `max(0.25, 0.03 h)`, up to `min(4, 0.35 h)` m)
+    and can fly over.
+- **Known gaps:**
+  - **Era:** trees as flown in **2022–23, not 1993**. Nothing planted, grown or felled since 1993 is corrected, and
+    nothing post-1993 is hidden.
+  - **Species:** LiDAR gives none. The renderer's species slot (plane, locust, elm) is a **visual shape mix only**,
+    seeded from the position (40% elm-shape, 35% plane-shape, 25% locust-shape). These are not surveyed species.
+  - **Leaf-off scan, summer foliage:** the scan was leaf-off, but the renderer draws summer leaves. Small and thin
+    deciduous trees are undercounted (`sparse`), some big crowns show as two trees, and touching crowns in woods as
+    one.
+  - **Street trees:** 2,340 real street trees whose crown peak overhangs the road are left out (`in-road`), not moved
+    to the verge. Some trees hugging houses are lost as `building-edge`.
+  - **Draw distance:** at tier 2 no tree is drawn beyond 950 m from the camera, so from high up the canopy ends in a
+    visible line (see `screenshots/cc005-overview-after.png`). The trees are still in the data and reappear as the
+    camera nears.
+  - **Pedestrians:** 1,278 placed trunks stand in the 1.8 m sidewalk band (by `gf-blocks.js` `onSidewalk`; about 1,276
+    by the data's own count), and pedestrians can walk through them; trees are not pedestrian obstacles yet.
+
 ## Source and licence
 
 Data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the
 [Open Database License (ODbL) 1.0](https://opendatacommons.org/licenses/odbl/1-0/). The raw extracts in
 `tools/gf/data/` and the derived `js/gf-geodata.js` are ODbL. The attribution "© OpenStreetMap contributors" appears
-here, in `GF_GEO.attribution` and on screen in the debug and game views. The one other dataset is the building heights
-from USGS 3DEP LiDAR (public domain; credited "USGS 3D Elevation Program" in the game view and in
-`GF_LIDAR_HEIGHTS.credit`, see LiDAR heights). No geography is placed by hand.
+here, in `GF_GEO.attribution` and on screen in the debug and game views. The one other dataset is USGS 3DEP LiDAR, for the
+building heights and the trees (public domain; credited "USGS 3D Elevation Program" in the game view, in
+`GF_LIDAR_HEIGHTS.credit` and `GF_TREES.credit`, see LiDAR heights and Trees). No geography is placed by hand.
