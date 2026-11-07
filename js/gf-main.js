@@ -48,8 +48,9 @@ const PEDESTRIANS = {
   trackInsets: [0.6, 1.2],
   groundAt: (x, z, ux, uz) => GF_SURFACE.road(x, z, ux, uz)
 };
-// The drawn asphalt (draped ribbons, gf-drape.js) for a vehicle heading (dirX, dirZ): deck or ground, plus ROAD_LIFT
-const roadSurface = (x, z, dirX, dirZ) => GF_SURFACE.road(x, z, dirX, dirZ) + ROAD_LIFT;
+// The drawn asphalt (draped ribbons, gf-drape.js) for a vehicle heading (dirX, dirZ) that last stood at lastY: deck or
+// ground, plus ROAD_LIFT
+const roadSurface = (x, z, dirX, dirZ, lastY = NaN) => GF_SURFACE.road(x, z, dirX, dirZ, lastY - ROAD_LIFT) + ROAD_LIFT;
 const STATE_KEY = 'gf-player-state';
 // Follow cameras only: New York's scenic cameras look at Manhattan landmarks
 const FOLLOW_CAMERAS = CAMERA_PRESETS.filter((p) => p.category === 'follow');
@@ -301,7 +302,9 @@ async function initApp() {
       bytes: GF_TERRAIN_BYTES,
       mesh: ground.terrain.stats,
       ground: ground.stats,
-      buildings: buildings.stats.terrain
+      buildings: buildings.stats.terrain,
+      // seed the deck-or-ground choice for a mode (a saved height), as the saved-player restore does
+      setNear: PLAYER_WORLD.setNear
     },
     // CC-005: the LiDAR tree field (renderer stats) and the trees the placement skipped as a safety net
     trees: {

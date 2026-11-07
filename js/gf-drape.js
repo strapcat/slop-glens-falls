@@ -77,17 +77,23 @@ function drapeRoads(graph, include, surface, bridgeSegs = new Set()) {
         prev = row;
       }
     }
-    // round joins (8-sided fans) at every point of the link, on the surface
-    for (const [x, z] of pts) {
-      const centre = vert(x, surface.road(x, z, 0, 0) + ROAD_LIFT, z);
+    // round joins (8-sided fans) at every point of the link, on the surface: on the deck where a bridge segment of the
+    // link starts or ends there (the deck, or the ground where that stands higher, as gf-surface.js deckAt)
+    pts.forEach(([x, z], k) => {
+      const onDeck = bridgeSegs.has(`${li}/${k - 1}`) || bridgeSegs.has(`${li}/${k}`);
+      const yAt = (px, pz) => {
+        const d = onDeck ? surface.deckAt(px, pz) : null;
+        return d ? d.y : surface.ground(px, pz);
+      };
+      const centre = vert(x, yAt(x, z) + ROAD_LIFT, z);
       const ring = [];
-      for (let k = 0; k < 8; k++) {
-        const ang = (k / 8) * Math.PI * 2;
+      for (let m = 0; m < 8; m++) {
+        const ang = (m / 8) * Math.PI * 2;
         const px = x + Math.cos(ang) * r, pz = z + Math.sin(ang) * r;
-        ring.push(vert(px, surface.ground(px, pz) + ROAD_LIFT, pz));
+        ring.push(vert(px, yAt(px, pz) + ROAD_LIFT, pz));
       }
-      for (let k = 0; k < 8; k++) idx.push(centre, ring[(k + 1) % 8], ring[k]);
-    }
+      for (let m = 0; m < 8; m++) idx.push(centre, ring[(m + 1) % 8], ring[m]);
+    });
   }
   return { positions: Float32Array.from(pos), indices: Uint32Array.from(idx), stations };
 }

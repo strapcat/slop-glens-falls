@@ -5,6 +5,7 @@ import { setCityRuntime } from './city-runtime.js';
 import { GF_TERRAIN } from './gf-terrain-data.js';
 import { GF_BRIDGES } from './gf-bridges.js';
 import { createGfSurface } from './gf-surface.js';
+import { ROAD_LIFT } from './gf-drape.js';
 
 // Glens Falls in the city runtime (city-runtime.js): imported first by gf-main.js, before any shared module runs.
 // No grid, park or shores: the road source's padded bbox is the land and the blocks are GF_GEO's curb islands
@@ -18,15 +19,22 @@ const { minX, maxX, minZ, maxZ } = ROAD_SOURCE.bounds;
 
 // The player's ground: what each mode last stood on decides between a bridge deck and the ground beneath it
 // (GF_SURFACE.support), so a player on a bridge stays on it and one on the road under it stays there. setNear(mode, y)
-// seeds it (a saved position's height); unknown (NaN), the highest support wins (a teleport onto a bridge).
+// seeds it (a saved position's height); unknown (NaN), the highest support wins (a teleport onto a bridge). Walkers,
+// cars and bicycles stand ROAD_LIFT above it: on the draped asphalt (gf-drape.js), never in it; the helicopter's floor
+// is the support itself.
 const nearY = { person: NaN, car: NaN, cyclist: NaN, helicopter: NaN };
 const PLAYER_WORLD = {
   bounds: ROAD_SOURCE.bounds,
   shoreAt: ROAD_SOURCE.shoreAt,
   groundHeightAt(x, z, mode = 'person') {
-    const y = GF_SURFACE.support(x, z, mode === 'helicopter' ? NaN : nearY[mode]);
-    if (mode !== 'helicopter' && Number.isFinite(y)) nearY[mode] = y;
-    return Number.isFinite(y) ? y : 0;
+    if (mode === 'helicopter') {
+      const y = GF_SURFACE.support(x, z, NaN);
+      return Number.isFinite(y) ? y : 0;
+    }
+    const y = GF_SURFACE.support(x, z, nearY[mode] - ROAD_LIFT);
+    if (!Number.isFinite(y)) return 0;
+    nearY[mode] = y + ROAD_LIFT;
+    return y + ROAD_LIFT;
   },
   // The ground's slope for the vehicles' pitch and roll, and for the cameras and the helicopter's clearance
   groundNormalAt: (x, z, out) => GF_SURFACE.normal(x, z, out),

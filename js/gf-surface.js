@@ -13,8 +13,9 @@ import { createGfWater } from './gf-water.js';
 //   support(x, z, nearY)  what something at height nearY stands on there: the highest of the ground and any deck no
 //                         more than STEP_UP above nearY (a player on a bridge stays on it, one on the road beneath stays
 //                         there); with nearY unknown (NaN), the highest. Roofs are not supports.
-//   road(x, z, dir)       the drivable surface for a vehicle heading (dirX, dirZ): a deck it runs along (within
-//                         DECK_ALIGN), else the ground, so a road passing under a bridge keeps to the ground.
+//   road(x, z, dirX, dirZ, nearY)  the drivable surface for a vehicle heading (dirX, dirZ): a deck it runs along
+//                         (within DECK_ALIGN), else the ground, so a road passing under a bridge keeps to the ground;
+//                         given its last height, the nearer of deck and ground (it stays on the level it is on).
 //   water(x, z)           the water surface (gf-water.js) or null.
 //   normal(x, z, out)     the ground's smoothed unit normal; info(x, z) all of it, with the terrain's provenance.
 // CC-005c (park trails, the Thrill Hill gathering) places paths, props and feet with support() / ground() and their
@@ -23,6 +24,7 @@ import { createGfWater } from './gf-water.js';
 const DECK_MARGIN = 2.0; // metres beyond the curb either side (the bridge sidewalks)
 const STEP_UP = 1.0; // metres: the most a support may be above the height asked about
 const DECK_ALIGN = 0.7; // cos of the largest angle between a vehicle's heading and a deck it drives along
+const NEAR_KEEP = 3; // metres: a vehicle within this of its last height keeps to the nearer of deck and ground
 
 function createGfSurface({ terrain, geo, bridges }) {
   const ground = terrain.heightAt;
@@ -107,18 +109,28 @@ function createGfSurface({ terrain, geo, bridges }) {
     for (const d of decks) {
       const b = d.bounds;
       if (x < b.minX || x > b.maxX || z < b.minZ || z > b.maxZ) continue;
-      for (const c of d.segments) {
+      d.segments.forEach((c, k) => {
         const ex = c.to[0] - c.from[0], ez = c.to[1] - c.from[1];
-        const t = ((x - c.from[0]) * ex + (z - c.from[1]) * ez) / (c.len * c.len);
-        if (t < 0 || t > 1) continue;
-        const lateral = Math.abs((x - c.from[0]) * ez - (z - c.from[1]) * ex) / c.len;
+        let t = ((x - c.from[0]) * ex + (z - c.from[1]) * ez) / (c.len * c.len);
         const half = c.width / 2 + DECK_MARGIN;
-        if (lateral > half) continue;
+        let lateral;
+        if (t >= -1e-6 && t <= 1 + 1e-6) {
+          t = Math.min(1, Math.max(0, t));
+          lateral = Math.abs((x - c.from[0]) * ez - (z - c.from[1]) * ex) / c.len;
+        } else if (t < 0 && k > 0) {
+          // the outside of a bend in the chain: round the joint, so the deck has no gap there
+          t = 0;
+          lateral = Math.hypot(x - c.from[0], z - c.from[1]);
+        } else if (t > 1 && k < d.segments.length - 1) {
+          t = 1;
+          lateral = Math.hypot(x - c.to[0], z - c.to[1]);
+        } else return;
+        if (lateral > half) return;
         const dirX = ex / c.len, dirZ = ez / c.len;
-        if (opts.dir && Math.abs(opts.dir[0] * dirX + opts.dir[1] * dirZ) < DECK_ALIGN) continue;
+        if (opts.dir && Math.abs(opts.dir[0] * dirX + opts.dir[1] * dirZ) < DECK_ALIGN) return;
         // the straight abutment-to-abutment line, or the ground where that stands higher (right by an abutment)
         if (!best || lateral < best.lateral) best = { deck: d, y: Math.max(d.yAt(c.s0 + t * c.len), ground(x, z)), s: c.s0 + t * c.len, lateral, halfWidth: half, dirX, dirZ };
-      }
+      });
     }
     return best;
   }
@@ -135,10 +147,19 @@ function createGfSurface({ terrain, geo, bridges }) {
     return g;
   }
 
-  // The drivable surface for a vehicle at (x, z) heading (dirX, dirZ)
-  function road(x, z, dirX, dirZ) {
+  // The drivable surface for a vehicle at (x, z) heading (dirX, dirZ). Given where it was (nearY, its last height), it
+  // keeps to whichever of a deck and the ground beneath is nearer that (within NEAR_KEEP), so a car turning off a bridge
+  // at its end stays on the deck it is on; otherwise (or with none), a deck it runs along, else the ground
+  function road(x, z, dirX, dirZ, nearY = NaN) {
+    const g = ground(x, z);
+    if (Number.isFinite(nearY)) {
+      const any = deckAt(x, z);
+      if (!any) return g;
+      const dd = Math.abs(any.y - nearY), dg = Math.abs(g - nearY);
+      if (Math.min(dd, dg) < NEAR_KEEP) return dd <= dg ? any.y : g;
+    }
     const d = deckAt(x, z, { dir: [dirX, dirZ] });
-    return d ? d.y : ground(x, z);
+    return d ? d.y : g;
   }
 
   const water = createGfWater(geo, ground);

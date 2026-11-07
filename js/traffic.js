@@ -119,7 +119,8 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 // (false: no pedestrian system) and pedestrianOptions (pedestrian-system.js's options)
 function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, options = {}) {
   const { roadSource, numCars = NUM_CARS, numBuses = NUM_BUSES, pedestrians = true, pedestrianOptions = {} } = options;
-  // options.surfaceAt(x, z, dirX, dirZ): the road's height under a vehicle heading (dirX, dirZ) (a city on a terrain,
+  // options.surfaceAt(x, z, dirX, dirZ, lastY): the road's height under a vehicle heading (dirX, dirZ), that stood at
+  // lastY last time (NaN: just placed) (a city on a terrain,
   // e.g. Glens Falls; New York gives none: its streets are at y = 0). With it, every vehicle stands at that height,
   // pitched and rolled with the road under its wheels, and its wheels, shadow, lamps and sparks follow.
   const surfaceAt = options.surfaceAt || null;
@@ -129,8 +130,10 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
   function poseOnSurface(v) {
     const spec = v.bus ? BUS_SPEC : BODY_SPECS[v.bodyType];
     const rotY = v.yaw + v.yawOffset, sinY = Math.sin(rotY), cosY = Math.cos(rotY);
+    // the last height (NaN for a vehicle just placed) lets the surface keep it on the level it is on
+    const last = v.edge === v.syEdge ? v.sy : NaN;
     const at = (dx, dz) => {
-      const y = surfaceAt(v.x + dx, v.z + dz, sinY, cosY);
+      const y = surfaceAt(v.x + dx, v.z + dz, sinY, cosY, last);
       return Number.isFinite(y) ? y : 0;
     };
     const hb = spec.wheelZ, ht = spec.wheelX;
@@ -141,6 +144,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     v.wy[0] = lf; v.wy[1] = lr; v.wy[2] = rf; v.wy[3] = rr;
     v.gp = Math.atan2((lr + rr) - (lf + rf), 4 * hb);
     v.gr = Math.atan2((rf + rr) - (lf + lr), 4 * ht);
+    v.syEdge = v.edge;
   }
   const group = new THREE.Group();
   group.name = 'ManhattanTrafficAndPedestrians';

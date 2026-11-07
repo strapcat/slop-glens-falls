@@ -15,6 +15,11 @@ node tools/gf/build-gf-buildings.mjs    # tools/gf/data/osm_gf_buildings.json ->
 node tools/gf/build-gf-landmarks.mjs    # tools/gf/data/gf_landmarks.json -> js/gf-landmarks.js, prints applied/pending
 node tools/gf/build-gf-lidar-heights.mjs # tools/gf/data/gf_lidar_heights.json -> js/gf-lidar-heights.js, prints counts
 node tools/gf/build-gf-trees.mjs        # tools/gf/data/gf_lidar_trees.json -> js/gf-trees.js, prints counts
+node tools/gf/build-gf-terrain.mjs      # tools/gf/data/terrain/ -> js/gf-terrain.bin.gz (see Topography), prints sizes
+node tools/gf/build-gf-bridges.mjs      # tools/gf/data/osm_gf_roads.json + GF_GEO -> js/gf-bridges.js
+# offline, with the two original USGS tiles (728 MB, not committed) in GF_USGS_DIR (default lidar/tiles):
+GF_USGS_DIR=lidar/tiles node tools/gf/prepare-gf-terrain.mjs  # checks them, proves the bundle, writes the 8 m ring
+GF_USGS_DIR=lidar/tiles node tools/gf/audit-gf-terrain.mjs    # the built terrain against every source pixel
 node --test tests/gf-geodata.test.mjs tests/gf-signals.test.mjs tests/gf-buildings.test.mjs tests/gf-landmarks.test.mjs tests/gf-lidar-heights.test.mjs
 ```
 
@@ -151,9 +156,11 @@ has no imports of its own:
 
 The Glens Falls view (`js/gf-main.js`) has:
 
-- **The ground** (`js/gf-ground.js`): flat at y = 0, with a ground plane, water, the blocks (the sidewalk band in
-  concrete, the lots a shade darker), and road ribbons at their curb widths for every class. Service roads are drawn a
-  shade lighter but not driven.
+- **The ground** (`js/gf-ground.js` `buildGfTerrainGround`): the sourced terrain (see Topography), its vertex colours
+  the old flat layers (the blocks' sidewalk band in concrete, the lots a shade darker, open ground green), road ribbons
+  at their curb widths for every class draped on it (decks over the bridges), and the water at its own levels. Service
+  roads are drawn a shade lighter but not driven. (Before CC-005b everything was flat at y = 0; `buildGfGround`, the flat
+  layout, is still what the debug view's helpers draw.)
 - **The road network**: `js/road-network.js` builds it from `GF_GEO.roadGraph` through `gfRoadSource()`
   (`js/gf-roadgraph.js`, installed as `ROAD_SOURCE` by `gf-runtime.js`), with no avenues, cross streets or blocks, so its centreline step (4b) carries the whole town.
   The source:
@@ -173,7 +180,8 @@ The Glens Falls view (`js/gf-main.js`) has:
 - **The buildings** (see Buildings): OSM footprints extruded with flat roofs. The player collides with them;
   pedestrians walk around them; cars don't notice them.
 - **The player** (`js/controllers.js` with the Glens Falls `PLAYER_WORLD` from `gf-runtime.js`):
-  - kept inside the bbox, on flat ground with no sidewalks, and out of the buildings;
+  - kept inside the bbox, on the terrain (on a bridge deck where it is on one) with no raised sidewalks, and out of the
+    buildings;
   - starting in the rightmost lane of the longest Glen Street edge (`gfSpawn()`);
   - saved under the `gf-player-state` localStorage key. A saved position inside a building (saved before the
     buildings stood) returns to the spawn.
@@ -222,7 +230,8 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
   - the lots, as obstacles to pedestrians only, so the car network is the same with them as without (tested);
   - `onSidewalk` (on a block, outside its lot).
 - **Settings:** 120 pedestrians on two walking lines 0.6 and 1.2 m from the roadway (New York's lie 1.7 and 2.8 m out,
-  on its 4.6 m sidewalks), at `sidewalkY` 0.02 on the flat ground.
+  on its 4.6 m sidewalks), at `sidewalkY` 0.02 above the terrain (CC-005b; a deck where their track runs along a
+  bridge), and on the draped asphalt where they cross a road.
 - **Coverage:** 2187 of the network's 2498 edges have sidewalk tracks.
 - **Limits:** there are no crosswalks at Glens Falls junctions yet (`pedestrian-routes.js` `across()` only knows New
   York's grid corners), so pedestrians walk around their block but don't cross streets.
@@ -276,7 +285,8 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
 
   `neighboursFor()` gives brick and stone buildings blank party walls where they adjoin a neighbour.
 - **Meshes** (`js/gf-building-meshes.js`): `building-footprints.js` with `{ base: 0 }` (walls on the flat ground; New
-  York's stand on its 0.22 m sidewalk). It makes one merged mesh per 1 km cell and style, from the pre-war masonry
+  York's stand on its 0.22 m sidewalk). Since CC-005b the game draws them through `js/gf-building-terrain.js`, each on
+  its own base on the terrain (see Topography); `gf-building-meshes.js` is unchanged. It makes one merged mesh per 1 km cell and style, from the pre-war masonry
   shader on 3.3 m storeys:
   - brick and stone take New York's two masonry presets' colours;
   - clapboard is a light painted tone (stone `0xd6d0c2`, trim `0x5e5a52`, glass `0x1a2430`).
@@ -544,11 +554,109 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
   - **Pedestrians:** 1,278 placed trunks stand in the 1.8 m sidewalk band (by `gf-blocks.js` `onSidewalk`; about 1,276
     by the data's own count), and pedestrians can walk through them; trees are not pedestrian obstacles yet.
 
+### Topography (CC-005b)
+
+The whole play area stands on the USGS 3DEP bare-earth DEM: hills, the river gorge, the quarry and the Thrill Hill /
+Cole's Woods relief, with every road, car, walker, building, tree and pond on it.
+
+- **Source:** USGS 3DEP **NY_Hudson_D22** 1 m DEM (bare earth, hydro-flattened), flown leaf-off November 2022 – April 2023,
+  so **2022–23 ground, not a 1993 landform**. Public domain; credit "USGS 3D Elevation Program". Metadata
+  <https://www.fisheries.noaa.gov/inport/item/73809>; tiles
+  `https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/NY_Hudson_D22/TIFF/`.
+
+  | | |
+  | --- | --- |
+  | original tiles | `USGS_1M_18_x60y480_NY_Hudson_D22.tif` 353,057,146 bytes `e7a48ffc…b2a3`; `…x61y480…` 375,244,353 bytes `76e5f1f3…9933` (not committed) |
+  | horizontal | EPSG:26918 as the TIFFs encode it (the metadata describes NAD83(2011) UTM 18N: reported, not relabelled) |
+  | vertical | NAVD88 (GEOID18) metres |
+  | OSM to UTM | `js/gf-utm.js`, Krüger to n⁶ on GRS80, WGS84 taken as NAD83 (as pyproj's default, which made the bundle's anchor; matched to < 1 µm): consistent, not survey-grade (the realisations differ ~1–2 m) |
+  | game height | **y = NAVD88 − 104.788276672**: the sourced anchor, OSM node 221400851 (Glen / Bay / South Street), whose bilinear 1 m sample that is (not a surveyed road deck). x and z are `GF_GEO`'s frame, unchanged |
+  | coverage | the established bbox (W −73.680, S 43.290, E −73.610, N 43.330) inside the bundle's UTM rectangle 606980–612800 E, 4793840–4798420 N (every 1 m pixel valid) with ≥ 19.6 m to spare; the player's bounds (bbox + 20 m) reach at most 0.7 m past it, into the blend towards the ring; the 8 m ring (the same source's means) reaches 426 m beyond for the view and the helicopter |
+
+- **Inputs** (`data/terrain/`, the CC-005b bundle, unedited; both `SHA256SUMS` verify): `gf-dem-candidate-2m.tif` (2 × 2
+  means), `gf-dem-refinement-patches-1m.tif` (native 1 m where the 2 m reconstruction is off by > 0.25 m, + 8 m halo),
+  `thrill-hill-reference-dem-1m.tif`, the provenance JSON, the audit lattice and the bundle's own script.
+  `prepare-gf-terrain.mjs` (offline, with the originals) checks the tiles' bytes and hashes, rebuilds the aligned 1 m
+  lattice (each reference pixel centre takes the source pixel it falls in, x60 then x61, valid samples only) and proves
+  the bundle is that lattice: **all 6,663,900 candidate pixels and all 8,236,080 patch pixels equal it, to the bit**.
+  It writes the ring (`gf_dem_ring_8m.f32`, 8 × 8 means) and `gf_terrain_prepare.json`. Nothing is filled or smoothed:
+  a missing sample stops it.
+- **Runtime data** (`build-gf-terrain.mjs`, repo inputs only, byte-identical on rebuild): `js/gf-terrain.bin.gz`,
+  **6,853,989 bytes** (16.1 MB inflated): the 2 m base (2910 × 2290) at 5 mm steps, **12,711 native 8 m tiles** (810,176
+  1 m nodes, to 1 cm) wherever a native sample misses the base's reconstruction by > 0.25 m (the bundle's own threshold),
+  and the ring, each grid MED-predicted and split into byte planes. Fetched from this site with the modules (never from
+  USGS); about 18 MB of typed arrays in memory.
+- **The surface** (`js/gf-terrain.js`): a lattice of 1 m nodes at the source pixel centres; a node is its native value
+  where a tile holds it, else the base's bilinear reconstruction; between nodes, two triangles per cell (north-west to
+  south-east diagonal). Outside the lattice the ring, blended in over 24 m; beyond the ring, `valid: false` (NaN), never
+  a flat fill. Continuous everywhere (tested along lines across native tiles and into the ring).
+- **Error against the original 1 m source** (`audit-gf-terrain.mjs`, every one of the 25,224,904 pixel centres in the
+  exact bbox; `data/terrain/gf_terrain_audit.json`), with the bundle's 2 m candidate for comparison:
+
+  | | n | MAE | p95 | p99 | max | > 0.25 m |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | candidate (bilinear 2 m) | 25,224,904 | 0.021 | 0.066 | 0.151 | 6.925 | 91,119 |
+  | **game surface** | 25,224,904 | **0.018** | **0.057** | **0.106** | **0.250** | **0** |
+  | on roads | 1,946,453 | 0.013 | 0.035 | 0.058 | 0.248 | 0 |
+  | river banks / shores (10 m) | 603,232 | 0.020 | 0.097 | 0.160 | 0.250 | 0 |
+  | under bridge decks | 14,883 | 0.018 | 0.089 | 0.156 | 0.242 | 0 |
+  | hill reference crop | 1,074,291 | 0.020 | 0.058 | 0.100 | 0.249 | 0 |
+
+  Tolerance: 0.25 m at any pixel (the bundle's selection threshold; a tighter one inside the patches would not lower the
+  worst case outside them). The hill crop equals the source pixel for pixel (1,078,800 of 1,078,800).
+- **The mesh** (`js/gf-terrain-mesh.js`): a quadtree of 32 × 32-cell chunks, level n every 2ⁿ-th node, chosen by
+  distance (level 0, the surface itself, within ~160 m; level 1 to ~330 m; …). Coarser levels are a decimation (their
+  error: 2 m p95 0.078 m, 4 m 0.14 m, 8 m 0.30 m), hang skirts to close their seams and take a larger depth offset, so
+  overlays on the exact surface stay on top. Up to 700 chunks are cached. Vertex colours are the old block and lot tints.
+- **The surface contract** (`js/gf-surface.js`, one instance in `gf-runtime.js`, `slopGlensFalls.terrain.surface`):
+  `ground(x, z)` (bare earth), `deckAt(x, z, { dir })`, `support(x, z, nearY)` (what stands there: a deck within 1 m
+  above nearY, else the ground), `road(x, z, dirX, dirZ, nearY)` (a deck the vehicle runs along, or the level it is on),
+  `water.surfaceAt(x, z)`, `normal(x, z)`, `info(x, z)` (with `source`: native-1m / base-2m / blend / ring-8m /
+  outside, and `resolution`). **CC-005c** places paths, props and feet with `support()` / `ground()` and `normal()` here
+  (tested example: a table's feet on the hill crop), never with a second terrain.
+- **Consumers:**
+  - roads and service roads draped (`js/gf-drape.js`: three lines across, split until every metre is within 2 cm, 3 cm
+    above the surface), road paint on them (`road-paint.js` opt-in `surfaceAt`), in 1 km chunks;
+  - traffic (`traffic.js` opt-in `surfaceAt`): every vehicle at its road's height, pitched and rolled by its four wheels,
+    keeping to the level it is on (deck or ground); wheels, shadows, lamps, sparks follow;
+  - pedestrians (`pedestrian-system.js` opt-in `groundAt`): feet on the terrain, a deck where their track runs along one;
+  - the player (`controllers.js`, `cameras.js`, opt-in by `world.groundNormalAt`): walking, cycling and driving follow
+    grades (a wheel climbs up to 45° or a 0.35 m step, follows drops up to 50°, falls off anything steeper), the car and
+    bike pitch (and the car rolls) with the ground; the helicopter flies free above a floor 0.25 m over the ground or a
+    deck; teleports, spawn and saved positions (a flat-era save included) land on the surface; the follow cameras keep
+    0.55 m above the ground under them;
+  - buildings (`js/gf-building-bases.js`, drawn by `js/gf-building-terrain.js`): heights unchanged, above a
+    **base = the median ground in a 2–12 m ring round the footprint** (the reference the CC-003b LiDAR heights were
+    measured from); roofs level at base + height; walls down to the lowest ground under them (no floating corner),
+    uphill feet in the ground; storeys counted from the base (`tsl-materials.js` opt-in `footprintBase`); colliders
+    foundation to roof. 103 buildings stand where the ground falls > 1 m under their walls (10 > 3 m) and 124 where it
+    rises > 1 m (9 > 3 m); the extremes are the mills built into the gorge at the falls (SCA Tissue 17.9 m, Finch Paper
+    10.3 m / 8.1 m buried), single footprints over terraced banks;
+  - landmark features keep their CC-004 / CC-004b heights: the First Presbyterian spire from its church's roof (26 m), the
+    Civil War Monument on the ground at its node (12.8 m);
+  - trees (CC-005 data unchanged): each site's y and its trunk's vertical range follow the bare earth, nothing else;
+  - signal posts on the ground.
+- **Bridges** (`js/gf-bridges.js` from the OSM `bridge=yes` ways, matched to their road-graph segments): a bare-earth
+  DEM does not measure decks, so a deck runs straight between the terrain at its two abutments (or the ground, where
+  that stands higher right by them): 16 decks from 17 ways, Cooper's Cave Bridge ~20 m above the water below the falls,
+  the Northway's ~5–6 m over the roads beneath. Each is drawn as a 1 m slab with 0.9 m parapets, whose railings keep the
+  player on it. No piers, no new spans; deck heights are inferred, not surveyed (flagged). Layer −1 / tunnel ways
+  (Warren Street's underpass) and the untagged layer-1 service ways (parking ramps) stay on the DEM.
+- **Water** (`js/gf-water.js`): the DEM over water is the hydro-flattened surface, not a bed; nothing underwater is
+  invented. A body mostly flattened at one level (26: the ponds, the reservoir pool at −23.0, the river above the
+  Feeder Dam at −18.9) is a plane at that level; a reach that falls or steps (21: the river below the falls, −38.2 to
+  −41.8 over 2.5 km, the canals, the treatment basins) takes the level of its nearest flattened cell, capped by the DEM,
+  so it falls downstream, follows the falls down and never climbs a bank. OSM x/z unchanged; islands stay dry.
+- **Uncertainties:** deck heights are inferred (abutment to abutment); the WGS84 / NAD83 mapping is consistent, not
+  survey-grade; building bases are one level per footprint (the mills on the gorge are the worst fit); the dam faces
+  and falls are only as sharp as the 1 m DEM; ring terrain (beyond the play area) is 8 m.
+
 ## Source and licence
 
 Data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the
 [Open Database License (ODbL) 1.0](https://opendatacommons.org/licenses/odbl/1-0/). The raw extracts in
 `tools/gf/data/` and the derived `js/gf-geodata.js` are ODbL. The attribution "© OpenStreetMap contributors" appears
-here, in `GF_GEO.attribution` and on screen in the debug and game views. The one other dataset is USGS 3DEP LiDAR, for the
-building heights and the trees (public domain; credited "USGS 3D Elevation Program" in the game view, in
-`GF_LIDAR_HEIGHTS.credit` and `GF_TREES.credit`, see LiDAR heights and Trees). No geography is placed by hand.
+here, in `GF_GEO.attribution` and on screen in the debug and game views. The other dataset is USGS 3DEP, for the building
+heights and the trees (LiDAR) and the terrain (the 1 m DEM) (public domain; credited "USGS 3D Elevation Program" in the
+game view, in `GF_LIDAR_HEIGHTS.credit`, `GF_TREES.credit` and the terrain's header, see LiDAR heights, Trees and
+Topography). No geography is placed by hand.

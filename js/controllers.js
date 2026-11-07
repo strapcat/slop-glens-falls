@@ -1429,6 +1429,8 @@ class ThirdPersonControllerManager {
     }
     h.position.y = Math.max(floor, Math.min(380, h.position.y));
     this.resolveHorizontalCollision(h.position, 4.5, null, h);
+    // a push off a building can move it over higher ground: never below the floor where it ends up
+    if (this.world.groundNormalAt) h.position.y = Math.max(h.position.y, this.getGroundHeight(h.position.x, h.position.z, 'helicopter') + 0.25);
 
     const targetPitch = (h.speed / maxHorizSpeed) * 0.24;
     const targetRoll = -yawInput * 0.28;
