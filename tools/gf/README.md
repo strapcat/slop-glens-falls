@@ -769,6 +769,11 @@ logs and red cups by day.
 - **Uncertainties:** the trails existed in 1993 according to Dave; the exact 1993 alignments are not documented. The
   OSM geometry is current, and widths other than those tagged are assumed. The anchor is about 10 m, as above. The
   party is invented.
+- **Screenshots** (`screenshots/cc005c-*`):
+  - before/after pairs from the same cameras: woods path, Crandall Pond footbridge, Park View and Glen St entrances,
+    the hill crest, and the hill's side/oblique relief;
+  - the party from one camera at golden hour, twilight, midnight and the morning after;
+  - the coverage diagram and the hill layout.
 - **Tests:** `tests/gf-crandall-trails.test.mjs` covers:
   - the kit's hashes, and both generators regenerating byte for byte;
   - malformed inputs;
