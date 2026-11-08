@@ -10,6 +10,8 @@ import { createGfWater } from './gf-water.js';
 //                         road-graph links, as wide as the road plus DECK_MARGIN each side. A bare-earth DEM does not
 //                         measure a deck: its height runs straight between the terrain at its two abutments (the ends
 //                         of the chain of bridge segments), so it meets the approach roads and never sags into the river.
+//                         Within DECK_TWIST of an end it also takes the ground's cross-slope there (fading out along the
+//                         deck), so it meets the approach road across its whole width, not only on the centre line.
 //   support(x, z, nearY)  what something at height nearY stands on there: the highest of the ground and any deck no
 //                         more than STEP_UP above nearY (a player on a bridge stays on it, one on the road beneath stays
 //                         there); with nearY unknown (NaN), the highest. Roofs are not supports.
@@ -25,6 +27,7 @@ const DECK_MARGIN = 2.0; // metres beyond the curb either side (the bridge sidew
 const STEP_UP = 1.0; // metres: the most a support may be above the height asked about
 const DECK_ALIGN = 0.7; // cos of the largest angle between a vehicle's heading and a deck it drives along
 const NEAR_KEEP = 3; // metres: a vehicle within this of its last height keeps to the nearer of deck and ground
+const DECK_TWIST = 12; // metres from an end over which a deck turns from the ground's cross-slope to level
 
 function createGfSurface({ terrain, geo, bridges }) {
   const ground = terrain.heightAt;
@@ -98,7 +101,15 @@ function createGfSurface({ terrain, geo, bridges }) {
     decks.push({
       id, osm: [...new Set(chain.map((c) => c.osm))], name: chain[0].name, highway: chain[0].highway, length: len,
       ends: [first, last], endY: [y0, y1], segments: chain, bounds: { minX, maxX, minZ, maxZ },
-      yAt: (s) => y0 + ((y1 - y0) * Math.min(len, Math.max(0, s))) / len
+      yAt: (s) => y0 + ((y1 - y0) * Math.min(len, Math.max(0, s))) / len,
+      // the deck at (x, z), s along it, whose centre line point is (cx, cz): the straight line, plus near an end the
+      // ground's rise from the centre line to (x, z), fading out over DECK_TWIST; never under the ground
+      heightAt(s, x, z, cx, cz) {
+        const g = ground(x, z);
+        const w = Math.max(0, 1 - Math.min(s, len - s) / DECK_TWIST);
+        const y = this.yAt(s) + (w > 0 ? w * (g - ground(cx, cz)) : 0);
+        return Math.max(y, g);
+      }
     });
   });
 
@@ -129,7 +140,10 @@ function createGfSurface({ terrain, geo, bridges }) {
         const dirX = ex / c.len, dirZ = ez / c.len;
         if (opts.dir && Math.abs(opts.dir[0] * dirX + opts.dir[1] * dirZ) < DECK_ALIGN) return;
         // the straight abutment-to-abutment line, or the ground where that stands higher (right by an abutment)
-        if (!best || lateral < best.lateral) best = { deck: d, y: Math.max(d.yAt(c.s0 + t * c.len), ground(x, z)), s: c.s0 + t * c.len, lateral, halfWidth: half, dirX, dirZ };
+        if (!best || lateral < best.lateral) {
+          const s = c.s0 + t * c.len;
+          best = { deck: d, y: d.heightAt(s, x, z, c.from[0] + ex * t, c.from[1] + ez * t), s, lateral, halfWidth: half, dirX, dirZ };
+        }
       });
     }
     return best;
@@ -178,8 +192,8 @@ function createGfSurface({ terrain, geo, bridges }) {
     terrain, ground, decks, deckAt, support, road, water, info,
     normal: (x, z, out) => terrain.normalAt(x, z, out),
     valid: (x, z) => Number.isFinite(ground(x, z)),
-    constants: { DECK_MARGIN, STEP_UP, DECK_ALIGN }
+    constants: { DECK_MARGIN, STEP_UP, DECK_ALIGN, DECK_TWIST }
   };
 }
 
-export { createGfSurface, DECK_MARGIN, STEP_UP, DECK_ALIGN };
+export { createGfSurface, DECK_MARGIN, STEP_UP, DECK_ALIGN, DECK_TWIST };

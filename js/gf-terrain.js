@@ -155,6 +155,12 @@ function createGfTerrain(data, frame) {
     return local.toLocal(lon, lat);
   };
 
+  // Game y of the bare earth at UTM (e, n) (heightAt without the projection, for callers that sample many points)
+  function heightUtm(e, n) {
+    if (e >= hull.e0 && e <= hull.e1 && n >= hull.n0 && n <= hull.n1) return latticeNavd(e, n) - ANCHOR;
+    const s = sampleUtm(e, n);
+    return s.valid ? s.navd - ANCHOR : NaN;
+  }
   // Game y of the bare earth at local (x, z); NaN outside the terrain
   function heightAt(x, z) {
     const [e, n] = toUtm(x, z);
@@ -185,7 +191,7 @@ function createGfTerrain(data, frame) {
 
   return {
     header, anchor: header.anchor, ANCHOR, hull, ringBox, lattice: L,
-    heightAt, normalAt, infoAt, sampleUtm, toUtm, fromUtm,
+    heightAt, heightUtm, normalAt, infoAt, sampleUtm, toUtm, fromUtm,
     // lattice access for the mesher and tests: NAVD88 of node (i, j), and UTM of a node
     nodeNavd, isNative, nodeUtm: (i, j) => [L.e0 + i, L.n0 - j], ringNavd
   };

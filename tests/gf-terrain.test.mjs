@@ -373,22 +373,91 @@ test('trees on the terrain: only the base height and the trunk\'s vertical range
   });
 });
 
-test('roads draped: every ribbon vertex sits ROAD_LIFT above the surface, every metre within DRAPE_TOL of it', () => {
+test('roads draped: each piece on the right surface (deck or ground), its vertices on it and its interior close', () => {
   const g = GF_GEO.roadGraph, service = g.classes.indexOf('service');
-  const segs = new Set(GF_BRIDGES.bridges.flatMap((b) => b.segments.map(([l, s]) => `${l}/${s}`)));
-  // a sample of links (every 20th) for speed
-  const sample = { ...g, links: g.links.filter((_, k) => k % 20 === 0) };
-  const { positions } = drapeRoads(sample, (c) => c !== service, S, segs);
-  let worst = 0;
-  for (let i = 0; i < positions.length; i += 3) {
-    const x = positions[i], z = positions[i + 2];
-    // the ground, or the deck it runs on (a road under a bridge keeps to the ground)
-    const d = S.deckAt(x, z), y = positions[i + 1] - ROAD_LIFT;
-    worst = Math.max(worst, Math.min(Math.abs(y - S.ground(x, z)), d ? Math.abs(y - d.y) : Infinity));
+  const bridgeSegs = new Set(GF_BRIDGES.bridges.flatMap((b) => b.segments.map(([l, s]) => `${l}/${s}`)));
+  const linkPts = (l) => {
+    const pts = [[g.nodes[l[0] * 2], g.nodes[l[0] * 2 + 1]]];
+    for (let i = 0; i < l[7].length; i += 2) pts.push([l[7][i], l[7][i + 1]]);
+    pts.push([g.nodes[l[1] * 2], g.nodes[l[1] * 2 + 1]]);
+    return pts;
+  };
+  // the sample: every 20th link, every link with a bridge segment and every link passing under a deck; the bridge
+  // segments keyed by the sample's own link indices (drapeRoads reads `${link}/${segment}` of the graph it is given)
+  const under = (l) => linkPts(l).some(([x, z], k, pts) => k > 0 && [0.25, 0.5, 0.75].some((t) => {
+    const [px, pz] = pts[k - 1], d = S.deckAt(px + (x - px) * t, pz + (z - pz) * t);
+    return d && d.y - S.ground(px + (x - px) * t, pz + (z - pz) * t) > 2;
+  }));
+  const keep = g.links.map((l, k) => k).filter((k) => (g.links[k][3] !== service && k % 20 === 0)
+    || linkPts(g.links[k]).some((_, s) => bridgeSegs.has(`${k}/${s}`)) || under(g.links[k]));
+  const remap = new Map(keep.map((k, i) => [k, i]));
+  const segs = new Set([...bridgeSegs].map((key) => key.split('/').map(Number)).filter(([l]) => remap.has(l)).map(([l, s]) => `${remap.get(l)}/${s}`));
+  assert.equal(segs.size, bridgeSegs.size, 'every bridge segment is in the sample, under its new index');
+  const sample = { ...g, links: keep.map((k) => g.links[k]) };
+  const { positions: P, indices: I, parts } = drapeRoads(sample, () => true, S, segs, { parts: true });
+
+  let vertexWorst = 0, interiorWorst = 0, over10 = 0, samples = 0, deckChecks = 0, underChecks = 0;
+  for (const part of parts) {
+    const li = keep[part.link], pts = linkPts(g.links[li]);
+    // the right surface: a strip over a bridge segment drapes on its deck; a join on the deck where a bridge segment
+    // of the link starts or ends at its point; everything else on the ground, even under a deck
+    const wantDeck = part.kind === 'strip' ? bridgeSegs.has(`${li}/${part.seg}`)
+      : bridgeSegs.has(`${li}/${part.point - 1}`) || bridgeSegs.has(`${li}/${part.point}`);
+    assert.equal(part.onDeck, wantDeck, `${part.kind} of link ${li}`);
+    let expect;
+    if (part.kind === 'strip') {
+      const [x0, z0] = pts[part.seg], [x1, z1] = pts[part.seg + 1], len = Math.hypot(x1 - x0, z1 - z0);
+      const dir = [(x1 - x0) / len, (z1 - z0) / len];
+      expect = (x, z) => { const d = wantDeck ? S.deckAt(x, z, { dir }) : null; return d ? d.y : S.ground(x, z); };
+    } else expect = (x, z) => { const d = wantDeck ? S.deckAt(x, z) : null; return d ? d.y : S.ground(x, z); };
+    for (let k = part.start; k < part.end; k += 3) {
+      const A = I[k] * 3, B = I[k + 1] * 3, C = I[k + 2] * 3;
+      for (const V of [A, B, C]) vertexWorst = Math.max(vertexWorst, Math.abs(P[V + 1] - ROAD_LIFT - expect(P[V], P[V + 2])));
+      // the interior, on a 0.5 m barycentric grid
+      const e = Math.max(Math.hypot(P[A] - P[B], P[A + 2] - P[B + 2]), Math.hypot(P[B] - P[C], P[B + 2] - P[C + 2]), Math.hypot(P[A] - P[C], P[A + 2] - P[C + 2]));
+      const n = Math.max(1, Math.ceil(e / 0.5));
+      for (let i = 0; i <= n; i++) {
+        for (let j = 0; j <= n - i; j++) {
+          const w1 = i / n, w2 = j / n, w3 = 1 - w1 - w2;
+          const x = w1 * P[A] + w2 * P[B] + w3 * P[C], z = w1 * P[A + 2] + w2 * P[B + 2] + w3 * P[C + 2];
+          const y = w1 * P[A + 1] + w2 * P[B + 1] + w3 * P[C + 1] - ROAD_LIFT;
+          const err = Math.abs(y - expect(x, z));
+          interiorWorst = Math.max(interiorWorst, err);
+          if (err > 0.1) over10++;
+          samples++;
+          // on the right level where the two are metres apart: a deck strip over the deck, a road beneath on the ground
+          const d = S.deckAt(x, z), gy = S.ground(x, z);
+          if (part.kind === 'strip' && d && d.y - gy > 2 && d.lateral < 0.5) {
+            // (nearer its own surface than the other, and close to it)
+            if (wantDeck) { assert.ok(y - gy > d.y - y && Math.abs(y - d.y) < 0.35, `deck strip of link ${li} at ${x}, ${z}: ${y} deck ${d.y} ground ${gy}`); deckChecks++; }
+            else { assert.ok(d.y - y > y - gy && Math.abs(y - gy) < 0.35, `road under a deck, link ${li} at ${x}, ${z}: ${y} deck ${d.y} ground ${gy}`); underChecks++; }
+          }
+        }
+      }
+    }
   }
-  // a vertex is on the surface (decks: the deck), to float32 positions (its x, z rounded on a slope)
-  assert.ok(worst < 1e-3, `${worst}`);
+  // vertices on their surface (to float32 positions); the interior within 0.45 m everywhere and within 0.1 m at all but
+  // about one in a thousand samples. The worst are abutment walls in the DEM (a 3.6 m drop within 2 m beside Murray
+  // Street's deck, a bank across Bush Street's approach), which a ribbon of lines 0.5 m apart cannot follow
+  assert.ok(vertexWorst < 2e-3, `vertices ${vertexWorst}`);
+  assert.ok(interiorWorst < 0.45, `interior ${interiorWorst}`);
+  // (this sample holds every bridge and under-bridge link, so the abutments weigh more than over the whole network)
+  assert.ok(over10 / samples < 1e-3, `${over10} of ${samples} samples over 0.1 m`);
+  assert.ok(deckChecks > 500 && underChecks > 50, `${deckChecks} deck, ${underChecks} under-deck samples`);
   assert.equal(DRAPE_TOL, 0.02);
+});
+
+test('bridge decks meet the ground across the whole road at both ends (the deck turns into its cross-slope)', () => {
+  for (const d of S.decks) {
+    for (const [end, c] of [[0, d.segments[0]], [1, d.segments[d.segments.length - 1]]]) {
+      const [px, pz] = end ? c.to : c.from, ex = (c.to[0] - c.from[0]) / c.len, ez = (c.to[1] - c.from[1]) / c.len;
+      const inside = end ? -0.01 : 0.01, half = c.width / 2;
+      for (let k = -1; k <= 1; k += 0.125) {
+        const x = px - ez * half * k + ex * inside, z = pz + ex * half * k + ez * inside;
+        assert.ok(Math.abs(S.deckAt(x, z).y - S.ground(x, z)) < 0.05, `${d.name || d.id} end ${end}, ${k}`);
+      }
+    }
+  }
 });
 
 test('shared modules: tsl-materials.js gains only the opt-in footprintBase (undoing it gives back CC-005\'s file)', () => {

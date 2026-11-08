@@ -206,15 +206,22 @@ function deckGeometry(surface) {
       const ux = (c.to[0] - c.from[0]) / c.len, uz = (c.to[1] - c.from[1]) / c.len;
       const half = c.width / 2 + surface.constants.DECK_MARGIN;
       const rx = -uz, rz = ux;
+      // the deck's height (gf-surface.js: level across, but for its twist into the ground's cross-slope near an end)
+      // at station k and lateral offset o, just under the asphalt ribbon
       const at = (k) => {
         const s = (c.len * k) / n, x = c.from[0] + ux * s, z = c.from[1] + uz * s;
-        return { x, z, y: Math.max(d.yAt(c.s0 + s), surface.ground(x, z)) + ROAD_LIFT - 0.01 };
+        const yo = (o) => d.heightAt(c.s0 + s, x + rx * o, z + rz * o, x, z) + ROAD_LIFT - 0.01;
+        return { x, z, y: yo(0), yo };
       };
+      const ACROSS = 4; // quads across the top (follow the twist near an end)
       for (let k = 0; k < n; k++) {
         const p = at(k), q = at(k + 1);
-        const L = (o, dy = 0, P = p) => [P.x + rx * o, P.y + dy, P.z + rz * o];
-        quad(L(-half, 0, p), L(-half, 0, q), L(half, 0, q), L(half, 0, p)); // top
-        quad(L(-half, -DECK_DEPTH, p), L(half, -DECK_DEPTH, p), L(half, -DECK_DEPTH, q), L(-half, -DECK_DEPTH, q)); // underside
+        const L = (o, dy = 0, P = p, y = P.yo(o)) => [P.x + rx * o, y + dy, P.z + rz * o];
+        for (let a = 0; a < ACROSS; a++) {
+          const o0 = -half + (2 * half * a) / ACROSS, o1 = -half + (2 * half * (a + 1)) / ACROSS;
+          quad(L(o0, 0, p), L(o0, 0, q), L(o1, 0, q), L(o1, 0, p)); // top
+          quad(L(o0, -DECK_DEPTH, p), L(o1, -DECK_DEPTH, p), L(o1, -DECK_DEPTH, q), L(o0, -DECK_DEPTH, q)); // underside
+        }
         for (const side of [-1, 1]) {
           const o = side * half, oi = side * (half - PARAPET_W);
           quad(L(o, -DECK_DEPTH, p), L(o, -DECK_DEPTH, q), L(o, PARAPET, q), L(o, PARAPET, p)); // outer face
@@ -236,7 +243,7 @@ function deckGeometry(surface) {
           colliders.push({
             minX: Math.min(...outer.map((v) => v.x)), maxX: Math.max(...outer.map((v) => v.x)),
             minZ: Math.min(...outer.map((v) => v.z)), maxZ: Math.max(...outer.map((v) => v.z)),
-            minY: Math.min(p.y, q.y) - DECK_DEPTH, maxY: Math.max(p.y, q.y) + 1.1, polygon: { outer, holes: [] }, deck: d.id
+            minY: Math.min(p.yo(o1), q.yo(o1)) - DECK_DEPTH, maxY: Math.max(p.yo(o1), q.yo(o1)) + 1.1, polygon: { outer, holes: [] }, deck: d.id
           });
         }
       }
