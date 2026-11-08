@@ -105,7 +105,25 @@ test('against the original 1 m source: the bundle audit lattice (10,096 samples)
   const audit = JSON.parse(fs.readFileSync(path.join(DATA, 'gf_terrain_audit.json'), 'utf8'));
   assert.equal(audit.targetPixels, 25224904);
   assert.ok(audit.query.all.maxM <= 0.25 && audit.query.all.over0_25M === 0);
+  // the bundle's hill reference crop is the source, pixel for pixel; the game surface there is not (base-2 m nodes
+  // within the 0.25 m keep threshold): about 2 cm typical, ~0.249 m at worst
   assert.equal(audit.hillCrop.equalToSource, audit.hillCrop.pixels);
+  assert.ok(audit.query.hill.maxM > 0.2 && audit.query.hill.maxM < 0.25 && audit.query.hill.maeM < 0.025);
+  // each subset's worst list holds its true largest errors (largest first; the first is the maximum), whatever their size
+  for (const k of ['all', 'roads', 'banks', 'decks', 'hill']) {
+    const q = audit.query[k];
+    assert.equal(q.worst.length, 10, k);
+    assert.ok(Math.abs(q.worst[0].errorM - q.maxM) < 1e-4, `${k}: worst ${q.worst[0].errorM} vs max ${q.maxM}`);
+    for (let i = 1; i < q.worst.length; i++) assert.ok(q.worst[i].errorM <= q.worst[i - 1].errorM, k);
+  }
+  // the hill's worst, checked against the crop itself (the source there): the surface's node minus the crop's pixel
+  const hill = openTiff(path.join(DATA, 'thrill-hill-reference-dem-1m.tif'));
+  const c0 = Math.round(hill.tie[3] - (T.lattice.e0 - 0.5)), r0 = Math.round(T.lattice.n0 + 0.5 - hill.tie[4]);
+  for (const w of audit.query.hill.worst) {
+    const ref = hill.readWindow(w.col - c0, w.row - r0, 1, 1)[0];
+    assert.ok(Math.abs(Math.abs(T.nodeNavd(w.col, w.row) - ref) - w.errorM) < 1e-4, JSON.stringify(w));
+    assert.ok(w.on.includes('hill'));
+  }
 });
 
 test('the surface: anchor, axes, pixel centres, triangles, edges and outside', () => {

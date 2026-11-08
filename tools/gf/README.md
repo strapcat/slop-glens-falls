@@ -603,7 +603,10 @@ Cole's Woods relief, with every road, car, walker, building, tree and pond on it
   | hill reference crop | 1,074,291 | 0.020 | 0.058 | 0.100 | 0.249 | 0 |
 
   Tolerance: 0.25 m at any pixel (the bundle's selection threshold; a tighter one inside the patches would not lower the
-  worst case outside them). The hill crop equals the source pixel for pixel (1,078,800 of 1,078,800).
+  worst case outside them). The bundle's hill reference crop (`thrill-hill-reference-dem-1m.tif`) equals the source
+  pixel for pixel (1,078,800 of 1,078,800), but **the game surface there is not exact**: MAE 0.020 m, p95 0.058 m, max
+  **0.249 m** (x −2597.5, z −1737.9, a base-2 m node just within the keep threshold). Each subset's ten worst
+  locations (true maxima, whatever their size) are in the audit JSON.
 - **The mesh** (`js/gf-terrain-mesh.js`): a quadtree of 32 × 32-cell chunks, level n every 2ⁿ-th node, chosen by
   distance (a chunk splits while the camera is nearer than 1.2 × its size: level 0, the surface itself, within ~77 m;
   level 1 to ~154 m; …). Coarser levels are a decimation (their error: 2 m p95 0.078 m, 4 m 0.14 m, 8 m 0.30 m) and take

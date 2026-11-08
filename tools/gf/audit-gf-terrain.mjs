@@ -96,6 +96,16 @@ for (let r = 0; r < hill.height; r++) {
 }
 log(`hill crop: ${hillEqual} of ${hill.width * hill.height} pixels equal the source lattice (window at column ${hc0}, row ${hr0})`);
 
+// The WORST largest errors, whatever their size: a list kept sorted largest first (ties: the first met, row-major)
+const WORST = 10;
+function keepWorst(worst, e, i, j) {
+  if (worst.length === WORST && e <= worst[WORST - 1][0]) return;
+  let k = worst.length < WORST ? worst.length : WORST - 1;
+  while (k > 0 && worst[k - 1][0] < e) k--;
+  worst.splice(k, 0, [e, i, j]);
+  if (worst.length > WORST) worst.pop();
+}
+
 // error statistics of f(i, j) over the pixels where (mask & bit) === bit; stride for the mesh levels
 function stats(f, bit, stride = 1) {
   const hist = new Uint32Array(200001); // 0.0001 m bins to 20 m
@@ -109,7 +119,7 @@ function stats(f, bit, stride = 1) {
       n++; sum += e; sum2 += e * e;
       hist[Math.min(200000, Math.round(e * 10000))]++;
       if (e > max) max = e;
-      if (e > 0.25 && worst.length < 4000) worst.push([e, i, j]);
+      keepWorst(worst, e, i, j);
     }
   }
   const pct = (p) => {
@@ -118,14 +128,14 @@ function stats(f, bit, stride = 1) {
     return max;
   };
   const over = (t) => { let c = 0; for (let b = Math.round(t * 10000) + 1; b < hist.length; b++) c += hist[b]; return c; };
-  worst.sort((a, b) => b[0] - a[0]);
   return {
     n, maeM: sum / n, rmseM: Math.sqrt(sum2 / n), p50M: pct(0.5), p95M: pct(0.95), p99M: pct(0.99), maxM: max,
     over0_1M: over(0.1), over0_25M: over(0.25), over0_5M: over(0.5), over1M: over(1),
-    worst: worst.slice(0, 10).map(([e, i, j]) => {
+    worst: worst.map(([e, i, j]) => {
       const [x, z] = T.fromUtm(L.e0 + i, L.n0 - j);
       const [lon, lat] = utmToLonLat(L.e0 + i, L.n0 - j);
-      return { errorM: +e.toFixed(4), sourceM: +src[j * W + i].toFixed(3), surfaceM: +f(i, j).toFixed(3), col: i, row: j, lon: +lon.toFixed(7), lat: +lat.toFixed(7), x: +x.toFixed(1), z: +z.toFixed(1), native: T.isNative(i, j) };
+      const m = mask[j * W + i], on = ['road', 'bank', 'deck', 'hill'].filter((_, b) => m & (2 << b));
+      return { errorM: +e.toFixed(4), sourceM: +src[j * W + i].toFixed(3), surfaceM: +f(i, j).toFixed(3), col: i, row: j, lon: +lon.toFixed(7), lat: +lat.toFixed(7), x: +x.toFixed(1), z: +z.toFixed(1), native: T.isNative(i, j), on };
     })
   };
 }
