@@ -1,5 +1,7 @@
 import * as THREE from 'three/webgpu';
 import { createGfTerrainMesh } from './gf-terrain-mesh.js';
+import { decodeLodErrors } from './gf-terrain-lod-codec.js';
+import { GF_TERRAIN_LOD_ERRORS } from './gf-terrain-lod-errors.js';
 import { drapeRoads, ROAD_LIFT } from './gf-drape.js';
 
 // Glens Falls ground from GF_GEO (js/gf-geodata.js): road ribbons at their curb widths, water, block tint and the
@@ -267,7 +269,8 @@ function buildGfTerrainGround(scene, geo, surface, blocks, bridges) {
     if (!b) return 0;
     return b.lot && polygonIn(b.lot, x, z) ? 2 : 1;
   };
-  const terrain = createGfTerrainMesh(surface.terrain, { classify });
+  // the chunks' drawn errors (tools/gf/audit-gf-terrain-mesh.mjs) keep a chunk fine where a decimation would show
+  const terrain = createGfTerrainMesh(surface.terrain, { classify, errors: decodeLodErrors(GF_TERRAIN_LOD_ERRORS) });
   group.add(terrain.group);
   // Draped: the normals follow the slope, turned to face up whichever way the triangles wind
   const add = (g, mat, name) => {
