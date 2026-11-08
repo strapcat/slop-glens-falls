@@ -308,8 +308,10 @@ function trailGroundAt(surface) {
   return (x, z, ux, uz, p) => {
     const tr = p && p.route && p.route.trail;
     if (!tr) return surface.road(x, z, ux, uz);
-    if (tr.deck) { const d = surface.footDeckAt(x, z); if (d) return d.y + TRAIL_LIFT; }
-    return surface.ground(x, z) + TRAIL_LIFT;
+    // by position, not by the walker's track: a foot set down at a bridge's end while the walker is still on the path
+    // stands on the deck all the same (the deck meets the ground at its ends, so a path beside one is unchanged)
+    const d = surface.footDeckAt(x, z);
+    return (d ? d.y : surface.ground(x, z)) + TRAIL_LIFT;
   };
 }
 
