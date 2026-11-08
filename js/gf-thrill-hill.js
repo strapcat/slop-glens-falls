@@ -86,8 +86,19 @@ function buildThrillHillParty(scene, plan, ground, { textureFallback = false } =
   // the keg (both times: full by night, left empty by day)
   const kegMat = new THREE.MeshStandardMaterial({ color: 0xb9bcc0, roughness: 0.35, metalness: 0.85 });
   add(group, new THREE.CylinderGeometry(keg.r, keg.r, keg.h, 18), kegMat, keg.x, keg.y + keg.h / 2, keg.z, 'Keg');
-  for (const y of [0.12, keg.h - 0.12]) add(group, new THREE.TorusGeometry(keg.r + 0.005, 0.012, 6, 24), kegMat, keg.x, keg.y + y, keg.z, 'KegRib').rotation.x = Math.PI / 2;
+  const ribGeo = new THREE.TorusGeometry(keg.r + 0.005, 0.012, 6, 24);
+  for (const y of [0.12, keg.h - 0.12]) add(group, ribGeo, kegMat, keg.x, keg.y + y, keg.z, 'KegRib').rotation.x = Math.PI / 2;
   add(group, new THREE.BoxGeometry(0.08, 0.1, 0.08), new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.6 }), keg.x, keg.y + keg.h + 0.05, keg.z, 'KegTap');
+
+  // the repeated props as one instanced draw each (fewer draw calls, also in the shadow pass)
+  for (const [parent, name] of [[group, 'FireStone'], [night, 'FireLog'], [day, 'CharredLog'], [group, 'KegRib']]) {
+    const parts = parent.children.filter((c) => c.name === name);
+    const inst = new THREE.InstancedMesh(parts[0].geometry, parts[0].material, parts.length);
+    inst.name = name + 's';
+    inst.castShadow = inst.receiveShadow = true;
+    parts.forEach((p, k) => { p.updateMatrix(); inst.setMatrixAt(k, p.matrix); parent.remove(p); });
+    parent.add(inst);
+  }
 
   // day: empty red cups (one instanced draw)
   const cupGeo = new THREE.CylinderGeometry(0.045, 0.032, 0.11, 10, 1, true);

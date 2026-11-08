@@ -26,7 +26,7 @@ import { GF_TREES } from '../js/gf-trees.js';
 import { GF_TRAILS } from '../js/gf-trails.js';
 import { createTrailNetwork, createTrailRoutes, trailGroundAt, TRAIL_LIFT, TRAIL_MOD, TRAIL_REM, ATTACH_REACH } from '../js/gf-trail-network.js';
 import { planThrillHillParty, createPartySchedule, isNight, THRILL_HILL_SCENE, NIGHT_GLOW, ATTENDEES, FIRE_CLEAR, FIRE_RING } from '../js/gf-thrill-hill-plan.js';
-import { buildTrails, moduleText, segSquareDist, BODY } from '../tools/gf/build-gf-crandall-trails.mjs';
+import { buildTrails, moduleText, checkCorridor, segSquareDist, BODY } from '../tools/gf/build-gf-crandall-trails.mjs';
 import { select } from '../tools/gf/select-gf-crandall-trails.mjs';
 
 // CC-005c: the sourced trails through Crandall Park and Cole's Woods to Thrill Hill, the walkers who use them, the
@@ -82,6 +82,34 @@ test('malformed inputs are refused', () => {
   assert.throws(variant((c, f) => { c.features.push(structuredClone(f)); }), /duplicate line/);
   assert.throws(variant((c, f) => { f.properties.nodeIds = f.properties.nodeIds.slice(1); }), /disagree/);
   assert.throws(variant((c, f) => { f.geometry.coordinates[1] = f.geometry.coordinates[0].slice(); f.properties.nodeIds[1] = f.properties.nodeIds[0]; f.geometry.coordinates.length = 2; f.properties.nodeIds.length = 2; }), /zero-length|two positions/);
+});
+
+test('fixtures: a pond mid-segment, a building, the clearance boundary, a junction turn, a nearby but unconnected end', () => {
+  // dry ends, a pond in the middle: refused; the same line as a footbridge (a deck) passes; a building: refused
+  const pond = { name: 'fixture pond', outer: [4, -3, 6, -3, 6, 3, 4, 3], holes: [] };
+  const line = (kind, z = 0) => ({ id: `fixture-${kind}`, kind, widthM: 2, pts: [0, z, 10, z] });
+  assert.throws(() => checkCorridor([line('path')], { water: [pond], buildings: [] }), /in water \(fixture pond\)/);
+  assert.doesNotThrow(() => checkCorridor([line('footbridge')], { water: [pond], buildings: [] }));
+  assert.throws(() => checkCorridor([line('footbridge')], { water: [], buildings: [{ osm: 'w1', ...pond }] }), /in a building \(w1\)/);
+  // beside the pond, its edge 0.9 m from the water: the 2 m corridor (1 m half width) reaches in
+  assert.throws(() => checkCorridor([line('path', -3.9)], { water: [pond], buildings: [] }), /in water/);
+  assert.doesNotThrow(() => checkCorridor([line('path', -4.1)], { water: [pond], buildings: [] }));
+  // the tree rule: a trunk square (half 0.25) is cleared when within half the width + BODY of the line
+  const reach = 1 + BODY, h = 0.25;
+  assert.ok(segSquareDist(0, 0, 10, 0, 5, reach + h - 0.01, h) < reach, 'just inside: cleared');
+  assert.ok(!(segSquareDist(0, 0, 10, 0, 5, reach + h + 0.01, h) < reach), 'just outside: kept');
+  // a junction turn: outside the corner, near neither segment's middle but within reach of their shared end
+  assert.ok(segSquareDist(0, 0, 10, 0, 11.2, -1.2, h) < reach && segSquareDist(10, 0, 10, 10, 11.2, -1.2, h) < reach);
+  // a line ending 0.3 m from a graph node but not on it (no shared OSM node) is not joined: its component has no
+  // entrance and the generator refuses it (no snap ever makes a connection)
+  const fc = JSON.parse(fs.readFileSync(INPUT, 'utf8'));
+  const src = fc.features.find((f) => f.properties.accepted && f.properties.group === 'coles-corridor' && f.geometry.type === 'LineString');
+  const copy = structuredClone(src);
+  copy.properties.id = 'fixture-nearby';
+  copy.properties.nodeIds = copy.properties.nodeIds.map((n) => `fixture-${n}`);
+  copy.geometry.coordinates = copy.geometry.coordinates.map(([lon, lat]) => [lon + 0.0000037, lat]);
+  fc.features.push(copy);
+  assert.throws(() => buildTrails(fc, 'test'), /has no entrance/);
 });
 
 test('only the accepted, pedestrian-permitted sources are in the graph', () => {
@@ -178,6 +206,11 @@ test('trees: exactly those whose trunk reaches a path or footbridge corridor are
   const expected = treesAll.sites.filter(reaches).map((s) => s.index);
   assert.deepEqual([...excluded].sort((a, b) => a - b), expected);
   assert.equal(treesKept.skipped.trail, excluded.size);
+  // every drawn tree has its trunk collider, and only those (the player's colliders agree with the rendered trees)
+  assert.equal(treesKept.trunks.length, treesKept.sites.length);
+  // outside the clearing, every tree is placed exactly as before (x, z, height, species)
+  const kept = new Map(treesKept.sites.map((s) => [s.index, s]));
+  for (const s of treesAll.sites) if (!excluded.has(s.index)) assert.deepEqual(kept.get(s.index), s);
   assert.equal(treesAll.sites.length - treesKept.sites.length, excluded.size);
   assert.ok(excluded.size === 70, `${excluded.size} trees cleared`);
   for (const row of GF_TRAILS.treeExclusions.trees) assert.ok(GF_TRAILS.edges.some((e) => e.id === row[5]), `tree ${row[0]} names its path`);

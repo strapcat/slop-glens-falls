@@ -344,7 +344,9 @@ async function initApp() {
     // CC-005c: the trails (graph, entrances and their sidewalk attachments, meshes, trees cleared), the trail walkers
     // and the fictional Thrill Hill party (its layout, who is where, the fire's state)
     trails: {
-      data: { counts: GF_TRAILS.counts, lengthsM: GF_TRAILS.lengthsM, hill: GF_TRAILS.hill, components: GF_TRAILS.components },
+      data: { source: GF_TRAILS.source, sha256: GF_TRAILS.sha256, counts: GF_TRAILS.counts, lengthsM: GF_TRAILS.lengthsM, hill: GF_TRAILS.hill, components: GF_TRAILS.components },
+      // graph nodes no entrance reaches (0: every component has one)
+      unreachableNodes: Array.from({ length: TRAIL_NET.nodes }, (_, u) => u).filter((u) => !TRAIL_NET.entrances.some((en) => Number.isFinite(TRAIL_NET.dist[en.node][u]))).length,
       network: TRAIL_NET,
       meshes: trailMeshes.stats,
       footbridgeRails: trailMeshes.colliders.length,

@@ -63,6 +63,39 @@ function segSquareDist(ax, az, bx, bz, cx, cz, h) {
   return best;
 }
 
+// The corridor is dry and open: every edge sampled every CORRIDOR_STEP m along its centre line and both edges of its
+// width stays out of mapped water (GF_GEO.water; a footbridge, which has a deck, excepted) and out of every building
+// footprint (GF_BUILDINGS). Dry endpoints do not excuse a pond in the middle. water: [{ outer, holes }] and buildings:
+// [{ outer, holes }], flat [x, z, ...] rings.
+const CORRIDOR_STEP = 0.5;
+const inRing = (flat, x, z) => {
+  let ins = false;
+  for (let i = 0, j = flat.length - 2; i < flat.length; j = i, i += 2) {
+    const xi = flat[i], zi = flat[i + 1], xj = flat[j], zj = flat[j + 1];
+    if ((zi > z) !== (zj > z) && x < xi + ((xj - xi) * (z - zi)) / (zj - zi)) ins = !ins;
+  }
+  return ins;
+};
+const inShape = (p, x, z) => inRing(p.outer, x, z) && !(p.holes || []).some((h) => inRing(h, x, z));
+function checkCorridor(edges, { water, buildings }) {
+  const box = (p) => { let a = Infinity, b = -Infinity, c = Infinity, d = -Infinity; for (let i = 0; i < p.outer.length; i += 2) { a = Math.min(a, p.outer[i]); b = Math.max(b, p.outer[i]); c = Math.min(c, p.outer[i + 1]); d = Math.max(d, p.outer[i + 1]); } return { p, a, b, c, d }; };
+  const W = water.map(box), B = buildings.map(box);
+  for (const e of edges) {
+    const half = e.widthM / 2;
+    for (let k = 0; k + 3 < e.pts.length; k += 2) {
+      const [ax, az, bx, bz] = e.pts.slice(k, k + 4), l = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(l / CORRIDOR_STEP));
+      const nx = -(bz - az) / l, nz = (bx - ax) / l;
+      for (let i = 0; i <= n; i++) for (const o of [0, -half, half]) {
+        const x = ax + ((bx - ax) * i) / n + nx * o, z = az + ((bz - az) * i) / n + nz * o;
+        const hit = (list) => list.find((q) => x >= q.a && x <= q.b && z >= q.c && z <= q.d && inShape(q.p, x, z));
+        if (e.kind !== 'footbridge') { const w = hit(W); if (w) throw new Error(`${e.id}: in water (${w.p.name || w.p.osm}) at (${x.toFixed(2)}, ${z.toFixed(2)})`); }
+        const b = hit(B);
+        if (b) throw new Error(`${e.id}: in a building (${b.p.osm}) at (${x.toFixed(2)}, ${z.toFixed(2)})`);
+      }
+    }
+  }
+}
+
 function roadSegments() {
   const g = GF_GEO.roadGraph, at = Object.fromEntries(g.linkFields.map((f, k) => [f, k]));
   const segs = [];
@@ -247,6 +280,11 @@ function buildTrails(fc = JSON.parse(fs.readFileSync(INPUT, 'utf8')), inputSha =
       roadLink: cut.link, roadName: cut.roadName, roadHalfM: cut.half, side, sidewalkX: r2(sx), sidewalkZ: r2(sz), snapM: r2(snap), trimmedM: r2(cut.trimmedM || 0) });
   }
 
+  {
+    const F = Object.fromEntries(GF_BUILDINGS.fields.map((name, i) => [name, i]));
+    checkCorridor(edges, { water: GF_GEO.water, buildings: GF_BUILDINGS.buildings.map((b) => ({ osm: b[F.osm], outer: b[F.outer], holes: b[F.holes] })) });
+  }
+
   // Components (each must reach an entrance) and the hill node
   const adj = Array.from({ length: nodes.length / 2 }, () => []);
   edges.forEach((e, k) => { adj[e.a].push(k); adj[e.b].push(k); });
@@ -317,4 +355,4 @@ function main() {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) main();
 
-export { buildTrails, moduleText, segSquareDist, BODY, SIDEWALK_LINE };
+export { buildTrails, moduleText, checkCorridor, segSquareDist, BODY, SIDEWALK_LINE };
