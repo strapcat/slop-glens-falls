@@ -1,0 +1,42 @@
+{
+  "sourceFile": "USGS_1M_18_x60y480_NY_Hudson_D22.tif",
+  "sourceUrl": "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1m/Projects/NY_Hudson_D22/TIFF/USGS_1M_18_x60y480_NY_Hudson_D22.tif",
+  "sourceSHA256": "e7a48ffc968e370dbd84c827e96c07f80ed5e8089e06242676e30c1867beb2a3",
+  "sourceBytes": 353057146,
+  "datasetMetadata": "https://www.fisheries.noaa.gov/inport/item/73809",
+  "cropFile": "crandall-coles-corridor-dem-1m.tif",
+  "cropSHA256": "dc60f1b73f84b00567703bbc44b1b49524a5dcc3b17394f7a4c423d033fc6213",
+  "cropPixels": [
+    1488,
+    725
+  ],
+  "cropCRS": "EPSG:26918 (as encoded in GeoTIFF); do not silently relabel as 3857/4326",
+  "transform": [
+    1.0,
+    0.0,
+    607019.999988492,
+    0.0,
+    -1.0,
+    4797898.999961247,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "resolutionM": 1,
+  "verticalUnits": "metres",
+  "verticalDatum": "NAVD88/GEOID18 per dataset metadata",
+  "method": "integer pixel window of existing source tile; original float32 values preserved, no reprojection, smoothing, resampling or nodata filling",
+  "wgs84RequestBounds": [
+    -73.68,
+    43.3198,
+    -73.6618,
+    43.3261
+  ],
+  "cropElevationRangeM": [
+    98.66249084472656,
+    130.83685302734375
+  ],
+  "notHistoric": true,
+  "license": "USGS government work/public domain; credit USGS 3D Elevation Program",
+  "note": "2022\u201323 bare earth. Footbridge decks are not represented by a bare-earth DEM; do not drape bridges into water."
+}

@@ -30,6 +30,15 @@ import {
 
 const NUM_CARS = 200;
 const NUM_BUSES = 12;
+// Vertical extents for contacts between levels (only on a terrain, see poseOnSurface): from the road up, generously
+// (the tallest car body is ~1.9 m, a bus ~3.2 m, a standing person or a rider ~1.9 m). Decks clear the roads beneath by
+// 4.5 m or more, so these keep the levels apart and still let ramps meet where they merge.
+const CAR_LEVEL_HEIGHT = 2.2;
+const BUS_LEVEL_HEIGHT = 3.4;
+const PLAYER_LEVEL_HEIGHT = 2.2;
+// a and b ({ levelY, levelTop }) both known and not overlapping in height
+const apartVertically = (a, b) => a.levelY !== undefined && b.levelY !== undefined
+  && (a.levelY >= b.levelTop || b.levelY >= a.levelTop);
 
 // The stand-in for pedestrian-system.js where a city has no sidewalks to walk (options.pedestrians false): nobody
 // walks, so nothing reads the city's blocks. Like it, it gives every node its (here always empty) lists of the
@@ -119,6 +128,37 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 // (false: no pedestrian system) and pedestrianOptions (pedestrian-system.js's options)
 function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, options = {}) {
   const { roadSource, numCars = NUM_CARS, numBuses = NUM_BUSES, pedestrians = true, pedestrianOptions = {} } = options;
+  // options.surfaceAt(x, z, dirX, dirZ, lastY): the road's height under a vehicle heading (dirX, dirZ), that stood at
+  // lastY last time (NaN: just placed) (a city on a terrain,
+  // e.g. Glens Falls; New York gives none: its streets are at y = 0). With it, every vehicle stands at that height,
+  // pitched and rolled with the road under its wheels, and its wheels, shadow, lamps and sparks follow.
+  const surfaceAt = options.surfaceAt || null;
+  // Height and grade of vehicle v where it is (only with surfaceAt), before it is drawn: v.sy, v.gp (pitch, front
+  // down), v.gr (roll, +x side up) and v.wy, its four wheels' road heights (left front, left rear, right front, right
+  // rear, as placeWheels draws them). The draw functions read them (0 without a surface). Also the vertical extent
+  // contacts compare (v.levelY to v.levelTop): a vehicle on a bridge deck never touches one on the road beneath it.
+  // Without a surface these stay undefined and every contact is tested as before (New York).
+  function poseOnSurface(v) {
+    const spec = v.bus ? BUS_SPEC : BODY_SPECS[v.bodyType];
+    const rotY = v.yaw + v.yawOffset, sinY = Math.sin(rotY), cosY = Math.cos(rotY);
+    // the last height (NaN for a vehicle just placed) lets the surface keep it on the level it is on
+    const last = v.edge === v.syEdge ? v.sy : NaN;
+    const at = (dx, dz) => {
+      const y = surfaceAt(v.x + dx, v.z + dz, sinY, cosY, last);
+      return Number.isFinite(y) ? y : 0;
+    };
+    const hb = spec.wheelZ, ht = spec.wheelX;
+    v.sy = at(0, 0);
+    const lf = at(-ht * cosY + hb * sinY, ht * sinY + hb * cosY), lr = at(-ht * cosY - hb * sinY, ht * sinY - hb * cosY);
+    const rf = at(ht * cosY + hb * sinY, -ht * sinY + hb * cosY), rr = at(ht * cosY - hb * sinY, -ht * sinY - hb * cosY);
+    v.wy = v.wy || [0, 0, 0, 0];
+    v.wy[0] = lf; v.wy[1] = lr; v.wy[2] = rf; v.wy[3] = rr;
+    v.gp = Math.atan2((lr + rr) - (lf + rf), 4 * hb);
+    v.gr = Math.atan2((rf + rr) - (lf + lr), 4 * ht);
+    v.syEdge = v.edge;
+    v.levelY = v.sy;
+    v.levelTop = v.sy + (v.bus ? BUS_LEVEL_HEIGHT : CAR_LEVEL_HEIGHT);
+  }
   const group = new THREE.Group();
   group.name = 'ManhattanTrafficAndPedestrians';
   let collisionListener = null;
@@ -352,7 +392,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
   for (let s = 0; s < MAX_SPARKS; s++) {
     sparks.push({ x: 0, y: -10, z: 0, vx: 0, vy: 0, vz: 0, life: 0, maxLife: 0.4 });
   }
-  function spawnCollisionSparks(x, y, z, nx, nz, impactSpeed) {
+  // floor: the height they bounce on (the road's, on a terrain)
+  function spawnCollisionSparks(x, y, z, nx, nz, impactSpeed, floor = 0.03) {
     const count = Math.min(24, Math.max(8, Math.floor(impactSpeed * 1.4)));
     const tx = -nz;
     const tz = nx;
@@ -370,6 +411,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
       sp.vz = nz * outBoost + tz * tanBoost;
       sp.maxLife = 0.28 + Math.random() * 0.24;
       sp.life = sp.maxLife;
+      sp.floor = floor;
     }
   }
 
@@ -660,7 +702,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
   // Where the player is relative to v: metres ahead, metres to the right, and how fast it moves v's way
   function relateToPlayer(v) {
     v.pAhead = Infinity;
-    if (!player.active) return;
+    if (!player.active || apartVertically(player, v)) return;
     const dx = player.x - v.x;
     const dz = player.z - v.z;
     if (Math.abs(dx) > LOOKAHEAD + 10 || Math.abs(dz) > LOOKAHEAD + 10) return;
@@ -1418,6 +1460,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     body.vx = body.sin * v.speed + v.vx;
     body.vz = body.cos * v.speed + v.vz;
     body.angularVel = v.yawRate + v.yawVel;
+    body.levelY = v.levelY;
+    body.levelTop = v.levelTop;
   }
 
   function writeTrafficVelocity(v, body) {
@@ -1449,6 +1493,9 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     const dz = pe.position.z - prevZ - v.z + v.prevZ;
     if (Math.abs(pe.position.x - v.x) > reach + Math.abs(dx)
       || Math.abs(pe.position.z - v.z) > reach + Math.abs(dz)) return;
+    // on different levels (a deck over a road) there is no contact; both heights are resolved before this
+    if (player.levelY !== undefined && v.levelY !== undefined
+      && (player.levelY >= v.levelTop || v.levelY >= player.levelTop)) return;
     const a = contactA, b = contactB, hit = vehicleHit;
     const heading = pe.heading || 0;
     a.x = pe.position.x; a.z = pe.position.z;
@@ -1485,8 +1532,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
       pe.heaveVel += Math.min(0.7, kick * 0.06);
     }
     impactSuspension(v, -hit.nx, -hit.nz, hit.impulse / b.mass);
-    if (pe.type !== 'person') reportCollision(pe, v, hit.x, 0.58, hit.z, hit.nx, hit.nz, speed);
-    if (speed > 2.2) spawnCollisionSparks(hit.x, 0.58, hit.z, hit.nx, hit.nz, speed);
+    if (pe.type !== 'person') reportCollision(pe, v, hit.x, (v.sy || 0) + 0.58, hit.z, hit.nx, hit.nz, speed);
+    if (speed > 2.2) spawnCollisionSparks(hit.x, (v.sy || 0) + 0.58, hit.z, hit.nx, hit.nz, speed, (v.sy || 0) + 0.03);
   }
 
   // Only disturbed traffic needs pair contacts. Newly struck cars join the same
@@ -1510,6 +1557,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
           || Math.abs(dz) > reach + Math.abs(dz - v.prevZ + o.prevZ)) continue;
         readTrafficBody(v, contactA);
         readTrafficBody(o, contactB);
+        if (contactA.levelY !== undefined && contactB.levelY !== undefined
+          && (contactA.levelY >= contactB.levelTop || contactB.levelY >= contactA.levelTop)) continue;
         const hit = vehicleHit;
         if (!sweptVehicleContact(contactA, contactB, hit) && !vehicleContact(contactA, contactB, hit)) continue;
         const speed = resolveVehicleContact(contactA, contactB, hit);
@@ -1521,8 +1570,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
         writeTrafficVelocity(o, contactB);
         impactSuspension(v, hit.nx, hit.nz, hit.impulse / contactA.mass);
         impactSuspension(o, -hit.nx, -hit.nz, hit.impulse / contactB.mass);
-        reportCollision(v, o, hit.x, 0.56, hit.z, hit.nx, hit.nz, speed);
-        if (speed > 2.2) spawnCollisionSparks(hit.x, 0.56, hit.z, hit.nx, hit.nz, speed);
+        reportCollision(v, o, hit.x, (v.sy || 0) + 0.56, hit.z, hit.nx, hit.nz, speed);
+        if (speed > 2.2) spawnCollisionSparks(hit.x, (v.sy || 0) + 0.56, hit.z, hit.nx, hit.nz, speed, (v.sy || 0) + 0.03);
         if (o.contactStep !== collisionStep) {
           o.contactStep = collisionStep;
           impacted.push(o);
@@ -1621,12 +1670,12 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     dummy.scale.set(scale, scale, scale);
     for (let w = 0; w < 2; w++) {
       const wz = w === 0 ? halfBase : -halfBase;
-      dummy.rotation.set(v.wheelSpin + w * 0.55, rotY + (w === 0 ? v.steer : 0), roll, 'YXZ');
-      dummy.position.set(v.x - halfTrack * cosY + wz * sinY, radius, v.z + halfTrack * sinY + wz * cosY);
+      dummy.rotation.set(v.wheelSpin + w * 0.55, rotY + (w === 0 ? v.steer : 0), roll + (v.gr || 0), 'YXZ');
+      dummy.position.set(v.x - halfTrack * cosY + wz * sinY, radius + (v.wy ? v.wy[w] : 0), v.z + halfTrack * sinY + wz * cosY);
       dummy.updateMatrix();
       leftInst.setMatrixAt(i * 2 + w, dummy.matrix);
 
-      dummy.position.set(v.x + halfTrack * cosY + wz * sinY, radius, v.z - halfTrack * sinY + wz * cosY);
+      dummy.position.set(v.x + halfTrack * cosY + wz * sinY, radius + (v.wy ? v.wy[2 + w] : 0), v.z - halfTrack * sinY + wz * cosY);
       dummy.updateMatrix();
       rightInst.setMatrixAt(i * 2 + w, dummy.matrix);
     }
@@ -1655,8 +1704,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     const bodyInst = near ? bodies[c.bodyType].near : bodies[c.bodyType].far;
     const slot = bodyInst.count++;
 
-    dummy.position.set(c.x, 0.0, c.z);
-    dummy.rotation.set(c.pitch, rotY, c.roll, 'YXZ');
+    dummy.position.set(c.x, c.sy || 0, c.z);
+    dummy.rotation.set(c.pitch + (c.gp || 0), rotY, c.roll + (c.gr || 0), 'YXZ');
     dummy.scale.set(1, 1, 1);
     dummy.updateMatrix();
     bodyInst.setMatrixAt(slot, dummy.matrix);
@@ -1692,8 +1741,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     // Soft Under-Car Contact Shadow (AO) stays flat on the asphalt, sized to the body kind
     const visIdx = visibleCars++;
     const [shadowW, shadowL, shadowZ] = bodies[c.bodyType].shadow;
-    dummy.rotation.set(0, rotY, 0, 'YXZ');
-    dummy.position.set(c.x + sinY * shadowZ, 0.018, c.z + cosY * shadowZ);
+    dummy.rotation.set(c.gp || 0, rotY, c.gr || 0, 'YXZ');
+    dummy.position.set(c.x + sinY * shadowZ, (c.sy || 0) + 0.018, c.z + cosY * shadowZ);
     dummy.scale.set(shadowW, 1.0, shadowL);
     dummy.updateMatrix();
     carShadowInst.setMatrixAt(visIdx, dummy.matrix);
@@ -1736,15 +1785,15 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     if (hasView && !visible(b.x, b.z, 22)) return;
 
     const i = visibleBuses++;
-    dummy.position.set(b.x, 0.018, b.z);
-    dummy.rotation.set(0, rotY, 0, 'YXZ');
+    dummy.position.set(b.x, (b.sy || 0) + 0.018, b.z);
+    dummy.rotation.set(b.gp || 0, rotY, b.gr || 0, 'YXZ');
     dummy.scale.set(2.92, 1.0, 12.4);
     dummy.updateMatrix();
     busShadowInst.setMatrixAt(i, dummy.matrix);
 
     // Lofted Bus Body is defined in ground-relative Y (0.35m skirt to 3.23m roof fairing crown)
-    dummy.position.set(b.x, 0.0, b.z);
-    dummy.rotation.set(b.pitch, rotY, b.roll, 'YXZ');
+    dummy.position.set(b.x, b.sy || 0, b.z);
+    dummy.rotation.set(b.pitch + (b.gp || 0), rotY, b.roll + (b.gr || 0), 'YXZ');
     dummy.scale.set(1, 1, 1);
     dummy.updateMatrix();
     busBodyInst.setMatrixAt(i, dummy.matrix);
@@ -1809,8 +1858,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
 
         const baseInt = (v.bus ? HEADLIGHTS.busIntensity : HEADLIGHTS.intensity) * beamScale * fade;
         // Match the body instance, including suspension and impact rotation.
-        dummy.position.set(v.x, 0, v.z);
-        dummy.rotation.set(v.pitch, v.yaw + v.yawOffset, v.roll, 'YXZ');
+        dummy.position.set(v.x, v.sy || 0, v.z);
+        dummy.rotation.set(v.pitch + (v.gp || 0), v.yaw + v.yawOffset, v.roll + (v.gr || 0), 'YXZ');
         dummy.scale.set(1, 1, 1);
         dummy.updateMatrix();
         for (let side = -1; side <= 1; side += 2) {
@@ -1840,7 +1889,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
       const side = redPhase ? -0.36 : 0.36;
       const pt = policeLightPool[policeLightsUsed++];
       pt.color.setHex(redPhase ? 0xff1828 : 0x1868ff);
-      pt.position.set(v.x + side * v._cosY - 0.25 * v._sinY, v.bodyType === 'suv' ? 2.05 : 1.85, v.z - side * v._sinY - 0.25 * v._cosY);
+      pt.position.set(v.x + side * v._cosY - 0.25 * v._sinY, (v.sy || 0) + (v.bodyType === 'suv' ? 2.05 : 1.85), v.z - side * v._sinY - 0.25 * v._cosY);
       pt.distance = 12.0;
       pt.intensity = 42.0 * tailScale * fade * pulse;
     }
@@ -1861,8 +1910,9 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
         sp.x += sp.vx * dt;
         sp.y += sp.vy * dt;
         sp.z += sp.vz * dt;
-        if (sp.y < 0.03) {
-          sp.y = 0.03;
+        const floor = sp.floor ?? 0.03;
+        if (sp.y < floor) {
+          sp.y = floor;
           sp.vy = Math.abs(sp.vy) * 0.45;
           sp.vx *= 0.78;
           sp.vz *= 0.78;
@@ -1907,7 +1957,12 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     refreshNear();
     updateView(camera);
 
-    player.active = Boolean(playerEntity && activeMode !== 'helicopter' && playerEntity.position.y < 2.6);
+    // On (not above) the road: within 2.6 m of it (y = 0 in New York, the road's surface on a terrain)
+    player.active = Boolean(playerEntity && activeMode !== 'helicopter' && playerEntity.position.y -
+      (surfaceAt ? surfaceAt(playerEntity.position.x, playerEntity.position.z, Math.sin(playerEntity.heading || 0), Math.cos(playerEntity.heading || 0), playerEntity.position.y) || 0 : 0) < 2.6);
+    // The player's vertical extent (only on a terrain): its feet, which the controllers keep on its level
+    player.levelY = surfaceAt && playerEntity ? playerEntity.position.y : undefined;
+    player.levelTop = player.levelY === undefined ? undefined : player.levelY + PLAYER_LEVEL_HEIGHT;
     if (playerEntity) {
       const heading = playerEntity.heading || 0;
       const speed = playerEntity.speed || 0;
@@ -1955,6 +2010,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
       locate(v);
       knock(v, dt);
       pose(v, dt);
+      // its level (ground or deck) where it now is, before any contact is tested
+      if (surfaceAt) poseOnSurface(v);
     }
     if (player.active) {
       for (const v of vehicles) if (v.edge) collideWithPlayer(v);
@@ -1962,6 +2019,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     collideTraffic();
     for (const v of vehicles) {
       if (!v.edge) continue;
+      if (surfaceAt) poseOnSurface(v);
       if (v.bus) renderBus(v);
       else renderCar(v);
     }
@@ -2018,7 +2076,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     // 3. Collision sparks, including the player's own impacts against buildings
     if (playerEntity && playerEntity.lastCollisionSpark) {
       const bs = playerEntity.lastCollisionSpark;
-      spawnCollisionSparks(bs.x, bs.y, bs.z, bs.nx, bs.nz, bs.speed);
+      spawnCollisionSparks(bs.x, bs.y, bs.z, bs.nx, bs.nz, bs.speed, surfaceAt ? (surfaceAt(bs.x, bs.z, 0, 0) || 0) + 0.03 : 0.03);
       playerEntity.lastCollisionSpark = null;
     }
     updateSparks(dt);

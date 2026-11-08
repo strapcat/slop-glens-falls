@@ -39,6 +39,11 @@ const baseWorld = () => ({ bounds: ISLAND_BOUNDS, shoreAt: getIslandBoundsAtZ, g
 // Spawn on 5th Ave at 37th St, facing south down the avenue toward the Empire State Building (34th St)
 const spawnZ = () => streetZ(37);
 const groundCollider = { type: 'ground' };
+// Terrain worlds (see followGround): the steepest grade a wheel climbs (rise over run) and the step it takes anyway,
+// and the steepest it follows down before it leaves the ground
+const CLIMB_SLOPE = 1.0;
+const CLIMB_STEP = 0.35;
+const FOLLOW_SLOPE = 1.2;
 
 const CAR_DRIVE = {
   speed: 36, reverseSpeed: 10.5, acceleration: 4.5,
@@ -253,7 +258,9 @@ class ThirdPersonControllerManager {
       const ent = this.entities[mode];
       // forward (fx, fz), its right (-fz, fx)
       ent.position.set(x + fx * back - fz * side, 0, z + fz * back + fx * side);
-      ent.position.y = up || this.getGroundHeight(ent.position.x, ent.position.z, mode);
+      const ground = this.getGroundHeight(ent.position.x, ent.position.z, mode);
+      // On a terrain (world.groundNormalAt) the helicopter hovers `up` above the ground there, else at `up`
+      ent.position.y = up ? (this.world.groundNormalAt ? ground + up : up) : ground;
       ent.heading = heading;
       ent.mesh.position.copy(ent.position);
       ent.mesh.rotation.y = heading;
@@ -378,7 +385,9 @@ class ThirdPersonControllerManager {
     this.resetInput();
     if (!Number.isFinite(heading)) heading = ent.heading;
     const heli = this.activeMode === 'helicopter';
-    const altitude = heli ? Math.max(0.25, Math.min(380, savedAltitude ?? Math.max(92, ent.position.y))) : 0;
+    // On a terrain the limits are above the ground at the destination (a saved altitude stays the height it was)
+    const g = heli && this.world.groundNormalAt && Number.isFinite(x) && Number.isFinite(z) ? this.getGroundHeight(x, z, 'helicopter') : 0;
+    const altitude = heli ? Math.max(g + 0.25, Math.min(g + 380, savedAltitude ?? Math.max(g + 92, ent.position.y))) : 0;
     const destination = this.findTeleportPosition(x, z, heading, altitude);
     if (destination) {
       ent.position.x = destination.x;
@@ -1125,6 +1134,7 @@ class ThirdPersonControllerManager {
       p.position.z += Math.cos(p.heading) * walkSpeed * dt;
       if (p.position.z < -340) p.heading = 0;
       else if (p.position.z > 340) p.heading = Math.PI;
+      if (this.world.groundNormalAt) p.position.y = this.getGroundHeight(p.position.x, p.position.z, 'person');
     }
 
     if (this.activeMode === 'car') {
@@ -1138,7 +1148,9 @@ class ThirdPersonControllerManager {
     for (const key of Object.keys(this.entities)) {
       const e = this.entities[key];
       e.mesh.position.copy(e.position);
-      e.mesh.rotation.y = e.heading;
+      // On a terrain the car and the bicycle pitch (and the car rolls) with the ground under their wheels
+      if (e.gradePitch !== undefined) e.mesh.rotation.set(e.gradePitch, e.heading, e.gradeRoll || 0, 'YXZ');
+      else e.mesh.rotation.y = e.heading;
     }
 
     // Modulate clustered vehicle & bike lights by time of day (off during Midday & Golden Hour; fade in at Dusk & Night)
@@ -1176,13 +1188,21 @@ class ThirdPersonControllerManager {
     const acceleration = accelerating ? 5.5 * Math.abs(targetSpeed) / maxSpeed : 12;
     p.speed += Math.max(-acceleration * dt, Math.min(acceleration * dt, targetSpeed - p.speed));
 
+    const fromX = p.position.x, fromZ = p.position.z;
     p.position.x += Math.sin(p.heading) * p.speed * dt;
     p.position.z += Math.cos(p.heading) * p.speed * dt;
     this.resolveHorizontalCollision(p.position, 0.48);
 
     const groundY = this.getGroundHeight(p.position.x, p.position.z, 'person');
-    if (this.keys.up && p.position.y <= groundY + 0.02) {
+    // On a terrain, walking down a slope (not a drop: at most FOLLOW_SLOPE) keeps the feet on the ground
+    const terrain = !!this.world.groundNormalAt;
+    const run = Math.hypot(p.position.x - fromX, p.position.z - fromZ);
+    const onGround = terrain && p.verticalVel <= 0 && p.position.y - groundY <= 0.05 + run * FOLLOW_SLOPE && p.position.y >= groundY - 0.6;
+    if (this.keys.up && (p.position.y <= groundY + 0.02 || onGround)) {
       p.verticalVel = 5.2;
+    } else if (onGround) {
+      p.position.y = groundY;
+      p.verticalVel = 0;
     }
     p.verticalVel -= 14.5 * dt;
     p.position.y += p.verticalVel * dt;
@@ -1190,6 +1210,45 @@ class ThirdPersonControllerManager {
       p.position.y = groundY;
       p.verticalVel = 0;
     }
+  }
+
+  // Terrain worlds (world.groundNormalAt): a wheeled entity after its horizontal move from (fromX, fromZ). It keeps to
+  // the ground up and down grades (rises of up to CLIMB_STEP, or CLIMB_SLOPE over the run; falls of up to
+  // FOLLOW_SLOPE over it); a steeper wall of earth stops it where it was, and a steeper drop it falls down (gravity,
+  // never through the ground). Then its grade pitch (and roll, given halfTrack) from the ground at its wheels.
+  followGround(e, mode, fromX, fromZ, dt, halfBase, halfTrack = 0) {
+    let g = this.getGroundHeight(e.position.x, e.position.z, mode);
+    let run = Math.hypot(e.position.x - fromX, e.position.z - fromZ);
+    if (g - e.position.y > CLIMB_STEP && g - e.position.y > run * CLIMB_SLOPE) {
+      e.position.x = fromX;
+      e.position.z = fromZ;
+      e.speed *= -0.15;
+      if (e.vx !== undefined) e.vx = e.vz = 0;
+      g = this.getGroundHeight(fromX, fromZ, mode);
+      run = 0;
+    }
+    const drop = e.position.y - g;
+    if (drop > 0.05 + run * FOLLOW_SLOPE || ((e.fallVel || 0) < 0 && drop > 0.02)) {
+      e.fallVel = (e.fallVel || 0) - 14.5 * dt;
+      e.position.y = Math.max(g, e.position.y + e.fallVel * dt);
+      if (e.position.y <= g) e.fallVel = 0;
+      return;
+    }
+    e.position.y = g;
+    e.fallVel = 0;
+    const s = Math.sin(e.heading), c = Math.cos(e.heading), x = e.position.x, z = e.position.z;
+    const yF = this.getGroundHeight(x + s * halfBase, z + c * halfBase, mode), yB = this.getGroundHeight(x - s * halfBase, z - c * halfBase, mode);
+    this.getGroundHeight(x, z, mode); // back to the centre's support for the next step
+    const pitch = Math.atan2(yB - yF, 2 * halfBase);
+    let roll = 0;
+    if (halfTrack) {
+      const yL = this.getGroundHeight(x + c * halfTrack, z - s * halfTrack, mode), yR = this.getGroundHeight(x - c * halfTrack, z + s * halfTrack, mode);
+      this.getGroundHeight(x, z, mode);
+      roll = Math.atan2(yL - yR, 2 * halfTrack);
+    }
+    const k = Math.min(1, dt * 14);
+    e.gradePitch = (e.gradePitch ?? pitch) + (pitch - (e.gradePitch ?? pitch)) * k;
+    e.gradeRoll = (e.gradeRoll ?? roll) + (roll - (e.gradeRoll ?? roll)) * k;
   }
 
   updateCar(dt) {
@@ -1265,7 +1324,8 @@ class ThirdPersonControllerManager {
       c.heaveVel += (-c.heaveY * 85 - c.heaveVel * 12) * step;
       c.heaveY = Math.max(-0.08, Math.min(0.14, c.heaveY + c.heaveVel * step));
     }
-    c.position.y = this.getGroundHeight(c.position.x, c.position.z, 'car');
+    if (this.world.groundNormalAt) this.followGround(c, 'car', prevX, prevZ, dt, CAR_DRIVE.wheelbase / 2, 0.8);
+    else c.position.y = this.getGroundHeight(c.position.x, c.position.z, 'car');
     c.chassisPivot.position.y = c.heaveY;
 
     if (c.carState) {
@@ -1303,10 +1363,12 @@ class ThirdPersonControllerManager {
       b.heading += turnInput * 2.15 * dirSign * dt;
     }
 
+    const fromX = b.position.x, fromZ = b.position.z;
     b.position.x += Math.sin(b.heading) * b.speed * dt;
     b.position.z += Math.cos(b.heading) * b.speed * dt;
     this.resolveHorizontalCollision(b.position, 0.65, null, b);
-    b.position.y = this.getGroundHeight(b.position.x, b.position.z, 'cyclist');
+    if (this.world.groundNormalAt) this.followGround(b, 'cyclist', fromX, fromZ, dt, 0.55);
+    else b.position.y = this.getGroundHeight(b.position.x, b.position.z, 'cyclist');
 
     const targetLean = -turnInput * Math.min(1.0, Math.abs(b.speed) / 9.0) * 0.34;
     b.leanAngle += (targetLean - b.leanAngle) * Math.min(1, dt * 9);
@@ -1360,11 +1422,15 @@ class ThirdPersonControllerManager {
     h.position.z += Math.cos(h.heading) * h.speed * dt;
     h.position.y += h.verticalSpeed * dt;
 
-    if (h.position.y < 0.25) {
-      this.reportCollision(h, groundCollider, 'ground', h.position.x, 0.25, h.position.z, 0, 1, 0, -h.verticalSpeed);
+    // The lowest it may fly: 0.25 m above the ground (on a terrain, the ground or bridge deck under it)
+    const floor = (this.world.groundNormalAt ? this.getGroundHeight(h.position.x, h.position.z, 'helicopter') : 0) + 0.25;
+    if (h.position.y < floor) {
+      this.reportCollision(h, groundCollider, 'ground', h.position.x, floor, h.position.z, 0, 1, 0, -h.verticalSpeed);
     }
-    h.position.y = Math.max(0.25, Math.min(380, h.position.y));
+    h.position.y = Math.max(floor, Math.min(380, h.position.y));
     this.resolveHorizontalCollision(h.position, 4.5, null, h);
+    // a push off a building can move it over higher ground: never below the floor where it ends up
+    if (this.world.groundNormalAt) h.position.y = Math.max(h.position.y, this.getGroundHeight(h.position.x, h.position.z, 'helicopter') + 0.25);
 
     const targetPitch = (h.speed / maxHorizSpeed) * 0.24;
     const targetRoll = -yawInput * 0.28;

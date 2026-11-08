@@ -1,0 +1,9 @@
+# Terrain input reproduction (research preprocessing, not game code)
+
+Use Python with numpy, rasterio, pyproj. Exact preparation environment versions are in environment-versions.json. prepare-topography-inputs.py expects the two original TIFFs in /workspace/slop-glens-falls/lidar/tiles; adjust only paths to run elsewhere. Public full source URLs/bytes/SHA256 are frozen in terrain-provenance-and-validation.json. Check full source hashes before processing. These original huge TIFFs are not in this attachment.
+
+The main script reproduces the aligned 1m reference, full-coverage 2m candidate, error audit, sparse reference samples and 1m refinement patches. Both tiles overlap; x61 is applied after x60, only valid source samples overwrite. Encoded tile lattice offsets differ by <0.00004m; nearest mapping to an integer-metre lattice preserves source values rather than interpolating original terrain. Candidate aggregation/float32 and bilinear audit are explicit, not a claimed final runtime implementation. No nodata fill or global smoothing pass. Full final game/mesh/collision errors and detail transitions remain Claude's responsibility.
+
+Hill reference crop: exact original 1m pixel window from x60. Stored transform and dimensions in hill-reference-provenance.json are sufficient to locate it in the source; read original window with those exact 1m bounds, preserve float32 values. Packaged filename is thrill-hill-reference-dem-1m.tif (old provenance cropFile field records its previous research name). Byte hash unchanged. No reprojecting or treating the 65m hill search allowance as an accuracy statistic.
+
+Tile CRS encoded EPSG:26918 versus dataset NAD83(2011) wording is recorded, not silently resolved by relabelling. Vertical NAVD88/GEOID18 metres. DEM water pixels are hydro-flattened surface constraints, not submerged bathymetry or bridge decks.

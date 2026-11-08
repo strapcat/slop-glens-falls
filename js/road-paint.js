@@ -104,14 +104,32 @@ function createRoadPaintChunkBuilder(name, { cellSize = PAINT_CELL_SIZE, cullDis
   return { strip3D, build };
 }
 
-function buildRoadPaint(scene, network, sharedBuilder = null) {
+// options.surfaceAt(x, z, dirX, dirZ): the height of the asphalt (a city on a terrain, e.g. Glens Falls; New York gives
+// none: its streets are at y = 0), and options.lift, how far above it the paint sits (default HEIGHT)
+const DRAPE_STEP = 4; // metres: on a terrain a strip follows the asphalt in pieces this long
+function buildRoadPaint(scene, network, sharedBuilder = null, options = {}) {
   const builder = sharedBuilder || createRoadPaintChunkBuilder('RoadMarkings');
   const lines = [];
   const bends = new Map();
+  const { surfaceAt = null, lift = HEIGHT } = options;
 
-  // Flat strip w wide from a to b, with a dash pattern (period, duty cycle) running along it
+  // Flat strip w wide from a to b, with a dash pattern (period, duty cycle) running along it; on a terrain, in pieces
+  // draped on the asphalt, the dash pattern running on unbroken
   function strip(ax, az, bx, bz, w, col, period = 1, duty = 1, phase = 0, flow = 1) {
-    builder.strip3D(ax, HEIGHT, az, bx, HEIGHT, bz, w, col, period, duty, phase, flow);
+    if (!surfaceAt) {
+      builder.strip3D(ax, HEIGHT, az, bx, HEIGHT, bz, w, col, period, duty, phase, flow);
+      return;
+    }
+    const len = Math.hypot(bx - ax, bz - az);
+    if (len < 0.05) return;
+    const dx = (bx - ax) / len, dz = (bz - az) / len;
+    const n = Math.max(1, Math.ceil(len / DRAPE_STEP));
+    let px = ax, pz = az, py = surfaceAt(ax, az, dx, dz) + lift;
+    for (let k = 1; k <= n; k++) {
+      const qx = ax + (bx - ax) * (k / n), qz = az + (bz - az) * (k / n), qy = surfaceAt(qx, qz, dx, dz) + lift;
+      builder.strip3D(px, py, pz, qx, qy, qz, w, col, period, duty, phase + ((len * (k - 1)) / n) * flow, flow);
+      px = qx; pz = qz; py = qy;
+    }
   }
 
   // Edges run between stop lines; s is measured from the start one and o to the right of the centre line

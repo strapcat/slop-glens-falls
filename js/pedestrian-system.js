@@ -14,9 +14,10 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 // options: numPeds, the heights pedestrians walk at on the sidewalks and crosswalks (sidewalkY, crosswalkY: New York's
 // raised curbs and painted roadway), onSidewalk(x, z) for routes' detours and dodges where the network's own (its curb
 // rectangles) doesn't describe the sidewalks, and trackInsets, the walking lines' distances beyond the roadway
-// (pedestrian-routes.js; New York's: 1.7 and 2.8 m)
+// (pedestrian-routes.js; New York's: 1.7 and 2.8 m), and groundAt(x, z, ux, uz), the ground those heights are above for
+// someone walking along (ux, uz) (a city on a terrain, e.g. Glens Falls; none: New York's streets, at y = 0)
 function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCross, walkOn, visible, nearView }, options = {}) {
-  const { numPeds = NUM_PEDS, sidewalkY = 0.22, crosswalkY = 0.012, onSidewalk = null, trackInsets = null } = options;
+  const { numPeds = NUM_PEDS, sidewalkY = 0.22, crosswalkY = 0.012, onSidewalk = null, trackInsets = null, groundAt = null, textureFallback = false } = options;
   let clock = 0;
   let focusX = 0, focusZ = 140;
   let hasView = false;
@@ -30,7 +31,7 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
 
   // One instanced draw per level of detail; every pedestrian has a PersonRig that plants its footsteps on the
   // sidewalk (no sliding), with their own build, height, sex, hair, clothes and gait
-  const pedCrowd = new PersonCrowd(numPeds);
+  const pedCrowd = new PersonCrowd(numPeds, { textureFallback });
   const hash = (i, salt) => {
     const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
     return v - Math.floor(v);
@@ -588,9 +589,10 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
   const SIDEWALK_Y = sidewalkY;
   const CROSSWALK_Y = crosswalkY;
   function pedGround(p, x, z) {
-    if (!p.node) return SIDEWALK_Y;
+    const base = groundAt ? groundAt(x, z, p.ux || 0, p.uz || 0) : 0;
+    if (!p.node) return base + SIDEWALK_Y;
     const t = (x - p.ax) * p.ux + (z - p.az) * p.uz;
-    return t > 2 && t < p.len - 2 ? CROSSWALK_Y : SIDEWALK_Y;
+    return base + (t > 2 && t < p.len - 2 ? CROSSWALK_Y : SIDEWALK_Y);
   }
 
   // Visible people (and hidden ones within footstep/turn range) advance their gait; only those the camera may see
@@ -631,7 +633,8 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
     focusX = x;
     focusZ = z;
     hasView = view;
-    pedRange = player.active && (activeMode === 'car' || activeMode === 'cyclist') && player.entity.position.y > -1
+    pedRange = player.active && (activeMode === 'car' || activeMode === 'cyclist') &&
+      player.entity.position.y - (groundAt ? groundAt(player.entity.position.x, player.entity.position.z) : 0) > -1
       ? Math.sqrt(player.vx * player.vx + player.vz * player.vz) * PED_LOOKAHEAD + player.halfL + 6 : 0;
 
     for (const n of walkedNodes) n.walkers.length = 0;

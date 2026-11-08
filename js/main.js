@@ -35,13 +35,25 @@ const GF_PRELOADS = [
   'gf-geodata.js',
   'gf-roadgraph.js',
   'gf-blocks.js',
+  'gf-utm.js',
+  'gf-terrain.js',
+  'gf-terrain-data.js',
+  'gf-water.js',
+  'gf-bridges.js',
+  'gf-surface.js',
   'gf-runtime.js',
+  'gf-terrain-lod.js',
+  'gf-terrain-lod-codec.js',
+  'gf-terrain-lod-errors.js',
+  'gf-terrain-mesh.js',
+  'gf-drape.js',
   'gf-ground.js',
   'gf-signals.js',
   'gf-signal-heads.js',
   'gf-buildings.js',
   'gf-building-records.js',
-  'gf-building-meshes.js',
+  'gf-building-bases.js',
+  'gf-building-terrain.js',
   'gf-facades.js',
   'gf-landmarks.js',
   'gf-landmark-records.js',
@@ -71,6 +83,8 @@ if (params.get('city') === 'glensfalls') {
   if (params.get('view') === 'debug') location.replace(`./gf.html${location.search}`);
   else {
     preload(GF_PRELOADS, { rel: 'modulepreload' });
+    // CC-005b: the terrain starts downloading with the modules
+    preload(['gf-terrain.bin.gz'], { rel: 'preload', as: 'fetch', crossOrigin: 'anonymous' });
     import('./gf-main.js');
   }
 } else {

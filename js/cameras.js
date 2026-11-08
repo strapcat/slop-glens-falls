@@ -144,6 +144,13 @@ class CameraSystem {
     this.userOrbitTimer = 0;
   }
 
+  // The height the follow cameras keep above: 0 (the flat city), or on a terrain (the player's world has
+  // groundNormalAt) the ground or deck under the camera, so it never dips into a hill behind a car going downhill
+  groundUnder(x, z) {
+    const cm = this.controllerManager;
+    return cm && cm.world && cm.world.groundNormalAt ? cm.getGroundHeight(x, z, 'helicopter') : 0;
+  }
+
   resetForTeleport() {
     // Arrive with a fresh chase view, without carrying a previous drive or gesture into the destination.
     this._clearPointers();
@@ -195,9 +202,10 @@ class CameraSystem {
 
         desiredPos.set(
           entity.position.x - Math.sin(totalYaw) * horizDist,
-          Math.max(0.65, entity.position.y + height),
+          0,
           entity.position.z - Math.cos(totalYaw) * horizDist
         );
+        desiredPos.y = Math.max(this.groundUnder(desiredPos.x, desiredPos.z) + 0.65, entity.position.y + height);
 
         const lookUpBias = entity.type === 'helicopter' ? 0.2 : (entity.type === 'car' ? 0.52 : 1.55);
         desiredLook.set(
@@ -215,9 +223,10 @@ class CameraSystem {
 
         desiredPos.set(
           entity.position.x - Math.sin(entity.heading) * backDist + Math.cos(entity.heading) * sideOffset,
-          Math.max(0.55, lowY),
+          0,
           entity.position.z - Math.cos(entity.heading) * backDist - Math.sin(entity.heading) * sideOffset
         );
+        desiredPos.y = Math.max(this.groundUnder(desiredPos.x, desiredPos.z) + 0.55, lowY);
         desiredLook.set(
           entity.position.x + Math.sin(entity.heading) * 3.2,
           entity.position.y + 1.05,
@@ -349,7 +358,7 @@ class CameraSystem {
       this.followLookOffset.lerp(desiredLook.sub(entity.position), k);
       this.currentPos.set(entity.position.x, this.followBaseY, entity.position.z).add(this.followOffset);
       this.currentLookAt.set(entity.position.x, this.followBaseY, entity.position.z).add(this.followLookOffset);
-      this.currentPos.y = Math.max(0.55, this.currentPos.y);
+      this.currentPos.y = Math.max(this.groundUnder(this.currentPos.x, this.currentPos.z) + 0.55, this.currentPos.y);
     } else {
       this.followEntity = null;
       const k = 1 - Math.exp(-dt * 8.5);

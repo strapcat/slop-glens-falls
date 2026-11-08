@@ -1,2 +1,4 @@
 .DS_Store
 .env*
+# CC-005b: the original USGS 3DEP 1 m tiles (728 MB), for tools/gf/prepare-gf-terrain.mjs only
+lidar/
