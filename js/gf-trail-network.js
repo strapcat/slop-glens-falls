@@ -8,19 +8,22 @@
 // graph node the lanes meet by a short connector (under a metre). Routing is a next-hop table over the graph (shortest
 // path, metres), so a walker always heads for a reachable node and never loops on an unreachable goal.
 //
-// Entrances: each entrance (gf-trails.js) is a point on the game's outer sidewalk walking line. The adapter splits the
-// sidewalk tracks that pass within ENTRANCE_REACH of it at that point; a walker reaching the split may turn into the
-// park there (a straight connector from the sidewalk line to the entrance node's lane, the length the generator
-// checked: no street crossing, no new path), and one leaving by that entrance turns back onto the same sidewalk.
+// Entrances: each entrance (gf-trails.js) is a trail end at a street's walking line. The adapter attaches it to the
+// nearest point of the game's sidewalk tracks (see createTrailRoutes) and splits the tracks there; a walker reaching
+// the split may turn into the park (a straight connector to the entrance node's lane: no street crossing, no new
+// path), and one leaving by that entrance turns back onto the same sidewalk.
 //
 // Who walks the trails: a fixed, documented share of the existing pedestrians (TRAIL_SHARE: every pedestrian whose
 // index is 3 modulo 10, 12 of Glens Falls's 120), with the city's usual randomness for each choice (as pedestrian-routes
-// .js). Entering, they pick a target in the component they entered (the hill in the woods; a park node in the park),
+// .js). A walker's trail state is p.trailWalk (pedestrian-system.js copies each track's own fields, `trail` among
+// them, onto the walker). Entering, they pick a target in the component they entered (the hill in the woods; a park node in the park),
 // walk there, then leave by an entrance of that component.
 
 const LANE_OFFSET = 0.4; // m right of a path's centre line (a park drive's: 1.0 m)
 const BODY_HALF = 0.35; // m: a walker's half width, kept inside the path
 const ENTRANCE_REACH = 0.9; // m: sidewalk tracks this near an entrance point are split there (both walking lines)
+const ATTACH_REACH = 15; // m: the farthest a sidewalk track may be from an entrance's trail end
+const CENTRE_CLEAR = 1.0; // m: an entrance connector keeps this far from every street's centre line (never crosses one)
 const ENTER_CHANCE = 0.7; // a trail walker passing an entrance turns in this often
 const TRAIL_MOD = 10, TRAIL_REM = 3; // trail walkers: pedestrian index % 10 === 3
 
@@ -129,20 +132,61 @@ function createTrailNetwork(trails) {
 
 // Wrap pedestrian-routes.js routes (base) for Glens Falls: sidewalk tracks split at the entrances, and the trails'
 // tracks with their own next(). network: road-network.js; net: createTrailNetwork(); random: Math.random by default.
+//
+// Attachments: an entrance's trail end (gf-trails.js, cut at the mapped street's walking line) meets the game's own
+// sidewalk tracks, which follow the road network's straight runs and stop short of junctions, so the adapter finds the
+// nearest point on a sidewalk track (within ATTACH_REACH of the trail end, not across any carriageway) and joins the
+// two by a straight connector. Every sidewalk track within ENTRANCE_REACH of that point is split there. An entrance
+// with no sidewalk track near it (Angel Lane: no pedestrian sidewalks in the game's network) stays an entrance for the
+// player only; walkers neither enter nor leave by it.
 function createTrailRoutes(base, network, net, { random = Math.random } = {}) {
   const pieces = new Map(); // original sidewalk track -> its pieces, split at entrances
   const splitAlong = new Map(); // edge -> along(e) with pieces
   const isTrailWalker = (p) => p && Number.isInteger(p.index) && p.index % TRAIL_MOD === TRAIL_REM;
+
+  // where each entrance meets the sidewalks (null: none within reach)
+  const segSeg = (ax, az, bx, bz, cx, cz, dx, dz) => {
+    const pd = (px, pz, sx, sz, ex, ez) => { const vx = ex - sx, vz = ez - sz, l2 = vx * vx + vz * vz, t = l2 ? Math.max(0, Math.min(1, ((px - sx) * vx + (pz - sz) * vz) / l2)) : 0; return Math.hypot(px - sx - vx * t, pz - sz - vz * t); };
+    const o = (px, pz, qx, qz, rx, rz) => Math.sign((qx - px) * (rz - pz) - (qz - pz) * (rx - px));
+    if (o(ax, az, bx, bz, cx, cz) * o(ax, az, bx, bz, dx, dz) < 0 && o(cx, cz, dx, dz, ax, az) * o(cx, cz, dx, dz, bx, bz) < 0) return 0;
+    return Math.min(pd(ax, az, cx, cz, dx, dz), pd(bx, bz, cx, cz, dx, dz), pd(cx, cz, ax, az, bx, bz), pd(dx, dz, ax, az, bx, bz));
+  };
+  // across a street: within CENTRE_CLEAR of a network edge's line (its centre; the network's straight runs sit up to a
+  // couple of metres off a curving street's mapped line, so its half width is no test here)
+  const crossesRoad = (a, b) => network.edges.some((e) => segSeg(a.x, a.z, b.x, b.z, e.sx, e.sz, e.sx + e.dx * e.len, e.sz + e.dz * e.len) < CENTRE_CLEAR);
+  const attach = new Map();
+  for (const en of net.entrances) {
+    const n = net.node(en.node);
+    let best = null;
+    for (const e of network.edges) {
+      const t = Math.max(0, Math.min(e.len, (n.x - e.sx) * e.dx + (n.z - e.sz) * e.dz));
+      if (Math.hypot(e.sx + e.dx * t - n.x, e.sz + e.dz * t - n.z) > e.half + ATTACH_REACH + 2) continue;
+      for (const track of base.along(e)) {
+        if (track.len < 1.5) continue;
+        const u = Math.max(0.5, Math.min(track.len - 0.5, (n.x - track.ax) * track.ux + (n.z - track.az) * track.uz));
+        const pt = { x: track.ax + track.ux * u, z: track.az + track.uz * u }, d = Math.hypot(pt.x - n.x, pt.z - n.z);
+        if (d > ATTACH_REACH || (best && d >= best.d) || crossesRoad(pt, n)) continue;
+        best = { x: pt.x, z: pt.z, d, edge: e };
+      }
+    }
+    attach.set(en, best);
+  }
+  const walkable = net.entrances.filter((en) => attach.get(en));
+  const exitFrom = (c) => {
+    const choices = walkable.filter((en) => en.component === c);
+    return choices.length ? choices[Math.floor(random() * choices.length)].node : -1;
+  };
 
   function along(e) {
     if (splitAlong.has(e)) return splitAlong.get(e);
     const out = [];
     for (const track of base.along(e)) {
       const cuts = [];
-      for (const en of net.entrances) {
-        const t = (en.sidewalkX - track.ax) * track.ux + (en.sidewalkZ - track.az) * track.uz;
-        if (t < 0.5 || t > track.len - 0.5) continue;
-        const d = Math.abs((en.sidewalkX - track.ax) * track.uz - (en.sidewalkZ - track.az) * track.ux);
+      for (const en of walkable) {
+        const at = attach.get(en);
+        const t = (at.x - track.ax) * track.ux + (at.z - track.az) * track.uz;
+        if (t < 0.25 || t > track.len - 0.25) continue;
+        const d = Math.abs((at.x - track.ax) * track.uz - (at.z - track.az) * track.ux);
         if (d <= ENTRANCE_REACH) cuts.push({ t, en });
       }
       if (!cuts.length) { out.push(track); continue; }
@@ -169,70 +213,67 @@ function createTrailRoutes(base, network, net, { random = Math.random } = {}) {
     return ps ? { track: leg.dir > 0 ? ps[0] : ps[ps.length - 1], dir: leg.dir } : leg;
   };
   const endPoint = (track, dir) => ({ x: track.ax + track.ux * (dir > 0 ? track.len : 0), z: track.az + track.uz * (dir > 0 ? track.len : 0) });
+  const connector = (a, b) => ({ track: segment(a, b, { trail: { connector: true } }), dir: 1 });
 
   // Onto the lane leaving graph node u along edge e, from point a (a connector when they are apart)
   function onto(a, e, u) {
     const lane = net.laneFrom(e, u), legs = [];
-    if (Math.hypot(lane.start.x - a.x, lane.start.z - a.z) > 0.01) legs.push({ track: segment(a, lane.start, { trail: { connector: true } }), dir: 1 });
+    if (Math.hypot(lane.start.x - a.x, lane.start.z - a.z) > 0.01) legs.push(connector(a, lane.start));
     legs.push({ track: lane.tracks[0], dir: 1 });
     return legs;
   }
   // Leave the trail at entrance node u from point a, back onto the split sidewalk there, continuing either way
   function leave(a, u) {
-    const en = net.entranceAt.get(u);
-    const sp = { x: en.sidewalkX, z: en.sidewalkZ };
+    const en = net.entranceAt.get(u), at = attach.get(en);
+    if (!at) return null;
     const choices = [];
     for (const list of pieces.values()) {
       for (const piece of list) {
         if (piece.entranceEnd !== en) continue;
-        choices.push(piece.after ? [{ track: piece.after, dir: 1 }] : null, [{ track: piece, dir: -1 }]);
+        if (piece.after) choices.push([{ track: piece.after, dir: 1 }]);
+        choices.push([{ track: piece, dir: -1 }]);
       }
     }
-    const go = choices.filter(Boolean);
-    if (!go.length) return null;
-    const pick = go[Math.floor(random() * go.length)];
+    if (!choices.length) return null;
+    const pick = choices[Math.floor(random() * choices.length)];
     const legs = [];
     const start = endPoint(pick[0].track, pick[0].dir > 0 ? -1 : 1);
-    if (Math.hypot(sp.x - a.x, sp.z - a.z) > 0.01) legs.push({ track: segment(a, sp, { trail: { connector: true } }), dir: 1 });
-    if (Math.hypot(start.x - sp.x, start.z - sp.z) > 0.01) legs.push({ track: segment(sp, start, { trail: { connector: true } }), dir: 1 });
+    if (Math.hypot(at.x - a.x, at.z - a.z) > 0.01) legs.push(connector(a, at));
+    if (Math.hypot(start.x - at.x, start.z - at.z) > 0.01) legs.push(connector(at, start));
     return [...legs, ...pick];
   }
 
   function next(track, dir, goalX, goalZ, p) {
     // on a trail: along the lane, then at its end node the next hop towards the walker's target
     if (track.trail) {
-      if (track.trail.connector) {
-        // a connector's end is a lane start or a sidewalk point: the legs that follow it were planned with it
-        return null;
-      }
+      // a connector's end is a lane start or a sidewalk point: the legs that follow it were planned with it
+      if (track.trail.connector) return null;
       if (track.after) return [{ track: track.after, dir: 1 }];
       const lane = net.lanes[track.trail.edge][track.trail.rev];
       const u = lane.to, a = endPoint(track, 1);
-      const st = p && p.trail ? p.trail : (p ? (p.trail = { phase: 'out', target: -1, exit: net.exitFrom(net.comp[u], random) }) : { phase: 'out', target: -1, exit: net.exitFrom(net.comp[u], random) });
-      if (st.phase === 'in' && u === st.target) { st.phase = 'out'; st.exit = net.exitFrom(net.comp[u], random); }
+      const st = (p && p.trailWalk) || { phase: 'out', target: -1, exit: exitFrom(net.comp[u]) };
+      if (p) p.trailWalk = st;
+      if (st.phase === 'in' && u === st.target) { st.phase = 'out'; st.exit = exitFrom(net.comp[u]); }
       if (st.phase === 'out' && u === st.exit) {
         const out = leave(a, u);
-        if (out) { if (p) p.trail = null; return out; }
+        if (out) { if (p) p.trailWalk = null; return out; }
       }
       const goal = st.phase === 'in' ? st.target : st.exit;
-      let k = net.hop[goal][u];
-      if (k < 0) {
-        // at a dead end with nowhere further (or already there): turn round
-        k = track.trail.edge;
-      }
+      // towards the goal; at a dead end with nowhere further (or no goal), turn round
+      const k = goal >= 0 && net.hop[goal][u] >= 0 ? net.hop[goal][u] : track.trail.edge;
       return onto(a, net.edges[k], u);
     }
     // on a sidewalk piece ending at an entrance: a trail walker may turn in
     const end = dir > 0 ? track.entranceEnd : track.before && track.before.entranceEnd;
     if (end && isTrailWalker(p) && random() < ENTER_CHANCE) {
-      const c = net.comp[end.node];
+      const c = end.component;
       const target = net.targetIn(c, random);
-      p.trail = { phase: 'in', target, exit: net.exitFrom(c, random) };
-      const a = endPoint(track, dir), sp = { x: end.sidewalkX, z: end.sidewalkZ };
+      p.trailWalk = { phase: 'in', target, exit: exitFrom(c) };
+      const a = endPoint(track, dir), at = attach.get(end);
       const k = net.hop[target][end.node] >= 0 ? net.hop[target][end.node] : net.adj[end.node][0].index;
       const legs = [];
-      if (Math.hypot(sp.x - a.x, sp.z - a.z) > 0.01) legs.push({ track: segment(a, sp, { trail: { connector: true } }), dir: 1 });
-      return [...legs, ...onto(sp, net.edges[k], end.node)];
+      if (Math.hypot(at.x - a.x, at.z - a.z) > 0.01) legs.push(connector(a, at));
+      return [...legs, ...onto(at, net.edges[k], end.node)];
     }
     // through a split point: the next piece of the same sidewalk track
     if (dir > 0 && track.entranceEnd && track.after) return [{ track: track.after, dir: 1 }];
@@ -244,15 +285,32 @@ function createTrailRoutes(base, network, net, { random = Math.random } = {}) {
   }
 
   // Split the sidewalks at every entrance now (leaving needs them whether or not anyone walked there yet)
-  for (const en of net.entrances) {
+  for (const en of walkable) along(attach.get(en).edge);
+  for (const en of walkable) {
+    const at = attach.get(en);
     for (const e of network.edges) {
-      const t = Math.max(0, Math.min(e.len, (en.sidewalkX - e.sx) * e.dx + (en.sidewalkZ - e.sz) * e.dz));
-      if (Math.hypot(e.sx + e.dx * t - en.sidewalkX, e.sz + e.dz * t - en.sidewalkZ) < e.half + 4) along(e);
+      const t = Math.max(0, Math.min(e.len, (at.x - e.sx) * e.dx + (at.z - e.sz) * e.dz));
+      if (Math.hypot(e.sx + e.dx * t - at.x, e.sz + e.dz * t - at.z) < e.half + 3) along(e);
     }
   }
   const splitCount = (en) => [...pieces.values()].reduce((n, list) => n + list.filter((q) => q.entranceEnd === en).length, 0);
+  // No sideways dodge off a trail (trees and water beside it); a walker there stops for the player instead
+  const canDodge = (p, offset) => !(p.route && p.route.trail) && base.canDodge(p, offset);
 
-  return { along, across: base.across, next, canDodge: base.canDodge, pieces, isTrailWalker, splitCount };
+  return { along, across: base.across, next, canDodge, pieces, isTrailWalker, splitCount, attach, walkable, exitFrom };
 }
 
-export { createTrailNetwork, createTrailRoutes, offsetLine, LANE_OFFSET, BODY_HALF, ENTRANCE_REACH, ENTER_CHANCE, TRAIL_MOD, TRAIL_REM };
+// The height a Glens Falls walker stands on (pedestrian-system.js groundAt): on a trail the drawn path, TRAIL_LIFT above
+// its ground or a footbridge's deck (gf-surface.js footDeckAt; gf-trail-meshes.js draws both there); elsewhere the
+// street surface as before (surface.road). surface: gf-surface.js.
+const TRAIL_LIFT = 0.03; // m: the drawn path above the terrain (gf-drape.js ROAD_LIFT, as the draped roads)
+function trailGroundAt(surface) {
+  return (x, z, ux, uz, p) => {
+    const tr = p && p.route && p.route.trail;
+    if (!tr) return surface.road(x, z, ux, uz);
+    if (tr.deck) { const d = surface.footDeckAt(x, z); if (d) return d.y + TRAIL_LIFT; }
+    return surface.ground(x, z) + TRAIL_LIFT;
+  };
+}
+
+export { createTrailNetwork, createTrailRoutes, trailGroundAt, TRAIL_LIFT, offsetLine, LANE_OFFSET, BODY_HALF, ENTRANCE_REACH, ATTACH_REACH, ENTER_CHANCE, TRAIL_MOD, TRAIL_REM };

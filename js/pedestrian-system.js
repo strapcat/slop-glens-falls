@@ -98,8 +98,8 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
   const baseRoutes = createPedestrianRoutes(onSidewalk ? { walkable: network.walkable, onSidewalk } : network, blockAt,
     trackInsets ? { insets: trackInsets } : undefined);
   // options.routes (opt-in, e.g. Glens Falls's park trails, gf-trail-network.js): wraps the routes (the same along /
-  // across / next / canDodge); next() and groundAt() are also given the pedestrian
-  const pedRoutes = wrapRoutes ? wrapRoutes(baseRoutes) : baseRoutes;
+  // across / next / canDodge; given the road network too); next() and groundAt() are also given the pedestrian
+  const pedRoutes = wrapRoutes ? wrapRoutes(baseRoutes, network) : baseRoutes;
   const track = { ax: 0, az: 0, ux: 0, uz: 1, len: 1, node: null, side: 0, line: 0, route: null };
 
   function sidewalkTrack(e) {

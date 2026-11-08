@@ -63,6 +63,11 @@ const GF_PRELOADS = [
   'trees.js',
   'gf-trees.js',
   'gf-tree-placements.js',
+  'gf-trails.js',
+  'gf-trail-network.js',
+  'gf-trail-meshes.js',
+  'gf-thrill-hill-plan.js',
+  'gf-thrill-hill.js',
   'gf-main.js'
 ];
 

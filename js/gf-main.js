@@ -29,6 +29,12 @@ import { polygonContains } from './building-collision.js';
 import { createTreeField } from './trees.js';
 import { GF_TREES } from './gf-trees.js';
 import { placeGfTrees } from './gf-tree-placements.js';
+import { GF_TRAILS } from './gf-trails.js';
+import { createTrailNetwork, createTrailRoutes, trailGroundAt } from './gf-trail-network.js';
+import { buildTrailMeshes } from './gf-trail-meshes.js';
+import { planThrillHillParty, THRILL_HILL_SCENE } from './gf-thrill-hill-plan.js';
+import { buildThrillHillParty } from './gf-thrill-hill.js';
+import { cityUniforms } from './tsl-materials.js';
 
 // Glens Falls game view (index.html?city=glensfalls): the town from GF_GEO (roads, water, blocks) on its sourced terrain
 // (CC-005b: USGS 3DEP bare earth, gf-terrain.js, asked through gf-surface.js by everything that stands on it), its road graph
@@ -39,14 +45,18 @@ import { placeGfTrees } from './gf-tree-placements.js';
 const NUM_CARS = 40;
 // Pedestrians walk the sidewalk band between each block's curb and its lot (1.8 m wide), on two walking lines 0.6 and
 // 1.2 m from the roadway, on the terrain (a deck where their track runs along a bridge); there are no crosswalks yet.
-// Their sidewalk is the ground's own (2 cm above it); crossing a road they walk on its draped asphalt
+// Their sidewalk is the ground's own (2 cm above it); crossing a road they walk on its draped asphalt. CC-005c: a fixed
+// share of them (gf-trail-network.js) also turn into Crandall Park and Cole's Woods at the trail entrances, walk the
+// sourced paths (gf-trails.js) to a place in the park or to Thrill Hill, and come back out
+const TRAIL_NET = createTrailNetwork(GF_TRAILS);
 const PEDESTRIANS = {
   numPeds: 120,
   sidewalkY: 0.02,
   crosswalkY: ROAD_LIFT + 0.012,
   onSidewalk: GF_BLOCKS.onSidewalk,
   trackInsets: [0.6, 1.2],
-  groundAt: (x, z, ux, uz) => GF_SURFACE.road(x, z, ux, uz),
+  groundAt: trailGroundAt(GF_SURFACE),
+  routes: (base, network) => createTrailRoutes(base, network, TRAIL_NET),
   // the WebGL 2 fallback reads the crowd poses from a data texture (its plain-attribute read ignores the bone index)
   textureFallback: true
 };
@@ -170,6 +180,8 @@ async function initApp() {
     const waterTypes = GF_SURFACE.water.bodies.reduce((o, b) => ({ ...o, [b.type]: (o[b.type] || 0) + 1 }), {});
     console.info(`[gf] terrain: USGS 3DEP ${h.base.cols} x ${h.base.rows} at 2 m + ${h.patches.tilesKept} native 1 m tiles + ${h.ring.cols} x ${h.ring.rows} ring at 8 m (${GF_TERRAIN_BYTES.download} bytes); anchor OSM ${h.anchor.osmNode} at ${h.anchor.navd88.toFixed(3)} m NAVD88 = y 0; ${GF_SURFACE.decks.length} bridge decks, water ${Object.entries(waterTypes).map(([t, n]) => `${n} ${t}`).join(', ')}; roads ${ground.stats.roadTriangles} triangles in ${ground.stats.roadChunks} chunks`);
   }
+  // CC-005c: the park and woods paths and their footbridges (gf-trail-meshes.js)
+  const trailMeshes = buildTrailMeshes(scene, GF_TRAILS, GF_SURFACE);
   markInit('ground');
   await showLoadingStage('Raising buildings...');
   // OSM footprints, flat-roofed. Heights: OSM height or levels where tagged; else measured from USGS 3DEP LiDAR
@@ -207,14 +219,22 @@ async function initApp() {
   // shape mix, not a surveyed species. No building colliders go to the renderer: the data already keeps tops about
   // 1 m off every wall, and real crowns do overhang roofs (slopGlensFalls.trees.diagnoseBuildingColliders() counts
   // how many trees they would drop).
-  const treePlan = placeGfTrees(GF_TREES, { buildings: GF_BUILDINGS, geo: GF_GEO, ground: GF_SURFACE.ground });
+  // CC-005c: no trunk in a trail's corridor (gf-trails.js treeExclusions: only the trees whose trunk reaches a path)
+  const treePlan = placeGfTrees(GF_TREES, { buildings: GF_BUILDINGS, geo: GF_GEO, ground: GF_SURFACE.ground,
+    exclude: new Set(GF_TRAILS.treeExclusions.trees.map((t) => t[0])) });
   const treeField = createTreeField(scene, treePlan.sites, []);
   scene.add(treeField.group);
   {
-    const { water, road, building } = treePlan.skipped;
+    const { water, road, building, trail } = treePlan.skipped;
     const mix = treePlan.speciesCounts.map((n, s) => `${['plane', 'locust', 'elm'][s]}-shape ${n}`).join(', ');
-    console.info(`[gf] trees: ${treeField.stats.trees} of ${GF_TREES.counts.usable} LiDAR tops (skipped water ${water}, road ${road}, building ${building}), ${treeField.group.children.length} cells, species mix ${mix} (visual only)`);
+    console.info(`[gf] trees: ${treeField.stats.trees} of ${GF_TREES.counts.usable} LiDAR tops (skipped water ${water}, road ${road}, building ${building}, trail ${trail}), ${treeField.group.children.length} cells, species mix ${mix} (visual only)`);
   }
+  // CC-005c: the FICTIONAL Thrill Hill keg party (gf-thrill-hill-plan.js), beside the trail crest, clear of the kept
+  // trees (none is removed for it). ?party=off leaves it out (for the performance comparison)
+  const partyPlan = planThrillHillParty({ trails: GF_TRAILS, net: TRAIL_NET, ground: GF_SURFACE.ground, trunks: treePlan.trunks, water: GF_SURFACE.water.surfaceAt });
+  const party = new URLSearchParams(location.search).get('party') === 'off' ? null
+    : buildThrillHillParty(scene, partyPlan, GF_SURFACE.ground, { textureFallback: true });
+  console.info(`[gf] trails: ${GF_TRAILS.counts.edges} edges (${Object.entries(GF_TRAILS.lengthsM).map(([k, m]) => `${k} ${m} m`).join(', ')}), ${GF_TRAILS.counts.entrances} entrances, ${GF_TRAILS.counts.footDecks} footbridges, ${trailMeshes.stats.pathTriangles} path triangles; ${GF_TRAILS.treeExclusions.trees.length} trees cleared from the paths; party ${party ? `at (${partyPlan.fire.x.toFixed(1)}, ${partyPlan.fire.z.toFixed(1)}), ${partyPlan.slots.length} people, ${partyPlan.cups.length} cups (fictional)` : 'off'}`);
   markInit('trees');
   await showLoadingStage('Creating traffic...');
   // The OSM signals (gf-signals.js) as they are: the network signals the junction within 6 m of each (road-network.js 8.)
@@ -243,7 +263,9 @@ async function initApp() {
   // The player's world (gf-runtime.js: the bbox, the terrain, no raised sidewalks), starting at the spawn; buildings
   // collide ... and tree trunks (gf-tree-placements.js), which the player bumps into and flies over, and the bridge
   // railings (gf-ground.js), which keep the player on a deck
-  const controllerManager = new ThirdPersonControllerManager(scene, [...buildings.colliders, ...treePlan.trunks, ...ground.deckColliders], { ...PLAYER_WORLD, spawn });
+  // CC-005c: and the footbridge rails and the party's fire ring and keg
+  const controllerManager = new ThirdPersonControllerManager(scene, [...buildings.colliders, ...treePlan.trunks, ...ground.deckColliders,
+    ...trailMeshes.colliders, ...(party ? party.colliders : [])], { ...PLAYER_WORLD, spawn });
   // The terrain's chunks round the start, built now so that the shader warm-up sees them
   ground.terrain.update({ x: spawn.x, y: GF_SURFACE.ground(spawn.x, spawn.z) + 3, z: spawn.z });
   // Glens Falls names in the HUD (controllers.js labels the car New York's yellow cab)
@@ -318,7 +340,25 @@ async function initApp() {
         const probe = createTreeField(null, treePlan.sites, buildings.colliders);
         return { placed: treePlan.sites.length, kept: probe.stats.trees, wouldDrop: treePlan.sites.length - probe.stats.trees };
       }
-    }
+    },
+    // CC-005c: the trails (graph, entrances and their sidewalk attachments, meshes, trees cleared), the trail walkers
+    // and the fictional Thrill Hill party (its layout, who is where, the fire's state)
+    trails: {
+      data: { counts: GF_TRAILS.counts, lengthsM: GF_TRAILS.lengthsM, hill: GF_TRAILS.hill, components: GF_TRAILS.components },
+      network: TRAIL_NET,
+      meshes: trailMeshes.stats,
+      footbridgeRails: trailMeshes.colliders.length,
+      treesCleared: GF_TRAILS.treeExclusions.trees.length,
+      treesSkipped: treePlan.skipped.trail,
+      walkers: () => {
+        const peds = trafficSystem.peds;
+        const on = peds.filter((p) => p.placed && p.route && p.route.trail);
+        return { trailWalkers: peds.filter((p) => p.index % 10 === 3).length, onTrails: on.length,
+          where: on.map((p) => ({ index: p.index, x: +p.x.toFixed(1), z: +p.z.toFixed(1), phase: p.trailWalk ? p.trailWalk.phase : null, connector: !!p.route.trail.connector })) };
+      }
+    },
+    party: party ? { scene: THRILL_HILL_SCENE, plan: { fire: partyPlan.fire, keg: partyPlan.keg, slots: partyPlan.slots, cups: partyPlan.cups.length, clearance: partyPlan.clearance }, stats: party.stats }
+      : { scene: THRILL_HILL_SCENE, off: true }
   };
   document.addEventListener('visibilitychange', () => { if (document.hidden) savePlayerState(); });
   markInit('controllers');
@@ -473,9 +513,13 @@ async function initApp() {
     selectCamera(FOLLOW_CAMERAS[(idx + step + n) % n].id, true);
   }
 
+  // CC-005c: the party follows the clock (on at twilight and midnight: gf-thrill-hill-plan.js NIGHT_GLOW); the first
+  // setting puts everyone in place (or away) at once, later ones send them walking
+  let partyTimeSet = false;
   function selectTime(timeId) {
     lightingSystem.applyPreset(timeId);
     colorGrade.applyPreset(lightingSystem.activePresetId);
+    if (party) { party.setTime(cityUniforms.uInteriorGlow.value, { instant: !partyTimeSet }); partyTimeSet = true; }
     timeButtons.forEach((btn) => {
       btn.classList.toggle('active', btn.getAttribute('data-time') === timeId);
     });
@@ -652,8 +696,10 @@ async function initApp() {
     }
     signalHeads.update(elapsed);
     treeField.update(cameraSystem.currentPos);
+    if (party) for (let i = 0; i < seconds * 30; i++) party.update(1 / 30, elapsed - seconds + (i + 1) / 30, cameraSystem.currentPos);
     return elapsed;
   };
+  globalThis.slopGlensFalls.selectTime = (id) => selectTime(id);
   let frameCount = 0;
   let fpsTimer = 0;
   const shadowFocus = new THREE.Vector3();
@@ -686,6 +732,7 @@ async function initApp() {
       nextPlayerSave = now + 5000;
     }
     signalHeads.update(elapsed);
+    if (party) party.update(dt, elapsed, cameraSystem.currentPos);
     // the shadow distance grows with the camera's height above the ground (not above y = 0, which the terrain is not)
     const cam = cameraSystem.currentPos, below = GF_SURFACE.ground(cam.x, cam.z);
     shadowFocus.set(cam.x, cam.y - (Number.isFinite(below) ? below : 0), cam.z);

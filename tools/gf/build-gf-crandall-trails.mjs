@@ -24,10 +24,13 @@ import { GF_GEO } from '../../js/gf-geodata.js';
 import { GF_TREES } from '../../js/gf-trees.js';
 import { GF_BUILDINGS } from '../../js/gf-buildings.js';
 import { placeGfTrees, TRUNK } from '../../js/gf-tree-placements.js';
+import zlib from 'node:zlib';
+import { decodeTerrain, createGfTerrain } from '../../js/gf-terrain.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, '../..');
 const INPUT = path.join(HERE, 'data/gf_crandall_trails.geojson');
+const TERRAIN = path.join(ROOT, 'js/gf-terrain.bin.gz');
 const SIDEWALK_LINE = 1.2; // m beyond the roadway's half width: the game's outer walking line (gf-main.js trackInsets)
 const SIDEWALK_SNAP = 5.0; // m: the most an entrance on a mapped sidewalk may sit from the game's walking line (the game
 // draws every sidewalk as a 1.8 m band at the curb; OSM maps it where it is, a grass strip away on Glen Street: the same
@@ -112,6 +115,19 @@ function buildTrails(fc = JSON.parse(fs.readFileSync(INPUT, 'utf8')), inputSha =
     cutAt.set(n, { street: e.properties.street, sidewalkWay: e.properties.sidewalkWay, link: best.s.link, half: best.s.half, roadName: best.s.name, seg: best.s, dist: best.d });
   }
 
+  // A park drive is already a drawn service road of the game (gf-geodata.js; drawn, not driven: gf-roadgraph.js): its
+  // walking width is that road's, read from the link under its middle
+  const driveWidth = (pts, id) => {
+    const [mx, mz] = pts[Math.floor(pts.length / 2)];
+    let best = null;
+    for (const s of roads) {
+      if (s.cls !== 'service') continue;
+      const [d] = segDist(mx, mz, s.a[0], s.a[1], s.b[0], s.b[1]);
+      if (!best || d < best.d) best = { d, s };
+    }
+    if (!best || best.d > 0.5) throw new Error(`${id}: no service road of the game under the drive`);
+    return { widthM: r2(best.s.half * 2), widthBasis: `the game's service road (road graph link ${best.s.link}, gf-geodata.js)` };
+  };
   const nodes = [], nodeIndex = new Map(), nodeInfo = [];
   const addNode = (key, x, z, info) => {
     if (nodeIndex.has(key)) return nodeIndex.get(key);
@@ -163,12 +179,55 @@ function buildTrails(fc = JSON.parse(fs.readFileSync(INPUT, 'utf8')), inputSha =
       if (!(len > 0.05)) throw new Error(`${f.properties.id}: zero-length edge`);
       edges.push({
         id: start === 0 && i === ids.length - 1 ? f.properties.id : `${f.properties.id}#${start}-${i}`, line: f.properties.id, way: f.properties.osmWayId,
-        group: f.properties.group, kind, a, b, lengthM: r2(len), widthM: f.properties.widthM, widthBasis: f.properties.widthBasis,
+        group: f.properties.group, kind, a, b, lengthM: r2(len), ...(kind === 'drive' ? driveWidth(pts, f.properties.id) : { widthM: f.properties.widthM, widthBasis: f.properties.widthBasis }),
         surface: f.properties.surface, pts: pts.flatMap(([x, z]) => [r2(x), r2(z)])
       });
       start = i;
     }
   }
+
+  // Thrill Hill's crest on the trail: the highest point of the game's terrain (0.5 m steps) along the accepted edges of
+  // the hill way becomes a graph node of its own (splitting its edge), so walkers make for the top itself rather than
+  // the junction below it. County loop vertex #137 (Dave's identification) is reported beside it: the mapped path runs
+  // a few metres from the county line, and neither is surveyed (the anchor uncertainty of the PR report).
+  const hillWay = fc.provenance.hill.pathWay;
+  const data = decodeTerrain(new Uint8Array(zlib.gunzipSync(fs.readFileSync(TERRAIN))));
+  const terrain = createGfTerrain(data, GF_GEO.frame);
+  let crest = null;
+  for (const e of edges) {
+    if (e.way !== hillWay) continue;
+    for (let k = 0; k + 3 < e.pts.length; k += 2) {
+      const [ax, az, bx, bz] = e.pts.slice(k, k + 4), l = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(l / 0.5));
+      for (let i = 0; i <= n; i++) {
+        const x = ax + (bx - ax) * i / n, z = az + (bz - az) * i / n, y = terrain.heightAt(x, z);
+        if (!crest || y > crest.y + 1e-9) crest = { e, k, x, z, y };
+      }
+    }
+  }
+  if (!crest) throw new Error(`the hill way ${hillWay} has no accepted edge`);
+  const [vx, vz] = toLocal(...fc.provenance.hill.countyLoopCoordinates);
+  const crestNode = addNode('crest', crest.x, crest.z, { osm: null, entrance: false, crest: true });
+  {
+    const e = crest.e, at = edges.indexOf(e);
+    const head = [...e.pts.slice(0, crest.k + 2), r2(crest.x), r2(crest.z)], tail = [r2(crest.x), r2(crest.z), ...e.pts.slice(crest.k + 2)];
+    const clean = (p) => { const out = [p[0], p[1]]; for (let i = 2; i < p.length; i += 2) if (Math.hypot(p[i] - out[out.length - 2], p[i + 1] - out[out.length - 1]) > 0.05) out.push(p[i], p[i + 1]); return out; };
+    const part = (pts, a, b, tag) => {
+      let len = 0;
+      for (let i = 2; i < pts.length; i += 2) len += Math.hypot(pts[i] - pts[i - 2], pts[i + 1] - pts[i - 1]);
+      return { ...e, id: `${e.id}~${tag}`, a, b, lengthM: r2(len), pts };
+    };
+    const parts = [];
+    const h = clean(head), t = clean(tail);
+    if (h.length >= 4) parts.push(part(h, e.a, crestNode, 'to-crest'));
+    if (t.length >= 4) parts.push(part(t, crestNode, e.b, 'from-crest'));
+    edges.splice(at, 1, ...parts);
+  }
+  const hillInfo = {
+    node: crestNode, crestX: r2(crest.x), crestZ: r2(crest.z), crestY: r2(crest.y), crestNavd88: r2(crest.y + data.header.anchor.navd88),
+    countyVertex: fc.provenance.hill.countyLoopVertex, vertexX: r2(vx), vertexZ: r2(vz), vertexGroundNavd88: r2(terrain.heightAt(vx, vz) + data.header.anchor.navd88),
+    crestToVertexM: r2(Math.hypot(crest.x - vx, crest.z - vz)), pathWay: hillWay, pathJunctionOsm: fc.provenance.hill.pathNode,
+    identity: fc.provenance.hill.identity
+  };
 
   // Entrances: the graph node and where it meets the game's outer walking line (the foot of the perpendicular on it)
   const entranceOut = [];
@@ -205,9 +264,6 @@ function buildTrails(fc = JSON.parse(fs.readFileSync(INPUT, 'utf8')), inputSha =
     entrances: entranceOut.filter((e) => comp[e.node] === c).map((e) => e.osmNode)
   }));
   for (const [c, k] of components.entries()) if (!k.entrances.length) throw new Error(`component ${c} has no entrance`);
-  const hillOsm = fc.provenance.hill.pathNode;
-  const hill = nodeIndex.get(hillOsm);
-  if (hill === undefined) throw new Error('the hill node is not in the graph');
 
   // Footbridge decks (heights from the terrain at run time)
   const footDecks = edges.filter((e) => e.kind === 'footbridge').map((e) => ({ id: e.id, way: e.way, widthM: e.widthM, pts: e.pts }));
@@ -241,23 +297,24 @@ function buildTrails(fc = JSON.parse(fs.readFileSync(INPUT, 'utf8')), inputSha =
     counts: { lines: lines.length, nodes: nodes.length / 2, edges: edges.length, entrances: entranceOut.length, components: nComp, footDecks: footDecks.length, treeExclusions: excluded.length,
       excludedSources: fc.features.filter((f) => !f.properties.accepted).length },
     lengthsM: lengths, components,
-    hill: { node: hill, osmNode: hillOsm, countyVertex: fc.provenance.hill.countyLoopVertex, identity: fc.provenance.hill.identity },
+    hill: hillInfo,
     nodes, nodeInfo, edges, entrances: entranceOut, footDecks,
     treeExclusions: { fields: ['treeIndex', 'x', 'z', 'heightM', 'trunkHalfM', 'edge'], rule: `trunk square within the corridor: half the path width + ${BODY} m (player body); paths and footbridges only`, trees: excluded }
   };
 }
 
+const moduleText = (data) => `// generated by tools/gf/build-gf-crandall-trails.mjs from tools/gf/data/gf_crandall_trails.geojson (do not edit)\n` +
+  `// CC-005c: Crandall Park's paths and the Cole's Woods corridor to Thrill Hill. ${data.attribution}\n` +
+  `export const GF_TRAILS = ${JSON.stringify(data)};\n`;
+
 function main() {
   const out = process.argv[2] || path.join(ROOT, 'js/gf-trails.js');
   const data = buildTrails();
-  const text = `// generated by tools/gf/build-gf-crandall-trails.mjs from tools/gf/data/gf_crandall_trails.geojson (do not edit)\n` +
-    `// CC-005c: Crandall Park's paths and the Cole's Woods corridor to Thrill Hill. ${data.attribution}\n` +
-    `export const GF_TRAILS = ${JSON.stringify(data)};\n`;
-  fs.writeFileSync(out, text);
+  fs.writeFileSync(out, moduleText(data));
   console.log(`[gf-trails] ${data.counts.edges} edges, ${data.counts.nodes} nodes, ${data.counts.entrances} entrances, ${data.counts.components} components, ${data.counts.footDecks} footbridges, ${data.counts.treeExclusions} trees excluded; lengths ${JSON.stringify(data.lengthsM)}; wrote ${path.relative(ROOT, out)}`);
   for (const e of data.entrances) console.log(`  entrance ${e.osmNode} ${e.street || e.sidewalkWay}: snap ${e.snapM} m, trimmed ${e.trimmedM} m, side ${e.side}`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) main();
 
-export { buildTrails, segSquareDist, BODY, SIDEWALK_LINE };
+export { buildTrails, moduleText, segSquareDist, BODY, SIDEWALK_LINE };
