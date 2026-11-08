@@ -23,6 +23,7 @@ const LANE_OFFSET = 0.4; // m right of a path's centre line (a park drive's: 1.0
 const BODY_HALF = 0.35; // m: a walker's half width, kept inside the path
 const ENTRANCE_REACH = 0.9; // m: sidewalk tracks this near an entrance point are split there (both walking lines)
 const ATTACH_REACH = 15; // m: the farthest a sidewalk track may be from an entrance's trail end
+const CONNECTOR_BODY = 0.48; // m: a connector's swept body (the player's person radius, as the trees' clearance)
 const CENTRE_CLEAR = 1.0; // m: an entrance connector keeps this far from every street's centre line (never crosses one)
 const ENTER_CHANCE = 0.7; // a trail walker passing an entrance turns in this often
 const TRAIL_MOD = 10, TRAIL_REM = 3; // trail walkers: pedestrian index % 10 === 3
@@ -138,8 +139,9 @@ function createTrailNetwork(trails) {
 // nearest point on a sidewalk track (within ATTACH_REACH of the trail end, not across any carriageway) and joins the
 // two by a straight connector. Every sidewalk track within ENTRANCE_REACH of that point is split there. An entrance
 // with no sidewalk track near it (Angel Lane: no pedestrian sidewalks in the game's network) stays an entrance for the
-// player only; walkers neither enter nor leave by it.
-function createTrailRoutes(base, network, net, { random = Math.random } = {}) {
+// player only; walkers neither enter nor leave by it. clearance (gf-trail-clearance.js createClearance, opt-in): a
+// connector is accepted only if the capsule of CONNECTOR_BODY round it meets no water, building or kept trunk.
+function createTrailRoutes(base, network, net, { random = Math.random, clearance = null } = {}) {
   const pieces = new Map(); // original sidewalk track -> its pieces, split at entrances
   const splitAlong = new Map(); // edge -> along(e) with pieces
   const isTrailWalker = (p) => p && Number.isInteger(p.index) && p.index % TRAIL_MOD === TRAIL_REM;
@@ -169,6 +171,8 @@ function createTrailRoutes(base, network, net, { random = Math.random } = {}) {
         const u = Math.max(0.5, Math.min(track.len - 0.5, (n.x - track.ax) * track.ux + (n.z - track.az) * track.uz));
         const pt = { x: track.ax + track.ux * u, z: track.az + track.uz * u }, d = Math.hypot(pt.x - n.x, pt.z - n.z);
         if (d > ATTACH_REACH || (best && d >= best.d) || crossesRoad(pt, n, near)) continue;
+        // the walker's whole swept body along the connector clear of water, buildings and kept trunks (exact)
+        if (clearance && clearance.capsule(pt.x, pt.z, n.x, n.z, CONNECTOR_BODY)) continue;
         best = { x: pt.x, z: pt.z, d, edge: e };
       }
     }
@@ -318,4 +322,22 @@ function trailGroundAt(surface) {
   };
 }
 
-export { createTrailNetwork, createTrailRoutes, trailGroundAt, TRAIL_LIFT, offsetLine, LANE_OFFSET, BODY_HALF, ENTRANCE_REACH, ATTACH_REACH, ENTER_CHANCE, TRAIL_MOD, TRAIL_REM };
+// The paths' drawn surfaces: a road graph for gf-drape.js ([a, b, name, class, oneway, lanes, width, inner points]),
+// one link per path edge, its class the index of its surface in TRAIL_SURFACES. Footbridges are drawn as decks
+// (gf-trail-meshes.js) and the park drives are the game's service roads, so neither is here.
+const TRAIL_SURFACES = {
+  paved: { color: 0x5b5d60, kinds: ['asphalt', 'paved', 'concrete'] },
+  gravel: { color: 0x9a9283, kinds: ['gravel', 'fine_gravel', 'compacted', 'pebblestone', 'unpaved'] },
+  dirt: { color: 0x7a6650, kinds: [] } // ground, dirt, earth, unmapped: a woods path
+};
+const surfaceOf = (s) => Object.keys(TRAIL_SURFACES).find((k) => TRAIL_SURFACES[k].kinds.includes(s)) || 'dirt';
+function trailDrapeGraph(trails) {
+  const links = [];
+  for (const e of trails.edges) {
+    if (e.kind !== 'path') continue;
+    links.push([e.a, e.b, 0, Object.keys(TRAIL_SURFACES).indexOf(surfaceOf(e.surface)), 0, 1, e.widthM, e.pts.slice(2, -2)]);
+  }
+  return { nodes: trails.nodes, links };
+}
+
+export { createTrailNetwork, createTrailRoutes, trailGroundAt, TRAIL_LIFT, offsetLine, LANE_OFFSET, BODY_HALF, ENTRANCE_REACH, ATTACH_REACH, CONNECTOR_BODY, ENTER_CHANCE, TRAIL_MOD, TRAIL_REM, TRAIL_SURFACES, surfaceOf, trailDrapeGraph };

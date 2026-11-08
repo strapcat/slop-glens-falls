@@ -24,8 +24,10 @@ import { GF_LIDAR_HEIGHTS } from '../js/gf-lidar-heights.js';
 import { GF_SIGNALS } from '../js/gf-signals.js';
 import { GF_TREES } from '../js/gf-trees.js';
 import { GF_TRAILS } from '../js/gf-trails.js';
-import { createTrailNetwork, createTrailRoutes, trailGroundAt, TRAIL_LIFT, TRAIL_MOD, TRAIL_REM, ATTACH_REACH } from '../js/gf-trail-network.js';
-import { planThrillHillParty, createPartySchedule, isNight, THRILL_HILL_SCENE, NIGHT_GLOW, ATTENDEES, FIRE_CLEAR, FIRE_RING } from '../js/gf-thrill-hill-plan.js';
+import { createTrailNetwork, createTrailRoutes, trailGroundAt, trailDrapeGraph, TRAIL_LIFT, TRAIL_MOD, TRAIL_REM, ATTACH_REACH, CONNECTOR_BODY, BODY_HALF } from '../js/gf-trail-network.js';
+import { planThrillHillParty, createPartySchedule, routeAround, isNight, THRILL_HILL_SCENE, NIGHT_GLOW, ATTENDEES, ATTENDEE_BODY, FIRE_CLEAR, FIRE_RING } from '../js/gf-thrill-hill-plan.js';
+import { createClearance, waterRegions, buildingRegions, trunkRegions, discRegion, region, inRegion, capsuleHits, triangleHits } from '../js/gf-trail-clearance.js';
+import { drapeRoads } from '../js/gf-drape.js';
 import { buildTrails, moduleText, checkCorridor, segSquareDist, BODY } from '../tools/gf/build-gf-crandall-trails.mjs';
 import { select } from '../tools/gf/select-gf-crandall-trails.mjs';
 
@@ -51,6 +53,9 @@ const net = createTrailNetwork(GF_TRAILS);
 const excluded = new Set(GF_TRAILS.treeExclusions.trees.map((t) => t[0]));
 const treesKept = placeGfTrees(GF_TREES, { buildings: GF_BUILDINGS, geo: GF_GEO, ground: surface.ground, exclude: excluded });
 const treesAll = placeGfTrees(GF_TREES, { buildings: GF_BUILDINGS, geo: GF_GEO, ground: surface.ground });
+// the game's obstacles for walkers (gf-main.js trailClearance): mapped water, building colliders, kept trunks
+const water = waterRegions(GF_GEO.water), buildingsR = buildingRegions(buildingColliders), trunksR = trunkRegions(treesKept.trunks);
+const obstaclesAll = createClearance([...water, ...buildingsR, ...trunksR]);
 const segDist = (px, pz, ax, az, bx, bz) => { const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz, t = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / l2)) : 0; return Math.hypot(px - ax - dx * t, pz - az - dz * t); };
 // a seeded random (mulberry32)
 const seeded = (seed) => () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -88,12 +93,38 @@ test('fixtures: a pond mid-segment, a building, the clearance boundary, a juncti
   // dry ends, a pond in the middle: refused; the same line as a footbridge (a deck) passes; a building: refused
   const pond = { name: 'fixture pond', outer: [4, -3, 6, -3, 6, 3, 4, 3], holes: [] };
   const line = (kind, z = 0) => ({ id: `fixture-${kind}`, kind, widthM: 2, pts: [0, z, 10, z] });
-  assert.throws(() => checkCorridor([line('path')], { water: [pond], buildings: [] }), /in water \(fixture pond\)/);
+  assert.throws(() => checkCorridor([line('path')], { water: [pond], buildings: [] }), /water \(fixture pond\)/);
   assert.doesNotThrow(() => checkCorridor([line('footbridge')], { water: [pond], buildings: [] }));
-  assert.throws(() => checkCorridor([line('footbridge')], { water: [], buildings: [{ osm: 'w1', ...pond }] }), /in a building \(w1\)/);
+  assert.throws(() => checkCorridor([line('footbridge')], { water: [], buildings: [{ osm: 'w1', ...pond }] }), /a building \(w1\)/);
   // beside the pond, its edge 0.9 m from the water: the 2 m corridor (1 m half width) reaches in
-  assert.throws(() => checkCorridor([line('path', -3.9)], { water: [pond], buildings: [] }), /in water/);
+  assert.throws(() => checkCorridor([line('path', -3.9)], { water: [pond], buildings: [] }), /meets water/);
   assert.doesNotThrow(() => checkCorridor([line('path', -4.1)], { water: [pond], buildings: [] }));
+  // obstacles BETWEEN the old sample lines (centre and both edges) and stations (every 0.5 m): a 0.2 m puddle at
+  // 0.5 m off the centre between two stations, a building corner poking 0.2 m into the edge between stations, and
+  // a pond in the outside wedge of a bend (outside both segments' rectangles, inside the round join). Each is found.
+  const sq = (x, z, h, extra = {}) => ({ outer: [x - h, z - h, x + h, z - h, x + h, z + h, x - h, z + h], holes: [], ...extra });
+  const puddle = sq(5.25, 0.5, 0.1, { name: 'puddle' });
+  assert.throws(() => checkCorridor([line('path')], { water: [puddle], buildings: [] }), /water \(puddle\)/);
+  assert.doesNotThrow(() => checkCorridor([line('footbridge')], { water: [puddle], buildings: [] }), 'a mapped footbridge crosses it on its deck');
+  // a diamond whose tip pokes 0.15 m into the corridor between stations 8.0 and 8.5 (no old sample point inside it)
+  const corner = { osm: 'w-corner', outer: [7.8, -1.3, 8.25, -1.75, 8.7, -1.3, 8.25, -0.85], holes: [] };
+  const oldSamples = [];
+  for (let x = 0; x <= 10; x += 0.5) for (const z of [-1, 0, 1]) oldSamples.push([x, z]);
+  for (const g of [puddle, corner]) assert.ok(!oldSamples.some(([x, z]) => inRegion(region([g.outer]), x, z)), 'the fixture lies between the old samples');
+  assert.throws(() => checkCorridor([line('path')], { water: [], buildings: [corner] }), /a building \(w-corner\)/);
+  assert.throws(() => checkCorridor([line('footbridge')], { water: [], buildings: [corner] }), /a building/, 'no exception for buildings');
+  const bend = { id: 'fixture-bend', kind: 'path', widthM: 2, pts: [0, 0, 10, 0, 10, 10] };
+  const wedge = sq(10.6, -0.6, 0.05, { name: 'wedge' }); // 0.78 m from the bend's corner, beyond both rectangles
+  assert.throws(() => checkCorridor([bend], { water: [wedge], buildings: [] }), /water \(wedge\)/);
+  assert.doesNotThrow(() => checkCorridor([bend], { water: [sq(10.8, -0.8, 0.05)], buildings: [] }), '1.06 m from the corner: clear');
+  // a pond with an island: a path on the island is dry; one across the island's shore is not
+  const ringPond = { name: 'ring pond', outer: [-20, -20, 20, -20, 20, 20, -20, 20], holes: [[-8, -8, 8, -8, 8, 8, -8, 8]] };
+  assert.doesNotThrow(() => checkCorridor([{ id: 'island', kind: 'path', widthM: 2, pts: [-5, 0, 5, 0] }], { water: [ringPond], buildings: [] }));
+  assert.throws(() => checkCorridor([{ id: 'shore', kind: 'path', widthM: 2, pts: [-5, 0, 7.5, 0] }], { water: [ringPond], buildings: [] }), /water/);
+  // the exact tests themselves: a triangle meets a pond smaller than it, and a capsule one wholly inside it
+  const tiny = region([[2, 1, 2.1, 1, 2.1, 1.1]]);
+  assert.ok(triangleHits(tiny, [0, 0, 6, 0, 0, 6]) && !triangleHits(tiny, [3, 3, 6, 3, 3, 6]));
+  assert.ok(capsuleHits(region([[-50, -50, 50, -50, 50, 50, -50, 50]]), 0, 0, 1, 0, 0.1), 'inside a region: a hit');
   // the tree rule: a trunk square (half 0.25) is cleared when within half the width + BODY of the line
   const reach = 1 + BODY, h = 0.25;
   assert.ok(segSquareDist(0, 0, 10, 0, 5, reach + h - 0.01, h) < reach, 'just inside: cleared');
@@ -141,34 +172,43 @@ test('only the accepted, pedestrian-permitted sources are in the graph', () => {
   }
 });
 
-test('paths and footbridges: walking lanes clear of buildings, water (off a deck) and every kept tree trunk', () => {
-  const trunks = treesKept.trunks;
-  const cells = new Map();
-  for (const t of trunks) { const k = `${Math.floor(t.minX / 20)},${Math.floor(t.minZ / 20)}`; (cells.get(k) || cells.set(k, []).get(k)).push(t); }
-  const nearTrunk = (x, z, r) => {
-    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const t of cells.get(`${Math.floor(x / 20) + i},${Math.floor(z / 20) + j}`) || []) {
-      if (x > t.minX - r && x < t.maxX + r && z > t.minZ - r && z < t.maxZ + r) return true;
-    }
-    return false;
-  };
-  let samples = 0, onDeck = 0;
-  for (const [k, pair] of net.lanes.entries()) {
-    const e = net.edges[k];
-    if (e.kind === 'drive') continue; // the game's own service roads (gf-geodata.js), drawn as they were
-    for (const lane of pair) for (const tr of lane.tracks) {
-      for (let s = 0; s <= tr.len; s += 0.5) {
-        const x = tr.ax + tr.ux * s, z = tr.az + tr.uz * s;
-        samples++;
-        assert.ok(!inBuilding(x, z), `${e.id} lane in a building at (${x}, ${z})`);
-        assert.ok(!nearTrunk(x, z, 0.35), `${e.id} lane through a tree trunk at (${x}, ${z})`);
-        const deck = surface.footDeckAt(x, z), w = surface.water.surfaceAt(x, z);
-        if (deck) onDeck++;
-        if (w !== null && !deck) assert.ok(surface.ground(x, z) >= w - 0.05, `${e.id} lane in water at (${x}, ${z})`);
-        if (deck && w !== null) assert.ok(deck.y >= w, `${e.id}: the footbridge deck above the water`);
-      }
+test('paths and footbridges, exactly: the drawn surfaces, joins and decks clear of water (but on a deck), buildings and every kept trunk', () => {
+  // 1. every drawn path triangle (gf-drape.js on the game's own trail graph: ribbons, round joins, bend wedges) in
+  // full: no water, no building; and BODY (0.48 m, the player) clear of every kept trunk
+  const { positions, indices } = drapeRoads(trailDrapeGraph(GF_TRAILS), () => true, surface);
+  let triangles = 0;
+  for (let t = 0; t < indices.length; t += 3) {
+    const tri = [];
+    for (let k = 0; k < 3; k++) tri.push(positions[indices[t + k] * 3], positions[indices[t + k] * 3 + 2]);
+    triangles++;
+    const hit = obstaclesAll.triangle(tri, 0, (o) => o.kind !== 'trunk') || obstaclesAll.triangle(tri, BODY, (o) => o.kind === 'trunk');
+    assert.equal(hit, null, `path triangle ${t / 3} (${tri.map((v) => v.toFixed(2))}) meets ${hit && hit.kind} ${hit && hit.name}`);
+  }
+  assert.ok(triangles > 3000, `${triangles} triangles`);
+  // 2. every path, footbridge and drive surface as capsules (each segment swept by half its width: what the drape can
+  // cover, joins included): water only under a footbridge; never a building
+  for (const e of GF_TRAILS.edges) {
+    for (let k = 0; k + 3 < e.pts.length; k += 2) {
+      const hit = obstaclesAll.capsule(e.pts[k], e.pts[k + 1], e.pts[k + 2], e.pts[k + 3], e.widthM / 2, (o) => o.kind === 'building' || (o.kind === 'water' && e.kind !== 'footbridge'));
+      assert.equal(hit, null, `${e.id} segment ${k / 2} meets ${hit && hit.kind}`);
+      if (e.kind !== 'drive') assert.equal(obstaclesAll.capsule(e.pts[k], e.pts[k + 1], e.pts[k + 2], e.pts[k + 3], e.widthM / 2 + BODY, (o) => o.kind === 'trunk'), null, `${e.id}: a kept trunk within the body clearance`);
     }
   }
-  assert.ok(samples > 7000 && onDeck > 100, `${samples} samples, ${onDeck} on footbridge decks`);
+  // 3. every walker lane, whole (each track swept by a walker's half width): no building, no kept trunk; water only
+  // on a footbridge's own lane, whose deck stands above it
+  for (const [k, pair] of net.lanes.entries()) {
+    const e = net.edges[k];
+    for (const lane of pair) for (const tr of lane.tracks) {
+      const bx = tr.ax + tr.ux * tr.len, bz = tr.az + tr.uz * tr.len;
+      const hit = obstaclesAll.capsule(tr.ax, tr.az, bx, bz, BODY_HALF, (o) => o.kind !== 'water' || e.kind !== 'footbridge');
+      assert.equal(hit, null, `${e.id} lane meets ${hit && hit.kind}`);
+    }
+  }
+  // the decks over water stand above it
+  for (const d of surface.footDecks) for (const c of d.segments) for (let i = 0; i <= 40; i++) {
+    const x = c.from[0] + (c.to[0] - c.from[0]) * i / 40, z = c.from[1] + (c.to[1] - c.from[1]) * i / 40, w = surface.water.surfaceAt(x, z);
+    if (w !== null) assert.ok(surface.footDeckAt(x, z).y >= w, `${d.name}: deck above the water`);
+  }
 });
 
 test('footbridge decks: walkers only, continuous with the ground at their ends, never under it', () => {
@@ -217,7 +257,7 @@ test('trees: exactly those whose trunk reaches a path or footbridge corridor are
 });
 
 test('entrances: each component reaches a sidewalk; connectors stay on their side of the street and out of buildings', () => {
-  const routes = createTrailRoutes(base(), network, net, { random: seeded(1) });
+  const routes = createTrailRoutes(base(), network, net, { random: seeded(1), clearance: obstaclesAll });
   const walkable = routes.walkable;
   assert.equal(walkable.length, 6, 'all but Angel Lane (no sidewalks in the game\'s network there)');
   assert.ok(!walkable.some((en) => en.street === 'Angel Lane'));
@@ -226,13 +266,19 @@ test('entrances: each component reaches a sidewalk; connectors stay on their sid
     const at = routes.attach.get(en), n = net.node(en.node);
     assert.ok(at.d <= ATTACH_REACH, `${en.street}: ${at.d} m`);
     assert.ok(routes.splitCount(en) >= 1, `${en.street}: a sidewalk split`);
-    for (let i = 0; i <= 20; i++) assert.ok(!inBuilding(at.x + (n.x - at.x) * i / 20, at.z + (n.z - at.z) * i / 20), `${en.street} connector`);
+    // the connector, whole, swept by a body (0.48 m): no water, building or kept trunk
+    assert.equal(obstaclesAll.capsule(at.x, at.z, n.x, n.z, CONNECTOR_BODY), null, `${en.street} connector`);
     // never across a street: every point of the connector at least 1 m from every street's centre line
     for (let i = 0; i <= 20; i++) {
       const x = at.x + (n.x - at.x) * i / 20, z = at.z + (n.z - at.z) * i / 20;
       for (const e of network.edges) assert.ok(segDist(x, z, e.sx, e.sz, e.sx + e.dx * e.len, e.sz + e.dz * e.len) >= 1, `${en.street} connector crosses a street`);
     }
   }
+  // with an obstacle on a connector, that attachment is refused (another, clear one, or none)
+  const en0 = walkable.find((en) => en.street === 'Park View Avenue'), at0 = routes.attach.get(en0), n0 = net.node(en0.node);
+  const blocker = createClearance([...water, ...buildingsR, ...trunksR, discRegion((at0.x + n0.x) / 2, (at0.z + n0.z) / 2, 0.3, { kind: 'trunk' })]);
+  const blocked = createTrailRoutes(base(), network, net, { random: seeded(1), clearance: blocker }).attach.get(net.entrances.find((en) => en.street === 'Park View Avenue'));
+  assert.ok(!blocked || blocker.capsule(blocked.x, blocked.z, n0.x, n0.z, CONNECTOR_BODY) === null);
   // every node is reachable from a walkers' entrance of its component
   for (let u = 0; u < net.nodes; u++) assert.ok(walkable.some((en) => Number.isFinite(net.dist[en.node][u])), `node ${u}`);
 });
@@ -333,13 +379,35 @@ test('Thrill Hill party: a fictional scene beside the crest, clear of the trail 
   assert.deepEqual(plan.colliders.map((c) => c.party), ['fire', 'keg']);
   for (const s of slots) for (const c of plan.colliders) assert.ok(!polygonContains(c.polygon, s.x, s.z), 'a place inside a collider');
   for (const c of plan.colliders) assert.ok(polygonContains(c.polygon, (c.minX + c.maxX) / 2, (c.minZ + c.maxZ) / 2) && c.maxY > c.minY);
-  // every way in runs on the trail lanes, then off to its place
+  // every way in runs on the trail lanes to the crest, then round the fire, keg and trunks to its place: each piece,
+  // whole, swept by an attendee's body, clears the fire ring, the keg and every kept trunk (not just its end)
+  const props = createClearance([discRegion(fire.x, fire.z, FIRE_RING, { kind: 'fire' }), discRegion(keg.x, keg.z, keg.r, { kind: 'keg' }), ...trunksR]);
+  const crest = { x: GF_TRAILS.hill.crestX, z: GF_TRAILS.hill.crestZ };
+  let routed = 0;
   for (const [k, p] of plan.paths.entries()) {
     assert.ok(p.length >= 45);
     const last = p.pts[p.pts.length - 1];
     assert.equal(last.x, slots[k].x);
-    for (const q of p.pts.slice(0, -1)) assert.ok(trailGap(q.x, q.z) < 0.1, 'the way in follows the path');
+    const atCrest = p.pts.findIndex((q) => Math.hypot(q.x - crest.x, q.z - crest.z) < 1);
+    assert.ok(atCrest > 0, 'the way in reaches the crest on the path');
+    for (const q of p.pts.slice(0, atCrest + 1)) assert.ok(trailGap(q.x, q.z) < 0.1, 'the way in follows the path to the crest');
+    for (let i = 0; i + 1 < p.pts.length; i++) {
+      const a = p.pts[i], b = p.pts[i + 1], hit = props.capsule(a.x, a.z, b.x, b.z, ATTENDEE_BODY);
+      assert.equal(hit, null, `way ${k} piece ${i} meets the ${hit && hit.kind}`);
+      assert.equal(obstaclesAll.capsule(a.x, a.z, b.x, b.z, ATTENDEE_BODY, (o) => o.kind !== 'trunk'), null, `way ${k}: water or a building`);
+    }
+    if (p.pts.length - atCrest > 2) routed++;
   }
+  // the straight line from the crest to some places runs through the fire: those ways go round
+  const straightThrough = slots.filter((s) => props.capsule(crest.x, crest.z, s.x, s.z, ATTENDEE_BODY) !== null).length;
+  assert.ok(straightThrough > 0 && routed >= straightThrough, `${straightThrough} straight lines blocked, ${routed} ways routed round`);
+  // routeAround itself: round a disc set across the straight line, clear along every piece, or null when walled in
+  const wall = createClearance([discRegion(5, 0, 1)]);
+  const way = routeAround(wall, { x: 0, z: 0 }, { x: 10, z: 0 }, 0.45);
+  assert.ok(way.length > 2);
+  for (let i = 0; i + 1 < way.length; i++) assert.equal(wall.capsule(way[i].x, way[i].z, way[i + 1].x, way[i + 1].z, 0.45), null);
+  const ringed = createClearance(Array.from({ length: 24 }, (_, i) => discRegion(10 + Math.cos(i / 12 * Math.PI) * 3, Math.sin(i / 12 * Math.PI) * 3, 0.6)));
+  assert.equal(routeAround(ringed, { x: 0, z: 0 }, { x: 10, z: 0 }, 0.45), null, 'a place walled in by obstacles is never reached through them');
 });
 
 test('Thrill Hill party: night and day follow the clock, without doubling anyone on transitions or advance()', () => {
@@ -364,6 +432,34 @@ test('Thrill Hill party: night and day follow the clock, without doubling anyone
     ['run', 2], ['set', { on: false }], ['run', 200], ['set', { on: false }], ['run', 1], ['set', { on: true }], ['run', 200]];
   const a = run(steps), b = run(steps);
   assert.deepEqual(a.log, b.log, 'deterministic');
+  // the whole movement, through clock changes and reversals mid-way: every step each person takes (the segment from
+  // one frame's position to the next), swept by their body, clears the fire ring, the keg and every kept trunk
+  const props = createClearance([discRegion(plan.fire.x, plan.fire.z, FIRE_RING), discRegion(plan.keg.x, plan.keg.z, plan.keg.r), ...trunksR]);
+  const random = seeded(7);
+  const sched = createPartySchedule(plan);
+  sched.setNight(false, { instant: true });
+  let steps2 = 0, reversals = 0, prev = sched.people.map((p) => [p.x, p.z, 'away']);
+  for (let f = 0; f < 30 * 900; f++) {
+    if (random() < 1 / 240) { // about every 8 s, a clock change, often while people are on the way
+      const was = sched.night;
+      sched.setNight(random() < 0.5);
+      if (sched.night !== was && sched.people.some((p) => p.phase === 'arriving' || p.phase === 'leaving')) reversals++;
+    }
+    sched.update(1 / 30);
+    sched.people.forEach((p, k) => {
+      const [x0, z0, was] = prev[k];
+      // a walked step: drawn before and after (appearing at the trail end, or going away there, is not a step)
+      if (was !== 'away' && was !== 'waiting' && sched.visible(p)) {
+        steps2++;
+        assert.ok(Math.hypot(p.x - x0, p.z - z0) <= 1.25 / 30 + 1e-9, `person ${k} at frame ${f} jumps`);
+        assert.equal(props.capsule(x0, z0, p.x, p.z, ATTENDEE_BODY), null, `person ${k} at frame ${f} (${p.phase}) steps through the fire, keg or a trunk`);
+      }
+      // every drawn position, too
+      if (sched.visible(p)) assert.equal(props.capsule(p.x, p.z, p.x, p.z, ATTENDEE_BODY), null);
+      prev[k] = [p.x, p.z, sched.visible(p) ? p.phase : (p.phase === 'away' ? 'away' : 'waiting')];
+    });
+  }
+  assert.ok(steps2 > 10000 && reversals > 20, `${steps2} steps checked, ${reversals} clock changes with people on the way`);
   assert.deepEqual(a.log[0][0], { at: plan.slots.length }, 'night on load: everyone in place');
   assert.deepEqual(a.log[8][0], { away: plan.slots.length }, 'day: everyone gone');
   assert.deepEqual(a.log[a.log.length - 1][0], { at: plan.slots.length }, 'back at night: everyone in place again');
@@ -384,7 +480,7 @@ test('Thrill Hill party: night and day follow the clock, without doubling anyone
 
 test('the game wires it all: trails, tree clearing, trail walkers, the party on the clock, preloads', () => {
   const main = fs.readFileSync(path.join(root, 'js/gf-main.js'), 'utf8');
-  for (const s of ['buildTrailMeshes(scene, GF_TRAILS, GF_SURFACE)', 'exclude: new Set(GF_TRAILS.treeExclusions.trees.map((t) => t[0]))', 'createTrailRoutes(base, network, TRAIL_NET)',
+  for (const s of ['buildTrailMeshes(scene, GF_TRAILS, GF_SURFACE)', 'exclude: new Set(GF_TRAILS.treeExclusions.trees.map((t) => t[0]))', 'createTrailRoutes(base, network, TRAIL_NET, { clearance: trailClearance })',
     'trailGroundAt(GF_SURFACE)', 'party.setTime(cityUniforms.uInteriorGlow.value', '...trailMeshes.colliders', "get('party') === 'off'"]) assert.ok(main.includes(s), s);
   const preloads = fs.readFileSync(path.join(root, 'js/main.js'), 'utf8');
   for (const f of ['gf-trails.js', 'gf-trail-network.js', 'gf-trail-meshes.js', 'gf-thrill-hill-plan.js', 'gf-thrill-hill.js']) assert.ok(preloads.includes(`'${f}'`), f);

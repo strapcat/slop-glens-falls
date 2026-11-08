@@ -31,6 +31,7 @@ import { GF_TREES } from './gf-trees.js';
 import { placeGfTrees } from './gf-tree-placements.js';
 import { GF_TRAILS } from './gf-trails.js';
 import { createTrailNetwork, createTrailRoutes, trailGroundAt } from './gf-trail-network.js';
+import { createClearance, waterRegions, buildingRegions, trunkRegions } from './gf-trail-clearance.js';
 import { buildTrailMeshes } from './gf-trail-meshes.js';
 import { planThrillHillParty, THRILL_HILL_SCENE } from './gf-thrill-hill-plan.js';
 import { buildThrillHillParty } from './gf-thrill-hill.js';
@@ -56,7 +57,6 @@ const PEDESTRIANS = {
   onSidewalk: GF_BLOCKS.onSidewalk,
   trackInsets: [0.6, 1.2],
   groundAt: trailGroundAt(GF_SURFACE),
-  routes: (base, network) => createTrailRoutes(base, network, TRAIL_NET),
   // the WebGL 2 fallback reads the crowd poses from a data texture (its plain-attribute read ignores the bone index)
   textureFallback: true
 };
@@ -239,9 +239,13 @@ async function initApp() {
   await showLoadingStage('Creating traffic...');
   // The OSM signals (gf-signals.js) as they are: the network signals the junction within 6 m of each (road-network.js 8.)
   const signalPoints = GF_SIGNALS.junctions.map(([x, z]) => ({ x, z }));
+  const trailClearance = createClearance([...waterRegions(GF_GEO.water), ...buildingRegions(buildings.colliders), ...trunkRegions(treePlan.trunks)]);
   // Lots and buildings stop pedestrians only; cars keep the road network they had without them
   const trafficSystem = createTrafficSystem(scene, [], [...GF_BLOCKS.lotObstacles, ...buildings.obstacles], signalPoints, {
-    roadSource: ROAD_SOURCE, numCars: NUM_CARS, numBuses: 0, pedestrians: true, pedestrianOptions: PEDESTRIANS, surfaceAt: roadSurface
+    roadSource: ROAD_SOURCE, numCars: NUM_CARS, numBuses: 0, pedestrians: true, surfaceAt: roadSurface,
+    // CC-005c: the trail walkers' routes; an entrance's sidewalk connector must keep a body's clearance from water,
+    // buildings and the kept trunks along its whole length (gf-trail-clearance.js)
+    pedestrianOptions: { ...PEDESTRIANS, routes: (base, network) => createTrailRoutes(base, network, TRAIL_NET, { clearance: trailClearance }) }
   });
   const signalHeads = buildGfSignalHeads(scene, trafficSystem.network, GF_SURFACE.ground);
   console.info(`[gf] ${trafficSystem.network.nodes.filter((n) => n.signal).length} signalled junctions of ${signalPoints.length} OSM signals, ${signalHeads.count} signal heads, ${PEDESTRIANS.numPeds} pedestrians`);
@@ -359,7 +363,9 @@ async function initApp() {
           where: on.map((p) => ({ index: p.index, x: +p.x.toFixed(1), z: +p.z.toFixed(1), phase: p.trailWalk ? p.trailWalk.phase : null, connector: !!p.route.trail.connector })) };
       }
     },
-    party: party ? { scene: THRILL_HILL_SCENE, plan: { fire: partyPlan.fire, keg: partyPlan.keg, slots: partyPlan.slots, cups: partyPlan.cups.length, clearance: partyPlan.clearance }, stats: party.stats }
+    party: party ? { scene: THRILL_HILL_SCENE, plan: { fire: partyPlan.fire, keg: partyPlan.keg, slots: partyPlan.slots, cups: partyPlan.cups.length, clearance: partyPlan.clearance }, stats: party.stats,
+      // where each person is now (phase, position, drawn or not)
+      people: () => party.schedule.people.map((p) => ({ k: p.k, phase: p.phase, x: p.x, z: p.z, drawn: party.schedule.visible(p) })) }
       : { scene: THRILL_HILL_SCENE, off: true }
   };
   document.addEventListener('visibilitychange', () => { if (document.hidden) savePlayerState(); });

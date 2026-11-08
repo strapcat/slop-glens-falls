@@ -26,6 +26,7 @@ import { GF_BUILDINGS } from '../../js/gf-buildings.js';
 import { placeGfTrees, TRUNK } from '../../js/gf-tree-placements.js';
 import zlib from 'node:zlib';
 import { decodeTerrain, createGfTerrain } from '../../js/gf-terrain.js';
+import { createClearance, waterRegions, buildingRegions } from '../../js/gf-trail-clearance.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, '../..');
@@ -63,35 +64,19 @@ function segSquareDist(ax, az, bx, bz, cx, cz, h) {
   return best;
 }
 
-// The corridor is dry and open: every edge sampled every CORRIDOR_STEP m along its centre line and both edges of its
-// width stays out of mapped water (GF_GEO.water; a footbridge, which has a deck, excepted) and out of every building
-// footprint (GF_BUILDINGS). Dry endpoints do not excuse a pond in the middle. water: [{ outer, holes }] and buildings:
-// [{ outer, holes }], flat [x, z, ...] rings.
-const CORRIDOR_STEP = 0.5;
-const inRing = (flat, x, z) => {
-  let ins = false;
-  for (let i = 0, j = flat.length - 2; i < flat.length; j = i, i += 2) {
-    const xi = flat[i], zi = flat[i + 1], xj = flat[j], zj = flat[j + 1];
-    if ((zi > z) !== (zj > z) && x < xi + ((xj - xi) * (z - zi)) / (zj - zi)) ins = !ins;
-  }
-  return ins;
-};
-const inShape = (p, x, z) => inRing(p.outer, x, z) && !(p.holes || []).some((h) => inRing(h, x, z));
+// The corridor is dry and open: every edge's full surface (each straight segment swept by a disc of half its width,
+// which contains the drawn ribbon, its round joins and the outside of its bends: gf-trail-clearance.js) stays out of
+// mapped water (GF_GEO.water; a footbridge, which has a deck, excepted) and every building footprint (GF_BUILDINGS).
+// Exact, not sampled: an obstacle between any two sample lines or stations is found. water: [{ outer, holes }];
+// buildings: [{ outer, holes, osm }], flat [x, z, ...] rings.
 function checkCorridor(edges, { water, buildings }) {
-  const box = (p) => { let a = Infinity, b = -Infinity, c = Infinity, d = -Infinity; for (let i = 0; i < p.outer.length; i += 2) { a = Math.min(a, p.outer[i]); b = Math.max(b, p.outer[i]); c = Math.min(c, p.outer[i + 1]); d = Math.max(d, p.outer[i + 1]); } return { p, a, b, c, d }; };
-  const W = water.map(box), B = buildings.map(box);
+  const clear = createClearance([...waterRegions(water), ...buildingRegions(buildings)]);
   for (const e of edges) {
     const half = e.widthM / 2;
     for (let k = 0; k + 3 < e.pts.length; k += 2) {
-      const [ax, az, bx, bz] = e.pts.slice(k, k + 4), l = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(l / CORRIDOR_STEP));
-      const nx = -(bz - az) / l, nz = (bx - ax) / l;
-      for (let i = 0; i <= n; i++) for (const o of [0, -half, half]) {
-        const x = ax + ((bx - ax) * i) / n + nx * o, z = az + ((bz - az) * i) / n + nz * o;
-        const hit = (list) => list.find((q) => x >= q.a && x <= q.b && z >= q.c && z <= q.d && inShape(q.p, x, z));
-        if (e.kind !== 'footbridge') { const w = hit(W); if (w) throw new Error(`${e.id}: in water (${w.p.name || w.p.osm}) at (${x.toFixed(2)}, ${z.toFixed(2)})`); }
-        const b = hit(B);
-        if (b) throw new Error(`${e.id}: in a building (${b.p.osm}) at (${x.toFixed(2)}, ${z.toFixed(2)})`);
-      }
+      const [ax, az, bx, bz] = e.pts.slice(k, k + 4);
+      const hit = clear.capsule(ax, az, bx, bz, half, (o) => o.kind === 'building' || e.kind !== 'footbridge');
+      if (hit) throw new Error(`${e.id}: its surface meets ${hit.kind === 'water' ? `water (${hit.name})` : `a building (${hit.name})`} on segment ${k / 2} (${ax}, ${az}) - (${bx}, ${bz})`);
     }
   }
 }
@@ -221,8 +206,9 @@ function buildTrails(fc = JSON.parse(fs.readFileSync(INPUT, 'utf8')), inputSha =
 
   // Thrill Hill's crest on the trail: the highest point of the game's terrain (0.5 m steps) along the accepted edges of
   // the hill way becomes a graph node of its own (splitting its edge), so walkers make for the top itself rather than
-  // the junction below it. County loop vertex #137 (Dave's identification) is reported beside it: the mapped path runs
-  // a few metres from the county line, and neither is surveyed (the anchor uncertainty of the PR report).
+  // the junction below it. County loop vertex #137 is reported beside it. Both are a provisional reading of Dave's
+  // mark (the Camel Humps vicinity), not points he confirmed; their separation is a distance between two unsurveyed
+  // lines, not a measure of accuracy.
   const hillWay = fc.provenance.hill.pathWay;
   const data = decodeTerrain(new Uint8Array(zlib.gunzipSync(fs.readFileSync(TERRAIN))));
   const terrain = createGfTerrain(data, GF_GEO.frame);

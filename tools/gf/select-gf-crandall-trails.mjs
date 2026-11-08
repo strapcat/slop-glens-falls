@@ -8,7 +8,7 @@
 // OBJECTID 19). Nothing is drawn by hand: every accepted line is an OSM way, or a contiguous run of an OSM way's own
 // nodes, with its id, version, timestamp, node ids and tags. No connector is invented and nothing is snapped.
 //
-// Accepted (the coverage gate, PR #11 discussion, confirmed by Dave 2026-11-08):
+// Accepted (the coverage gate and Dave's route decisions of 2026-11-08):
 //   park paths    the park-route candidates of osm-park-path-candidates.geojson that join the park's walking network:
 //                 the pond paths (w234501321-330, four of them wooden footbridges), Newell Way (w98662142),
 //                 w470028972 (access=no, foot=yes: open to walkers) and the Fire Road spur w1568246028;
@@ -17,8 +17,10 @@
 //                 service ways in the game);
 //   Cole's Woods  the shortest walk over foot-permitted OSM paths from each of the woods' two street entrances (the
 //                 Fire Road / Park View Avenue curve, w1328140737; Angel Lane, w1328141829) to the Thrill Hill site:
-//                 the path node nearest county loop vertex #137, the first Camel Hump at the top of The Wall (Dave,
-//                 2026-11-08), and the hill path's segment from there over the crest. Only the nodes those walks use
+//                 the path node nearest county loop vertex #137 and the hill path's segment from there over the crest.
+//                 Dave's marked map shows the Camel Humps vicinity, north of The Wall; #137 (the first hump's high
+//                 point on the county loop) and the crest are this project's PROVISIONAL interpretation of that mark,
+//                 not locations he surveyed or pinned (the PR's labelled comparison shows the candidates). Only the nodes those walks use
 //                 are kept (the rest of each way, and every other woods path, is excluded).
 // Excluded: sidewalks and crossings (context; the game's own sidewalks are used), private or foot=no ways, and every
 // candidate not on the accepted network, each with its reason.
@@ -229,7 +231,7 @@ function select() {
       attribution: '© OpenStreetMap contributors (ODbL 1.0, https://www.openstreetmap.org/copyright); Cole\'s Woods loop: Warren County GIS recreation_mapper layer 4 (reference only)',
       historicalBasis: HISTORY, sources,
       hill: { countyLoopVertex: HILL_VERTEX, countyLoopCoordinates: loop[HILL_VERTEX], pathWay: HILL_WAY, pathNode: hillNode, pathNodeToVertexM: Math.round(hillDist * 10) / 10,
-        identity: 'Thrill Hill = the first Camel Hump, top of The Wall (Dave\'s marked map; confirmed by Dave 2026-11-08). Local knowledge, not an official name.' },
+        identity: 'Thrill Hill: Dave\'s marked map shows the Camel Humps vicinity (local knowledge, not an official name). County loop vertex #137 and the trail crest are a provisional interpretation of that mark, not a location he confirmed.' },
       colesRoutes: routes
     },
     features

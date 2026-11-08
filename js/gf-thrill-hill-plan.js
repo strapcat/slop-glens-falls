@@ -1,7 +1,8 @@
-// CC-005c: a FICTIONAL night-time keg party on Thrill Hill (the first Camel Hump at the top of The Wall, Cole's Woods;
+// CC-005c: a FICTIONAL night-time keg party on Thrill Hill (the Camel Humps vicinity Dave marked, in Cole's Woods;
 // gf-trails.js hill). It depicts no real event, gathering or person: a scene of the game, placed beside the trail's crest
 // because the brief asks for one there. The anchor is the trail's own crest point (gf-trails.js hill: the highest
-// terrain point of the accepted hill path, 10.7 m from county ski loop vertex #137, Dave's identification); everything
+// terrain point of the accepted hill path). Dave marked the Camel Humps vicinity; the crest (and county ski loop vertex
+// #137 beside it) is a provisional interpretation of that mark, not a location he confirmed. Everything
 // else (the fire's offset, the circle, the keg, the cups) is a gameplay layout chosen below by a fixed rule, not surveyed.
 //
 // No three.js: the layout (where the fire, keg, attendees' places and day-time cups go, and the attendees' walking
@@ -11,10 +12,12 @@
 // Night and day follow the game clock (lighting.js presets): the party is on when the preset's interiorGlow is above
 // NIGHT_GLOW, the threshold traffic.js lights vehicle lamps by (twilight and midnight; golden hour and midday are day).
 
+import { createClearance, discRegion, trunkRegions } from './gf-trail-clearance.js';
+
 const SCENE = {
   fictional: true,
   description: 'A fictional night-time keg party at the trail crest of Thrill Hill: a fire, a keg and a small group. By day: a burnt-out fire, ash, charred logs and empty red cups.',
-  anchor: 'gf-trails.js hill (crestX, crestZ): the highest terrain point on the accepted Thrill Hill path (OSM way 1089938465), beside county ski loop vertex #137',
+  anchor: 'gf-trails.js hill (crestX, crestZ): the highest terrain point on the accepted hill path (OSM way 1089938465). A provisional interpretation of Dave\'s Camel Humps mark, not a location he confirmed',
   layout: 'gameplay choice by the rule in planThrillHillParty (not surveyed): fire 4.5-7.5 m off the trail centre line where no kept tree trunk is within FIRE_CLEAR and the ground is level enough',
   attendees: 'a bounded group (ATTENDEES at most) of the game\'s own generic people (pedestrians.js), no real person'
 };
@@ -33,6 +36,71 @@ const BODY = 0.35; // m: an attendee's half width
 const WALK_SPEED = 1.25; // m/s
 const STAGGER = 1.6; // s between attendees setting off
 const APPROACH = 45; // m: attendees arrive along at least this much of the trail (and leave the same way)
+
+const WAY_MARGIN = 0.1; // m: planned beyond BODY from the fire ring, the keg and trunks (the tests hold BODY exactly)
+const WAY_CELL = 0.25; // m: the route search's grid
+
+// The shortest 8-connected grid route from a to b (points) whose cells all keep `clear` (m) from every obstacle of
+// `blockers` (gf-trail-clearance.js), then pulled straight wherever the straight line (swept by that radius) is clear.
+// Every piece of the result is checked whole, as a capsule, so the route is clear along its full length. null if none.
+function routeAround(blockers, a, b, clear) {
+  const swept = (p, q) => !blockers.capsule(p.x, p.z, q.x, q.z, clear);
+  if (swept(a, b)) return [a, b];
+  const pad = 8;
+  const x0 = Math.min(a.x, b.x) - pad, z0 = Math.min(a.z, b.z) - pad;
+  const nx = Math.ceil((Math.max(a.x, b.x) + pad - x0) / WAY_CELL) + 1, nz = Math.ceil((Math.max(a.z, b.z) + pad - z0) / WAY_CELL) + 1;
+  const at = (i, j) => ({ x: x0 + i * WAY_CELL, z: z0 + j * WAY_CELL });
+  const cellOf = (p) => [Math.round((p.x - x0) / WAY_CELL), Math.round((p.z - z0) / WAY_CELL)];
+  const free = new Int8Array(nx * nz).fill(-1);
+  const isFree = (i, j) => {
+    const k = j * nx + i;
+    if (free[k] < 0) { const p = at(i, j); free[k] = blockers.capsule(p.x, p.z, p.x, p.z, clear) ? 0 : 1; }
+    return free[k] === 1;
+  };
+  const [si, sj] = cellOf(a), [gi, gj] = cellOf(b);
+  const g = new Float64Array(nx * nz).fill(Infinity), prev = new Int32Array(nx * nz).fill(-1);
+  // a binary heap of [f, cell]
+  const heap = [];
+  const push = (f, k) => { heap.push([f, k]); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+  const h = (i, j) => Math.hypot(i - gi, j - gj) * WAY_CELL;
+  const s0 = sj * nx + si, goal = gj * nx + gi;
+  g[s0] = 0; push(h(si, sj), s0);
+  while (heap.length) {
+    const [, k] = pop();
+    if (k === goal) break;
+    const i = k % nx, j = (k - i) / nx;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      if (!di && !dj) continue;
+      const ii = i + di, jj = j + dj;
+      if (ii < 0 || jj < 0 || ii >= nx || jj >= nz || !isFree(ii, jj)) continue;
+      if (di && dj && (!isFree(i + di, j) || !isFree(i, j + dj))) continue; // no corner cutting
+      const kk = jj * nx + ii, ng = g[k] + Math.hypot(di, dj) * WAY_CELL;
+      if (ng < g[kk] - 1e-9) { g[kk] = ng; prev[kk] = k; push(ng + h(ii, jj), kk); }
+    }
+  }
+  if (!Number.isFinite(g[goal])) return null;
+  const cells = [];
+  for (let k = goal; k >= 0; k = prev[k]) cells.push(at(k % nx, (k - (k % nx)) / nx));
+  cells.reverse();
+  // the exact ends in place of their cells' centres (each joined only if the join is clear)
+  const raw = [a, ...cells.slice(1, -1), b];
+  for (let k = 0; k + 1 < raw.length; k++) if (!swept(raw[k], raw[k + 1])) {
+    // an end's join to its cell runs into an obstacle: keep the cell centre between (it is clear) and try again
+    raw.splice(k + 1, 0, k === 0 ? cells[0] : cells[cells.length - 1]);
+    if (!swept(raw[k], raw[k + 1]) || !swept(raw[k + 1], raw[k + 2])) return null;
+    k++;
+  }
+  // pull straight: from each kept point, on to the farthest point it sees clear
+  const out = [raw[0]];
+  for (let k = 0; k < raw.length - 1;) {
+    let far = k + 1;
+    for (let m = raw.length - 1; m > k + 1; m--) if (swept(raw[k], raw[m])) { far = m; break; }
+    out.push(raw[far]);
+    k = far;
+  }
+  return out;
+}
 
 const hash = (i, salt) => {
   const v = Math.sin(i * 91.3458 + salt * 47.853) * 23421.631;
@@ -130,7 +198,9 @@ function planThrillHillParty({ trails, net, ground, trunks, water = () => null }
   }
 
   // 5. The way in and out: along the trail lanes from the first node at least APPROACH m from the crest towards the
-  // woods' walkers' entrance (Park View Avenue), to the crest, then straight to each place
+  // woods' walkers' entrance (Park View Avenue), to the crest, then by a route round the fire ring, the keg and every
+  // kept trunk to each place (routeAround: a grid search, straightened only where the straight line stays clear). The
+  // whole way keeps BODY + WAY_MARGIN from each of them; the way out is the same, walked back.
   const crest = hill.node;
   let from = crest, guard = 0;
   const towards = net.entrances.find((en) => en.component === net.comp[crest] && en.street === 'Park View Avenue') || net.entrances.find((en) => en.component === net.comp[crest]);
@@ -140,12 +210,20 @@ function planThrillHillParty({ trails, net, ground, trunks, water = () => null }
     from = e.a === from ? e.b : e.a;
   }
   const lane = (net.pathPoints(from, crest) || []).map((p) => ({ x: p.x, z: p.z }));
-  const paths = slots.map((s) => {
-    const pts = [...lane, { x: s.x, z: s.z }];
+  const blockers = createClearance([discRegion(fire.x, fire.z, FIRE_RING, { kind: 'fire' }), discRegion(keg.x, keg.z, KEG_R, { kind: 'keg' }), ...trunkRegions(near)]);
+  const start = lane[lane.length - 1];
+  const paths = [], placed = [];
+  for (const s of slots) {
+    const way = routeAround(blockers, start, s, BODY + WAY_MARGIN);
+    if (!way) continue; // no clear way to this place: it stays empty (the group is bounded, never forced through)
+    const pts = [...lane, ...way.slice(1)];
     const cum = [0];
     for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + Math.hypot(pts[k].x - pts[k - 1].x, pts[k].z - pts[k - 1].z));
-    return { pts, cum, length: cum[cum.length - 1] };
-  });
+    paths.push({ pts, cum, length: cum[cum.length - 1] });
+    placed.push(s);
+  }
+  slots.length = 0;
+  slots.push(...placed);
 
   // colliders (the player's: building-collision.js polygons): the fire's stone ring and the keg
   const disc = (x, z, r, y0, y1, sides = 10) => {
@@ -218,4 +296,4 @@ function createPartySchedule(plan) {
   return { people, setNight, update, visible, counts, get night() { return night; } };
 }
 
-export { planThrillHillParty, createPartySchedule, isNight, SCENE as THRILL_HILL_SCENE, NIGHT_GLOW, ATTENDEES, FIRE_CLEAR, FIRE_RING };
+export { planThrillHillParty, createPartySchedule, routeAround, isNight, BODY as ATTENDEE_BODY, SCENE as THRILL_HILL_SCENE, NIGHT_GLOW, ATTENDEES, FIRE_CLEAR, FIRE_RING };

@@ -1,6 +1,6 @@
 import * as THREE from 'three/webgpu';
 import { drapeRoads, ROAD_LIFT } from './gf-drape.js';
-import { TRAIL_LIFT } from './gf-trail-network.js';
+import { TRAIL_LIFT, TRAIL_SURFACES as SURFACES, trailDrapeGraph } from './gf-trail-network.js';
 
 // CC-005c: the accepted trails (gf-trails.js) drawn. Paths are ribbons draped on the terrain exactly as the roads are
 // (gf-drape.js: the same breakpoints, ROAD_LIFT above the ground, which is where walkers stand: gf-trail-network.js
@@ -9,12 +9,6 @@ import { TRAIL_LIFT } from './gf-trail-network.js';
 // fence each side; the rails are the player's colliders, stopping RAIL_GAP short of each end so the bridge is walked
 // onto from the path. The park drives are not drawn again: they are the game's service roads already (gf-ground.js).
 
-const SURFACES = {
-  paved: { color: 0x5b5d60, kinds: ['asphalt', 'paved', 'concrete'] },
-  gravel: { color: 0x9a9283, kinds: ['gravel', 'fine_gravel', 'compacted', 'pebblestone', 'unpaved'] },
-  dirt: { color: 0x7a6650, kinds: [] } // ground, dirt, earth, unmapped: a woods path
-};
-const surfaceOf = (s) => Object.keys(SURFACES).find((k) => SURFACES[k].kinds.includes(s)) || 'dirt';
 const PATH_LAYER = 2.5; // polygon offset: under the service roads (2) a path meets, over water (3) and the ground (5)
 const DECK_DEPTH = 0.3, POST = 0.09, RAIL_H = 1.0, RAIL_GAP = 1.2;
 const WOOD = 0x8a6a48;
@@ -27,14 +21,8 @@ function buildTrailMeshes(scene, trails, surface) {
 
   // 1. Paths: one draped mesh per surface colour (gf-drape.js wants a road graph: [a, b, name, class, oneway, lanes,
   // width, inner points])
-  const graph = { nodes: trails.nodes, links: [] };
-  const classOf = [];
-  for (const e of trails.edges) {
-    if (e.kind !== 'path') continue;
-    const cls = Object.keys(SURFACES).indexOf(surfaceOf(e.surface));
-    graph.links.push([e.a, e.b, 0, cls, 0, 1, e.widthM, e.pts.slice(2, -2)]);
-    classOf.push(cls);
-  }
+  const graph = trailDrapeGraph(trails);
+  const classOf = graph.links.map((l) => l[3]);
   Object.keys(SURFACES).forEach((name, cls) => {
     if (!classOf.includes(cls)) return;
     const { positions, indices } = drapeRoads(graph, (c) => c === cls, surface);
@@ -111,4 +99,4 @@ function buildTrailMeshes(scene, trails, surface) {
   return { group, colliders, stats };
 }
 
-export { buildTrailMeshes, surfaceOf };
+export { buildTrailMeshes };
