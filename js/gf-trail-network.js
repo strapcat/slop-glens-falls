@@ -153,19 +153,22 @@ function createTrailRoutes(base, network, net, { random = Math.random } = {}) {
   };
   // across a street: within CENTRE_CLEAR of a network edge's line (its centre; the network's straight runs sit up to a
   // couple of metres off a curving street's mapped line, so its half width is no test here)
-  const crossesRoad = (a, b) => network.edges.some((e) => segSeg(a.x, a.z, b.x, b.z, e.sx, e.sz, e.sx + e.dx * e.len, e.sz + e.dz * e.len) < CENTRE_CLEAR);
+  const crossesRoad = (a, b, edges) => edges.some((e) => segSeg(a.x, a.z, b.x, b.z, e.sx, e.sz, e.sx + e.dx * e.len, e.sz + e.dz * e.len) < CENTRE_CLEAR);
   const attach = new Map();
   for (const en of net.entrances) {
     const n = net.node(en.node);
     let best = null;
-    for (const e of network.edges) {
+    // the streets near enough to matter (a connector is at most ATTACH_REACH long)
+    const near = network.edges.filter((e) => {
       const t = Math.max(0, Math.min(e.len, (n.x - e.sx) * e.dx + (n.z - e.sz) * e.dz));
-      if (Math.hypot(e.sx + e.dx * t - n.x, e.sz + e.dz * t - n.z) > e.half + ATTACH_REACH + 2) continue;
+      return Math.hypot(e.sx + e.dx * t - n.x, e.sz + e.dz * t - n.z) <= e.half + ATTACH_REACH + 2;
+    });
+    for (const e of near) {
       for (const track of base.along(e)) {
         if (track.len < 1.5) continue;
         const u = Math.max(0.5, Math.min(track.len - 0.5, (n.x - track.ax) * track.ux + (n.z - track.az) * track.uz));
         const pt = { x: track.ax + track.ux * u, z: track.az + track.uz * u }, d = Math.hypot(pt.x - n.x, pt.z - n.z);
-        if (d > ATTACH_REACH || (best && d >= best.d) || crossesRoad(pt, n)) continue;
+        if (d > ATTACH_REACH || (best && d >= best.d) || crossesRoad(pt, n, near)) continue;
         best = { x: pt.x, z: pt.z, d, edge: e };
       }
     }
