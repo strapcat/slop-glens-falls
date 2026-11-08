@@ -98,8 +98,10 @@ function segmentDistance(s, x, z) {
 // { sites, trunks, skipped: { water, road, building }, speciesCounts } of GF_TREES, against GF_BUILDINGS footprints
 // and GF_GEO's water and roads. CC-005b: with ground(x, z) (gf-surface.js, the bare earth), each tree stands on the
 // ground at its top's x, z (site y) and its trunk collider rises from there; nothing else about it changes (x, z,
-// height, spread, shape, the skips), and its height stays its height above that ground.
-function placeGfTrees(trees, { buildings, geo, ground = null }) {
+// height, spread, shape, the skips), and its height stays its height above that ground. CC-005c: exclude (a Set of
+// tree indices, js/gf-trails.js treeExclusions) skips the trees whose trunks stand in an accepted trail's corridor,
+// counted apart (skipped.trail); without it nothing changes. Each site carries its tree's index.
+function placeGfTrees(trees, { buildings, geo, ground = null, exclude = null }) {
   const bAt = Object.fromEntries(buildings.fields.map((f, i) => [f, i]));
   const footprints = buildings.buildings.map((row) => ({ outer: row[bAt.outer], holes: row[bAt.holes], ...boundsOf(row[bAt.outer]) }));
   const buildingsNear = gridIndex(footprints, 64);
@@ -110,6 +112,7 @@ function placeGfTrees(trees, { buildings, geo, ground = null }) {
   const sites = [];
   const trunks = [];
   const skipped = { water: 0, road: 0, building: 0 };
+  if (exclude) skipped.trail = 0;
   const speciesCounts = TREE_MODELS.map(() => 0);
   const t = trees.trees;
   for (let i = 0; i < t.length; i += 4) {
@@ -117,12 +120,13 @@ function placeGfTrees(trees, { buildings, geo, ground = null }) {
     if (waterNear(x, z).some((w) => inPolygon(w.outer, w.holes, x, z))) { skipped.water++; continue; }
     if (roadsNear(x, z).some((s) => segmentDistance(s, x, z) < s.half)) { skipped.road++; continue; }
     if (buildingsNear(x, z).some((f) => x >= f.minX && x <= f.maxX && z >= f.minZ && z <= f.maxZ && inPolygon(f.outer, f.holes, x, z))) { skipped.building++; continue; }
+    if (exclude && exclude.has(i / 4)) { skipped.trail++; continue; }
     const species = speciesAt(x, z);
     const model = TREE_MODELS[species];
     const scale = h / model.H;
     const spread = Math.min(SPREAD[1], Math.max(SPREAD[0], r / (model.R * scale)));
     const y = ground ? ground(x, z) : 0;
-    sites.push({ x, y, z, scale, species, sx: spread, sz: spread, tier: TIER });
+    sites.push({ x, y, z, scale, species, sx: spread, sz: spread, tier: TIER, index: i / 4 });
     speciesCounts[species]++;
     const half = Math.max(TRUNK.minHalf, TRUNK.halfPerM * h);
     const outer = [{ x: x - half, z: z - half }, { x: x + half, z: z - half }, { x: x + half, z: z + half }, { x: x - half, z: z + half }];
