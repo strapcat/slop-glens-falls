@@ -483,6 +483,6 @@ test('the game wires it all: trails, tree clearing, trail walkers, the party on 
   for (const s of ['buildTrailMeshes(scene, GF_TRAILS, GF_SURFACE)', 'exclude: new Set(GF_TRAILS.treeExclusions.trees.map((t) => t[0]))', 'createTrailRoutes(base, network, TRAIL_NET, { clearance: trailClearance })',
     'trailGroundAt(GF_SURFACE)', 'party.setTime(cityUniforms.uInteriorGlow.value', '...trailMeshes.colliders', "get('party') === 'off'"]) assert.ok(main.includes(s), s);
   const preloads = fs.readFileSync(path.join(root, 'js/main.js'), 'utf8');
-  for (const f of ['gf-trails.js', 'gf-trail-network.js', 'gf-trail-meshes.js', 'gf-thrill-hill-plan.js', 'gf-thrill-hill.js']) assert.ok(preloads.includes(`'${f}'`), f);
+  for (const f of ['gf-trails.js', 'gf-trail-network.js', 'gf-trail-clearance.js', 'gf-trail-meshes.js', 'gf-thrill-hill-plan.js', 'gf-thrill-hill.js']) assert.ok(preloads.includes(`'${f}'`), f);
   assert.ok(net.edges.length === GF_TRAILS.edges.length && TRAIL_MOD === 10 && TRAIL_REM === 3);
 });
