@@ -6,7 +6,7 @@
 // north-west to south-east), so it is the surface things stand on, exactly. Coarser levels take every 2nd, 4th ... node
 // (a decimation, no smoothing). A chunk splits while the camera is nearer than REFINE x its size, or while its drawn
 // surface's largest departure from the query (its error, gf-terrain-lod-errors.js, exact at every lattice node) would
-// show as more than SCREEN_TOL of the distance to it (about a pixel), so a wall, cliff or bank keeps its fine levels
+// show as more than SCREEN_TOL of the distance to it (a few pixels), so a wall, cliff or bank keeps its fine levels
 // where a decimation would draw it metres off. Where a chunk borders a coarser one, its border vertices are moved onto
 // that neighbour's edge as the neighbour draws it (stitched), so no crack opens at the seam.
 
@@ -15,7 +15,7 @@ const ROOT_LEVEL = 8; // 32 x 256 m = 8192 m, the whole terrain
 const ROOT_MARGIN = 512; // metres the quadtree starts west / north of the lattice (keeps every level on lattice nodes)
 const RING_MIN_LEVEL = 3; // outside the lattice the ring is 8 m data: no finer chunks there
 const REFINE = 1.2; // a chunk splits while the camera is nearer than REFINE x its size (level 0 within ~77 m)
-const SCREEN_TOL = 0.0012; // its error over its distance: ~1 pixel at 900 pixels and a 60 degree field of view
+const SCREEN_TOL = 0.005; // its error over its distance: ~4 pixels at 900 pixels and a 60 degree field of view
 const N = CELLS + 1;
 const VERTICES = N * N;
 

@@ -10,7 +10,8 @@
 //            overall and on roads, banks, decks and the hill crop, with the worst locations;
 //   stitches every level l against every coarser neighbour K on each edge: the nodes along a stitched edge;
 //   views    the game's own selection (with the table) from cameras over the play area: chunks, triangles, the
-//            largest error within 50 / 100 / 200 m and over all as a fraction of the distance (about pixels), and
+//            largest error within 50 / 100 / 200 m and over all as a fraction of the distance (and in pixels at 900
+//            pixels and a 60 degree field of view, where a pixel is 0.00128 of the distance), and
 //            cracks (each chunk's drawn border against the chunk across it).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -177,7 +178,7 @@ function main() {
     const [ce, cn] = T.toUtm(x, z), g = T.heightAt(x, z);
     const { chunks, chosen } = lod.select(ce, cn, alt);
     const drawn = new Map();
-    let screen = 0, near = { 50: 0, 100: 0, 200: 0 }, crack = 0, crackAt = null;
+    let screen = 0, screenAt = null, near = { 50: 0, 100: 0, 200: 0 }, crack = 0, crackAt = null;
     for (const c of chunks) {
       const h = lod.heights(c.l, c.kx, c.ky);
       if (c.stitch) lod.stitchInto(h, c.l, c.kx, c.ky, c.stitch);
@@ -185,15 +186,20 @@ function main() {
       const [e0, n0, size] = lod.origin(c.l, c.kx, c.ky);
       const dx = Math.max(0, e0 - ce, ce - e0 - size), dn = Math.max(0, n0 - size - cn, cn - n0);
       const d = Math.hypot(dx, dn, alt);
-      // this chunk as drawn (stitched): exact over its nodes for fine levels, the table's bound for coarse ones
-      const err = c.l <= 3 ? chunkError(T, c.l, e0, n0, h, null) : Math.max(lod.errorOf(c.l, c.kx, c.ky), c.stitch ? stitchBound(c) : 0);
-      screen = Math.max(screen, err / Math.max(d, 1));
+      // this chunk as drawn (stitched): exact over all its nodes for fine levels; for coarse ones the table's (its
+      // unstitched error, rounded up to the centimetre) and, exactly, the cells along each stitched edge
+      let err;
+      if (c.l <= 3) err = chunkError(T, c.l, e0, n0, h, null);
+      else {
+        err = lod.errorOf(c.l, c.kx, c.ky);
+        if (c.stitch) c.stitch.forEach((K, edge) => {
+          if (K < 0) return;
+          const band = [[0, 0, 0, CELLS - 1], [0, CELLS - 1, CELLS - 1, CELLS - 1], [CELLS - 1, CELLS - 1, 0, CELLS - 1], [0, CELLS - 1, 0, 0]][edge];
+          err = Math.max(err, chunkError(T, c.l, e0, n0, h, null, ...band));
+        });
+      }
+      if (err / Math.max(d, 1) > screen) { screen = err / Math.max(d, 1); screenAt = { chunk: c.key, errorM: +err.toFixed(3), distanceM: +d.toFixed(0) }; }
       for (const r of [50, 100, 200]) if (d < r) near[r] = Math.max(near[r], err);
-    }
-    function stitchBound(c) {
-      let b = 0;
-      c.stitch.forEach((K) => { if (K >= 0) b = Math.max(b, report.stitches[`L${c.l}-L${K}`].errorM); });
-      return b;
     }
     // cracks: every chunk's border, each metre, against the chunk across it
     for (const c of chunks) {
@@ -219,7 +225,7 @@ function main() {
     const levelsUsed = {};
     for (const c of chunks) levelsUsed[c.l] = (levelsUsed[c.l] || 0) + 1;
     const v = { name, x, z, alt, chunks: chunks.length, triangles: chunks.length * CELLS * CELLS * 2, levels: levelsUsed,
-      screenError: +screen.toFixed(5), within50M: +near[50].toFixed(3), within100M: +near[100].toFixed(3), within200M: +near[200].toFixed(3),
+      screenError: +screen.toFixed(5), screenPixels: +(screen / 0.00128).toFixed(1), screenAt, within50M: +near[50].toFixed(3), within100M: +near[100].toFixed(3), within200M: +near[200].toFixed(3),
       crackM: +crack.toFixed(6), crackAt };
     report.views.push(v);
     log(`view ${name}: ${v.chunks} chunks, screen error ${v.screenError} (tol ${SCREEN_TOL}), <50 m ${v.within50M}, <100 m ${v.within100M}, <200 m ${v.within200M}, crack ${v.crackM}`);

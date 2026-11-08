@@ -10,6 +10,10 @@ import { decodeTerrain, createGfTerrain, encodeGrid, decodeGrid } from '../js/gf
 import { lonLatToUtm, utmToLonLat, localFrame } from '../js/gf-utm.js';
 import { createGfSurface, DECK_MARGIN } from '../js/gf-surface.js';
 import { drapeRoads, DRAPE_TOL, ROAD_LIFT } from '../js/gf-drape.js';
+import { createTerrainLod, ROOT_LEVEL, SCREEN_TOL } from '../js/gf-terrain-lod.js';
+import { decodeLodErrors } from '../js/gf-terrain-lod-codec.js';
+import { GF_TERRAIN_LOD_ERRORS } from '../js/gf-terrain-lod-errors.js';
+import { chunkError } from '../tools/gf/audit-gf-terrain-mesh.mjs';
 import { gfBuildingsOnTerrain } from '../js/gf-building-bases.js';
 import { placeGfTrees } from '../js/gf-tree-placements.js';
 import { createGfBuildingRecords } from '../js/gf-building-records.js';
@@ -457,6 +461,71 @@ test('bridge decks meet the ground across the whole road at both ends (the deck 
         assert.ok(Math.abs(S.deckAt(x, z).y - S.ground(x, z)) < 0.05, `${d.name || d.id} end ${end}, ${k}`);
       }
     }
+  }
+});
+
+test('the terrain as drawn (gf-terrain-lod.js): level 0 is the query, the error table is current, seams never crack', () => {
+  const lod = createTerrainLod(T, { errors: decodeLodErrors(GF_TERRAIN_LOD_ERRORS) });
+  const L = T.lattice;
+  // a few chunks per level (deterministic picks over the lattice): level 0 draws every node exactly; at levels 1..4 the
+  // shipped error (cm, rounded up) is the recomputed largest |drawn - query| over the chunk's nodes
+  let picked = 0;
+  for (let l = 0; l <= 4; l++) {
+    const across = 2 ** (ROOT_LEVEL - l), size = 32 * 2 ** l;
+    for (let q = 0; q < 6; q++) {
+      const e = L.e0 + ((q * 977 + l * 131) % (L.cols - size)), n = L.n0 - ((q * 613 + l * 271) % (L.rows - size));
+      const kx = Math.floor((e - lod.OE) / size), ky = Math.floor((lod.ON - n) / size);
+      if (kx < 0 || ky < 0 || kx >= across || ky >= across) continue;
+      const [e0, n0] = lod.origin(l, kx, ky);
+      const err = chunkError(T, l, e0, n0, lod.heights(l, kx, ky), null);
+      if (l === 0) assert.equal(err, 0, `level 0 chunk ${kx}, ${ky}`);
+      else assert.equal(lod.errorOf(l, kx, ky), Math.min(655.35, Math.ceil(err * 100 - 1e-9) / 100), `level ${l} chunk ${kx}, ${ky}: ${err}`);
+      picked++;
+    }
+  }
+  assert.ok(picked >= 25);
+  // the game's selection from the ground in town and over the river: level 0 within 70 m of the camera (where things
+  // stand and are seen up close, the drawn ground is the query), and each chunk's border meets the chunk across it
+  for (const [x, z, alt] of [[-150, -60, 2], [420, 300, 30]]) {
+    const [ce, cn] = T.toUtm(x, z);
+    const { chunks, chosen } = lod.select(ce, cn, alt);
+    const drawn = new Map();
+    for (const c of chunks) {
+      const h = lod.heights(c.l, c.kx, c.ky);
+      if (c.stitch) lod.stitchInto(h, c.l, c.kx, c.ky, c.stitch);
+      drawn.set(c.key, h);
+      const [e0, n0, size] = lod.origin(c.l, c.kx, c.ky);
+      const d = Math.hypot(Math.max(0, e0 - ce, ce - e0 - size), Math.max(0, n0 - size - cn, cn - n0), alt);
+      if (d < 70) assert.equal(c.l, 0, `chunk ${c.key} at ${d} m`);
+    }
+    const chunkAt = (e, n) => {
+      for (let K = 0; K <= ROOT_LEVEL; K++) {
+        const sz = 32 * 2 ** K, key = `${K}/${Math.floor((e - lod.OE) / sz)}/${Math.floor((lod.ON - n) / sz)}`;
+        if (chosen.has(key)) return key;
+      }
+      return null;
+    };
+    let crack = 0;
+    for (const c of chunks) {
+      const [e0, n0, size] = lod.origin(c.l, c.kx, c.ky);
+      for (let t = 0; t <= size; t += 2) {
+        for (const [e, n, oe, on] of [[e0 + t, n0, 0, 0.25], [e0 + size, n0 - t, 0.25, 0], [e0 + t, n0 - size, 0, -0.25], [e0, n0 - t, -0.25, 0]]) {
+          const other = chunkAt(e + oe, n + on);
+          if (!other || other === c.key) continue;
+          const [l2, kx2, ky2] = other.split('/').map(Number);
+          crack = Math.max(crack, Math.abs(lod.drawnAt(c.l, c.kx, c.ky, drawn.get(c.key), e, n) - lod.drawnAt(l2, kx2, ky2, drawn.get(other), e, n)));
+        }
+      }
+    }
+    assert.ok(crack < 1e-6, `crack ${crack} at ${x}, ${z}`);
+  }
+  // the full audit (tools/gf/audit-gf-terrain-mesh.mjs, every node of every level and every view it simulates)
+  const audit = JSON.parse(fs.readFileSync(path.join(DATA, 'gf_terrain_mesh_audit.json'), 'utf8'));
+  assert.equal(audit.levels.L0.all.maxM, 0);
+  for (const v of audit.views) {
+    assert.equal(v.crackM, 0, v.name);
+    assert.equal(v.within50M, 0, `${v.name}: the ground within 50 m is drawn exactly`);
+    assert.ok(v.screenError <= SCREEN_TOL + 1e-9 || v.screenAt.distanceM < 80, `${v.name}: ${JSON.stringify(v.screenAt)}`);
   }
 });
 
