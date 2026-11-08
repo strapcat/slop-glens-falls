@@ -15,11 +15,10 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { loadUsgsLattice } from './usgs-lattice.mjs';
-import { openTiff } from './tiff.mjs';
+import { terrainMasks } from './terrain-masks.mjs';
 import { decodeTerrain, createGfTerrain } from '../../js/gf-terrain.js';
 import { utmToLonLat } from '../../js/gf-utm.js';
 import { GF_GEO } from '../../js/gf-geodata.js';
-import { GF_BRIDGES } from '../../js/gf-bridges.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DATA = path.join(HERE, 'data/terrain');
@@ -33,66 +32,13 @@ const L = T.lattice;
 if (L.cols !== W || L.rows !== H || L.e0 !== X0 + 0.5 || L.n0 !== Y1 - 0.5) throw new Error('the terrain lattice is not the source rectangle');
 const tb = prov.targetWgs84Bounds;
 
-// masks: 1 target, 2 road, 4 bank, 8 deck, 16 hill crop
-const mask = new Uint8Array(W * H);
-let inTarget = 0;
-for (let j = 0; j < H; j++) {
-  for (let i = 0; i < W; i++) {
-    const [lon, lat] = utmToLonLat(L.e0 + i, L.n0 - j);
-    if (lon >= tb.west && lon <= tb.east && lat >= tb.south && lat <= tb.north) { mask[j * W + i] = 1; inTarget++; }
-  }
-}
+// masks: 1 target, 2 road, 4 bank, 8 deck, 16 hill crop (terrain-masks.mjs)
+const { mask, inTarget, hill, hc0, hr0 } = terrainMasks(T, tb, DATA);
 log(`${inTarget} source pixel centres in the exact WGS84 target (the bundle counts ${prov.coverage.referencePixelsInExactTarget})`);
-// a segment's carriageway (half width h) in the lattice
-function markSegment(ax, az, bx, bz, h, bit) {
-  const [ea, na] = T.toUtm(ax, az), [eb, nb] = T.toUtm(bx, bz);
-  const i0 = Math.max(0, Math.floor(Math.min(ea, eb) - h - L.e0)), i1 = Math.min(W - 1, Math.ceil(Math.max(ea, eb) + h - L.e0));
-  const j0 = Math.max(0, Math.floor(L.n0 - Math.max(na, nb) - h)), j1 = Math.min(H - 1, Math.ceil(L.n0 - Math.min(na, nb) + h));
-  const ex = eb - ea, ny = nb - na, len2 = ex * ex + ny * ny;
-  for (let j = j0; j <= j1; j++) {
-    for (let i = i0; i <= i1; i++) {
-      const e = L.e0 + i, n = L.n0 - j;
-      const t = len2 ? Math.max(0, Math.min(1, ((e - ea) * ex + (n - na) * ny) / len2)) : 0;
-      if (Math.hypot(ea + ex * t - e, na + ny * t - n) <= h) mask[j * W + i] |= bit;
-    }
-  }
-}
-const g = GF_GEO.roadGraph;
-const at = Object.fromEntries(g.linkFields.map((f, k) => [f, k]));
-const linkPts = (l) => {
-  const pts = [[g.nodes[l[at.a] * 2], g.nodes[l[at.a] * 2 + 1]]];
-  for (let k = 0; k < l[at.pts].length; k += 2) pts.push([l[at.pts][k], l[at.pts][k + 1]]);
-  pts.push([g.nodes[l[at.b] * 2], g.nodes[l[at.b] * 2 + 1]]);
-  return pts;
-};
-for (const l of g.links) {
-  const pts = linkPts(l);
-  for (let k = 0; k + 1 < pts.length; k++) markSegment(...pts[k], ...pts[k + 1], l[at.width] / 2, 2);
-}
-for (const w of GF_GEO.water) {
-  for (const ring of [w.outer, ...(w.holes || [])]) {
-    for (let k = 0; k < ring.length; k += 2) {
-      const n = (k + 2) % ring.length;
-      markSegment(ring[k], ring[k + 1], ring[n], ring[n + 1], 10, 4);
-    }
-  }
-}
-for (const b of GF_BRIDGES.bridges) {
-  for (const [li, s] of b.segments) {
-    const pts = linkPts(g.links[li]);
-    markSegment(...pts[s], ...pts[s + 1], g.links[li][at.width] / 2 + 2, 8);
-  }
-}
-const hill = openTiff(path.join(DATA, 'thrill-hill-reference-dem-1m.tif'));
 const hillVals = hill.readWindow(0, 0, hill.width, hill.height);
-const hc0 = Math.round(hill.tie[3] - X0), hr0 = Math.round(Y1 - hill.tie[4]);
 let hillEqual = 0;
 for (let r = 0; r < hill.height; r++) {
-  for (let c = 0; c < hill.width; c++) {
-    const k = (hr0 + r) * W + hc0 + c;
-    mask[k] |= 16;
-    if (hillVals[r * hill.width + c] === src[k]) hillEqual++;
-  }
+  for (let c = 0; c < hill.width; c++) if (hillVals[r * hill.width + c] === src[(hr0 + r) * W + hc0 + c]) hillEqual++;
 }
 log(`hill crop: ${hillEqual} of ${hill.width * hill.height} pixels equal the source lattice (window at column ${hc0}, row ${hr0})`);
 
