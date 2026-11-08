@@ -607,13 +607,32 @@ Cole's Woods relief, with every road, car, walker, building, tree and pond on it
   pixel for pixel (1,078,800 of 1,078,800), but **the game surface there is not exact**: MAE 0.020 m, p95 0.058 m, max
   **0.249 m** (x −2597.5, z −1737.9, a base-2 m node just within the keep threshold). Each subset's ten worst
   locations (true maxima, whatever their size) are in the audit JSON.
-- **The mesh** (`js/gf-terrain-mesh.js`): a quadtree of 32 × 32-cell chunks, level n every 2ⁿ-th node, chosen by
-  distance (a chunk splits while the camera is nearer than 1.2 × its size: level 0, the surface itself, within ~77 m;
-  level 1 to ~154 m; …). Coarser levels are a decimation (their error: 2 m p95 0.078 m, 4 m 0.14 m, 8 m 0.30 m) and take
-  a larger depth offset, so overlays on the exact surface stay on top. Where a chunk borders a coarser one its border
-  vertices are moved onto that neighbour's edge (stitched), so seams never open, with no skirts. The visible chunks of
-  each level are merged into one mesh (about 7 draw calls in all). Up to 450 chunks are cached. Vertex colours are the
-  old block and lot tints.
+- **The mesh** (`js/gf-terrain-lod.js`, no three.js, drawn by `js/gf-terrain-mesh.js`): a quadtree of 32 × 32-cell
+  chunks, level n every 2ⁿ-th node (a decimation; level 0 is the surface itself). A chunk splits while the camera is
+  nearer than 1.2 × its size (level 0 within ~77 m) **or while its drawn error exceeds 0.005 of its distance** (~4 px
+  at 900 px and a 60° view): each chunk's error is its largest |drawn − query| over its lattice nodes, measured by
+  `tools/gf/audit-gf-terrain-mesh.mjs` (`js/gf-terrain-lod-errors.js`, cm rounded up). Coarser levels take a larger
+  depth offset, so overlays on the exact surface stay on top. Where a chunk borders a coarser one its border vertices
+  are moved onto that neighbour's edge (stitched): no crack, no skirts. Each level's visible chunks are one mesh.
+- **The drawn terrain against the query** (`audit-gf-terrain-mesh.mjs`, `data/terrain/gf_terrain_mesh_audit.json`;
+  exact, not sampled: drawn triangles and the query are both linear on lattice triangles, so every node is checked).
+  Worst |drawn − query| per level over the whole lattice (location; on roads / banks / the hill):
+
+  | level | spacing | worst | at (x, z) | p95 | roads | banks | hill |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | 0 | 1 m | **0** | | 0 | 0 | 0 | 0 |
+  | 1 | 2 m | 12.0 m | 2744.7, 494.7 (gorge wall) | 0.029 | 2.11 | 7.78 | 0.70 |
+  | 2 | 4 m | 15.9 m | 2741.7, 494.6 | 0.097 | 3.12 | 15.2 | 1.19 |
+  | 3 | 8 m | 18.2 m | 2734.7, 498.5 | 0.265 | 4.16 | 12.9 | 1.71 |
+  | 4 | 16 m | 22.0 m | 2757.8, 492.9 | 0.62 | 9.74 | 19.1 | 3.26 |
+  | 5–8 | 32–256 m | 26–44 m | gorge, 2392, 1046 | 1.3–7.1 | 13–39 | 21–29 | 5.7–9.5 |
+
+  Stitched seams (each level against every coarser neighbour, every edge) are in the JSON. Before the error rule the
+  LOD chose by distance alone, so these walls and banks were drawn metres off a few hundred metres away, under cars,
+  trees and water edges standing on the query. With it, the game's own selection from ~60 cameras (town, river, hill,
+  the hill top, the overview, a grid of street-level points): **no crack**, every chunk within ~4 px (5.1 px at worst,
+  a stitched seam), **≤ 0.13 m within 50 m** (a level-0 seam stitched onto a 2 m neighbour), 112–576 chunks (median
+  274; distance only: ~190).
 - **The surface contract** (`js/gf-surface.js`, one instance in `gf-runtime.js`, `slopGlensFalls.terrain.surface`):
   `ground(x, z)` (bare earth), `deckAt(x, z, { dir })`, `support(x, z, nearY)` (what stands there: a deck within 1 m
   above nearY, else the ground), `road(x, z, dirX, dirZ, nearY)` (a deck the vehicle runs along, or the level it is on),
@@ -621,10 +640,17 @@ Cole's Woods relief, with every road, car, walker, building, tree and pond on it
   outside, and `resolution`). **CC-005c** places paths, props and feet with `support()` / `ground()` and `normal()` here
   (tested example: a table's feet on the hill crop), never with a second terrain.
 - **Consumers:**
-  - roads and service roads draped (`js/gf-drape.js`: three lines across, split until every metre is within 2 cm, 3 cm
-    above the surface), road paint on them (`road-paint.js` opt-in `surfaceAt`), in 1 km chunks;
+  - roads and service roads draped (`js/gf-drape.js`, 3 cm above the surface): along every line within 2 cm of the
+    surface at each lattice line it crosses; 2–16 quads across, chosen by cross-sections every 4 m (within 8 cm at
+    every lattice crossing); adaptive round joins at link ends and wedges on the outside of bends. Every triangle's
+    interior, sampled every 0.5 m (`tests/gf-terrain.test.mjs`): over the whole network about 1.4 in 10,000 samples
+    are more than 0.1 m off, the worst 0.40 m at abutment walls (a 3.6 m drop within 2 m beside Murray Street's deck,
+    the bank across Bush Street's approach), which lines 0.5 m apart cannot follow. Road paint on them (`road-paint.js`
+    opt-in `surfaceAt`), in 1 km chunks;
   - traffic (`traffic.js` opt-in `surfaceAt`): every vehicle at its road's height, pitched and rolled by its four wheels,
-    keeping to the level it is on (deck or ground); wheels, shadows, lamps, sparks follow;
+    keeping to the level it is on (deck or ground); wheels, shadows, lamps, sparks follow. Its level is resolved before
+    contacts, and bodies whose heights do not overlap (a car on a deck, one on the road beneath; the player on another
+    level) never collide or yield to each other (`tests/gf-traffic-levels.test.mjs`); New York sets no level;
   - pedestrians (`pedestrian-system.js` opt-in `groundAt`): feet on the terrain, a deck where their track runs along one;
   - the player (`controllers.js`, `cameras.js`, opt-in by `world.groundNormalAt`): walking, cycling and driving follow
     grades (a wheel climbs up to 45° or a 0.35 m step, follows drops up to 50°, falls off anything steeper), the car and
@@ -648,7 +674,9 @@ Cole's Woods relief, with every road, car, walker, building, tree and pond on it
     keeps the default.
 - **Bridges** (`js/gf-bridges.js` from the OSM `bridge=yes` ways, matched to their road-graph segments): a bare-earth
   DEM does not measure decks, so a deck runs straight between the terrain at its two abutments (or the ground, where
-  that stands higher right by them): 16 decks from 17 ways, Cooper's Cave Bridge ~20 m above the water below the falls,
+  that stands higher right by them), and within 12 m of an end takes the ground's cross-slope, so it meets the
+  approach road across its whole width (it was up to 1.85 m off at a curb, Bush Street): 16 decks from 17 ways,
+  Cooper's Cave Bridge ~20 m above the water below the falls,
   the Northway's ~5–6 m over the roads beneath. Each is drawn as a 1 m slab with 0.9 m parapets, whose railings keep the
   player on it. No piers, no new spans; deck heights are inferred, not surveyed (flagged). Layer −1 / tunnel ways
   (Warren Street's underpass) and the untagged layer-1 service ways (parking ramps) stay on the DEM.
