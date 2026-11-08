@@ -30,6 +30,15 @@ import {
 
 const NUM_CARS = 200;
 const NUM_BUSES = 12;
+// Vertical extents for contacts between levels (only on a terrain, see poseOnSurface): from the road up, generously
+// (the tallest car body is ~1.9 m, a bus ~3.2 m, a standing person or a rider ~1.9 m). Decks clear the roads beneath by
+// 4.5 m or more, so these keep the levels apart and still let ramps meet where they merge.
+const CAR_LEVEL_HEIGHT = 2.2;
+const BUS_LEVEL_HEIGHT = 3.4;
+const PLAYER_LEVEL_HEIGHT = 2.2;
+// a and b ({ levelY, levelTop }) both known and not overlapping in height
+const apartVertically = (a, b) => a.levelY !== undefined && b.levelY !== undefined
+  && (a.levelY >= b.levelTop || b.levelY >= a.levelTop);
 
 // The stand-in for pedestrian-system.js where a city has no sidewalks to walk (options.pedestrians false): nobody
 // walks, so nothing reads the city's blocks. Like it, it gives every node its (here always empty) lists of the
@@ -126,7 +135,9 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
   const surfaceAt = options.surfaceAt || null;
   // Height and grade of vehicle v where it is (only with surfaceAt), before it is drawn: v.sy, v.gp (pitch, front
   // down), v.gr (roll, +x side up) and v.wy, its four wheels' road heights (left front, left rear, right front, right
-  // rear, as placeWheels draws them). The draw functions read them (0 without a surface).
+  // rear, as placeWheels draws them). The draw functions read them (0 without a surface). Also the vertical extent
+  // contacts compare (v.levelY to v.levelTop): a vehicle on a bridge deck never touches one on the road beneath it.
+  // Without a surface these stay undefined and every contact is tested as before (New York).
   function poseOnSurface(v) {
     const spec = v.bus ? BUS_SPEC : BODY_SPECS[v.bodyType];
     const rotY = v.yaw + v.yawOffset, sinY = Math.sin(rotY), cosY = Math.cos(rotY);
@@ -145,6 +156,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     v.gp = Math.atan2((lr + rr) - (lf + rf), 4 * hb);
     v.gr = Math.atan2((rf + rr) - (lf + lr), 4 * ht);
     v.syEdge = v.edge;
+    v.levelY = v.sy;
+    v.levelTop = v.sy + (v.bus ? BUS_LEVEL_HEIGHT : CAR_LEVEL_HEIGHT);
   }
   const group = new THREE.Group();
   group.name = 'ManhattanTrafficAndPedestrians';
@@ -689,7 +702,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
   // Where the player is relative to v: metres ahead, metres to the right, and how fast it moves v's way
   function relateToPlayer(v) {
     v.pAhead = Infinity;
-    if (!player.active) return;
+    if (!player.active || apartVertically(player, v)) return;
     const dx = player.x - v.x;
     const dz = player.z - v.z;
     if (Math.abs(dx) > LOOKAHEAD + 10 || Math.abs(dz) > LOOKAHEAD + 10) return;
@@ -1447,6 +1460,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     body.vx = body.sin * v.speed + v.vx;
     body.vz = body.cos * v.speed + v.vz;
     body.angularVel = v.yawRate + v.yawVel;
+    body.levelY = v.levelY;
+    body.levelTop = v.levelTop;
   }
 
   function writeTrafficVelocity(v, body) {
@@ -1478,6 +1493,9 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     const dz = pe.position.z - prevZ - v.z + v.prevZ;
     if (Math.abs(pe.position.x - v.x) > reach + Math.abs(dx)
       || Math.abs(pe.position.z - v.z) > reach + Math.abs(dz)) return;
+    // on different levels (a deck over a road) there is no contact; both heights are resolved before this
+    if (player.levelY !== undefined && v.levelY !== undefined
+      && (player.levelY >= v.levelTop || v.levelY >= player.levelTop)) return;
     const a = contactA, b = contactB, hit = vehicleHit;
     const heading = pe.heading || 0;
     a.x = pe.position.x; a.z = pe.position.z;
@@ -1539,6 +1557,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
           || Math.abs(dz) > reach + Math.abs(dz - v.prevZ + o.prevZ)) continue;
         readTrafficBody(v, contactA);
         readTrafficBody(o, contactB);
+        if (contactA.levelY !== undefined && contactB.levelY !== undefined
+          && (contactA.levelY >= contactB.levelTop || contactB.levelY >= contactA.levelTop)) continue;
         const hit = vehicleHit;
         if (!sweptVehicleContact(contactA, contactB, hit) && !vehicleContact(contactA, contactB, hit)) continue;
         const speed = resolveVehicleContact(contactA, contactB, hit);
@@ -1939,7 +1959,10 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
 
     // On (not above) the road: within 2.6 m of it (y = 0 in New York, the road's surface on a terrain)
     player.active = Boolean(playerEntity && activeMode !== 'helicopter' && playerEntity.position.y -
-      (surfaceAt ? surfaceAt(playerEntity.position.x, playerEntity.position.z, Math.sin(playerEntity.heading || 0), Math.cos(playerEntity.heading || 0)) || 0 : 0) < 2.6);
+      (surfaceAt ? surfaceAt(playerEntity.position.x, playerEntity.position.z, Math.sin(playerEntity.heading || 0), Math.cos(playerEntity.heading || 0), playerEntity.position.y) || 0 : 0) < 2.6);
+    // The player's vertical extent (only on a terrain): its feet, which the controllers keep on its level
+    player.levelY = surfaceAt && playerEntity ? playerEntity.position.y : undefined;
+    player.levelTop = player.levelY === undefined ? undefined : player.levelY + PLAYER_LEVEL_HEIGHT;
     if (playerEntity) {
       const heading = playerEntity.heading || 0;
       const speed = playerEntity.speed || 0;
@@ -1987,6 +2010,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
       locate(v);
       knock(v, dt);
       pose(v, dt);
+      // its level (ground or deck) where it now is, before any contact is tested
+      if (surfaceAt) poseOnSurface(v);
     }
     if (player.active) {
       for (const v of vehicles) if (v.edge) collideWithPlayer(v);
