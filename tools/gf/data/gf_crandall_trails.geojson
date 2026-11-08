@@ -1,0 +1,4522 @@
+{
+ "type": "FeatureCollection",
+ "name": "gf_crandall_trails",
+ "provenance": {
+  "generator": "tools/gf/select-gf-crandall-trails.mjs",
+  "crs": "WGS84 (GeoJSON RFC 7946), [longitude, latitude]",
+  "retrieved": "2026-11-07",
+  "attribution": "© OpenStreetMap contributors (ODbL 1.0, https://www.openstreetmap.org/copyright); Cole's Woods loop: Warren County GIS recreation_mapper layer 4 (reference only)",
+  "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+  "sources": [
+   {
+    "file": "tools/gf/data/trails/osm-crandall-context.xml",
+    "sha256": "1f1a15f7c3106913888dc4c58221dc6c7cf2311b043a419169e06cc0f0278325"
+   },
+   {
+    "file": "tools/gf/data/trails/osm-coles-corridor-context.xml",
+    "sha256": "81fd2b033efef97290fe024f200b112898b878bdf07baa6a3740511a40a4adfd"
+   },
+   {
+    "file": "tools/gf/data/trails/osm-park.xml",
+    "sha256": "a81bafd45403c88e27052980451b00ecac790dc705d1b702410453fa59272638"
+   },
+   {
+    "file": "tools/gf/data/trails/county-coles-loop.geojson",
+    "sha256": "08795fe7f76545dbde00e1e5a8fca3dee2fc971dde42f884fbe55f352d23e484"
+   },
+   {
+    "file": "tools/gf/data/trails/osm-park-path-candidates.geojson",
+    "sha256": "4f42e874471c4d02fadfd2ad1a2c6923ac614a8f3d7d3f290d8627eb12b3de40"
+   },
+   {
+    "file": "tools/gf/data/trails/osm-coles-corridor-candidates.geojson",
+    "sha256": "458c927dcbb176ac849d92ac7456420c261057f87cd22b6a588a0e31588faa93"
+   }
+  ],
+  "hill": {
+   "countyLoopVertex": 137,
+   "countyLoopCoordinates": [
+    -73.6753612964908,
+    43.3209147424395
+   ],
+   "pathWay": "1089938465",
+   "pathNode": "7985360319",
+   "pathNodeToVertexM": 15.6,
+   "identity": "Thrill Hill = the first Camel Hump, top of The Wall (Dave's marked map; confirmed by Dave 2026-11-08). Local knowledge, not an official name."
+  },
+  "colesRoutes": [
+   {
+    "entranceNode": "12288007832",
+    "hillNode": "7985360319",
+    "lengthM": 742.8,
+    "ways": [
+     "1328140737",
+     "1086513564",
+     "1086513571",
+     "1086513560",
+     "1086513561",
+     "856427843"
+    ]
+   },
+   {
+    "entranceNode": "221466297",
+    "hillNode": "7985360319",
+    "lengthM": 969.7,
+    "ways": [
+     "1328141829",
+     "856427846",
+     "1086513562",
+     "1086513573",
+     "1086513566",
+     "1086513568",
+     "1086513569",
+     "1086513560",
+     "1086513561",
+     "856427843"
+    ]
+   }
+  ]
+ },
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w98662142",
+    "group": "park-path",
+    "accepted": true,
+    "osmWayId": "98662142",
+    "version": "3",
+    "timestamp": "2022-05-20T22:08:01Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/98662142",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "covered": "no",
+     "highway": "footway",
+     "name": "Newell Way",
+     "source": "survey",
+     "survey:date": "2022-05-20"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": null,
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "8421747670",
+     "1141399720",
+     "1141401827",
+     "1141399685"
+    ],
+    "reason": "park-route candidate on the park walking network"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6600312,
+      43.3174372
+     ],
+     [
+      -73.6602875,
+      43.3178524
+     ],
+     [
+      -73.6604757,
+      43.3181683
+     ],
+     [
+      -73.6604391,
+      43.3184933
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w234501321",
+    "group": "park-path",
+    "accepted": true,
+    "osmWayId": "234501321",
+    "version": "2",
+    "timestamp": "2018-01-31T21:10:08Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/234501321",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "bridge": "yes",
+     "highway": "footway",
+     "layer": "1",
+     "surface": "wood"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "wood",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": true,
+    "layer": 1,
+    "nodeIds": [
+     "2427424914",
+     "2427424910"
+    ],
+    "reason": "park-route candidate on the park walking network"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6594001,
+      43.3199277
+     ],
+     [
+      -73.659335,
+      43.3197855
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w234501322",
+    "group": "park-path",
+    "accepted": true,
+    "osmWayId": "234501322",
+    "version": "1",
+    "timestamp": "2013-08-22T00:47:12Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/234501322",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "footway",
+     "surface": "dirt"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "dirt",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "2427424910",
+     "2427424909"
+    ],
+    "reason": "park-route candidate on the park walking network"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.659335,
+      43.3197855
+     ],
+     [
+      -73.6593689,
+      43.3197115
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w234501323",
+    "group": "park-path",
+    "accepted": true,
+    "osmWayId": "234501323",
+    "version": "2",
+    "timestamp": "2018-01-31T21:10:08Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/234501323",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "bridge": "yes",
+     "highway": "footway",
+     "layer": "1",
+     "surface": "wood"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "wood",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": true,
+    "layer": 1,
+    "nodeIds": [
+     "2427424893",
+     "2427424892"
+    ],
+    "reason": "park-route candidate on the park walking network"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6600739,
+      43.31911
+     ],
+     [
+      -73.6602234,
+      43.3190781
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w234501324",
+    "group": "park-path",
+    "accepted": true,
+    "osmWayId": "234501324",
+    "version": "1",
+    "timestamp": "2013-08-22T00:47:12Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/234501324",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "footway",
+     "surface": "dirt"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "dirt",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "2427424900",
+     "2427424901"
+    ],
+    "reason": "park-route candidate on the park walking network"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6591586,
+      43.3193718
+     ],
+     [
+      -73.6593949,
+      43.3193759
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w234501325",
+    "group": "park-path",
+    "accepted": true,
+    "osmWayId": "234501325",
+    "version": "2",
+    "timestamp": "2018-01-31T21:10:08Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/234501325",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "bridge": "yes",
+     "highway": "footway",
+     "layer": "1",
+     "surface": "wood"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "wood",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": true,
+    "layer": 1,
+    "nodeIds": [
+     "2427424904",
+     "2427424907"
+    ],
+    "reason": "park-route candidate on the park walking network"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6600935,
+      43.3194119
+     ],
+     [
+      -73.6600518,
+      43.3197096
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w234501326",
+    "group": "park-path",
+    "accepted": true,
+    "osmWayId": "234501326",
+    "version": "2",
+    "timestamp": "2018-01-31T21:10:08Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/234501326",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "bridge": "yes",
+     "highway": "footway",
+     "layer": "1",
+     "surface": "wood"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "wood",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": true,
+    "layer": 1,
+    "nodeIds": [
+     "2427424901",
+     "2427424903"
+    ],
+    "reason": "park-route candidate on the park walking network"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6593949,
+      43.3193759
+     ],
+     [
+      -73.6597103,
+      43.3194043
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w234501327",
+    "group": "park-path",
+    "accepted": true,
+    "osmWayId": "234501327",
+    "version": "1",
+    "timestamp": "2013-08-22T00:47:12Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/234501327",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "footway",
+     "surface": "dirt"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "dirt",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "2427424892",
+     "2427424895",
+     "2427424904"
+    ],
+    "reason": "park-route candidate on the park walking network"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6602234,
+      43.3190781
+     ],
+     [
+      -73.6602004,
+      43.3191635
+     ],
+     [
+      -73.6600935,
+      43.3194119
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w234501328",
+    "group": "park-path",
+    "accepted": true,
+    "osmWayId": "234501328",
+    "version": "1",
+    "timestamp": "2013-08-22T00:47:12Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/234501328",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "footway",
+     "surface": "dirt"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "dirt",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "2427424907",
+     "2427424913",
+     "2427424914"
+    ],
+    "reason": "park-route candidate on the park walking network"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6600518,
+      43.3197096
+     ],
+     [
+      -73.6595357,
+      43.3199258
+     ],
+     [
+      -73.6594001,
+      43.3199277
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w234501329",
+    "group": "park-path",
+    "accepted": true,
+    "osmWayId": "234501329",
+    "version": "1",
+    "timestamp": "2013-08-22T00:47:12Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/234501329",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "footway",
+     "surface": "dirt"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "dirt",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "2427424892",
+     "2427424888",
+     "2427424887",
+     "2427424889",
+     "2427424891"
+    ],
+    "reason": "park-route candidate on the park walking network"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6602234,
+      43.3190781
+     ],
+     [
+      -73.6604179,
+      43.3190367
+     ],
+     [
+      -73.6605496,
+      43.3190288
+     ],
+     [
+      -73.6606617,
+      43.319044
+     ],
+     [
+      -73.6608174,
+      43.3190738
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w234501330",
+    "group": "park-path",
+    "accepted": true,
+    "osmWayId": "234501330",
+    "version": "1",
+    "timestamp": "2013-08-22T00:47:12Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/234501330",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "footway",
+     "surface": "dirt"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "dirt",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "2427424903",
+     "2427424902",
+     "2427424899",
+     "2427424898",
+     "2427424893"
+    ],
+    "reason": "park-route candidate on the park walking network"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6597103,
+      43.3194043
+     ],
+     [
+      -73.6597677,
+      43.3193967
+     ],
+     [
+      -73.6598276,
+      43.3193702
+     ],
+     [
+      -73.6599036,
+      43.3193365
+     ],
+     [
+      -73.6600739,
+      43.31911
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w470028972",
+    "group": "park-path",
+    "accepted": true,
+    "osmWayId": "470028972",
+    "version": "2",
+    "timestamp": "2019-06-13T02:23:55Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/470028972",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "access": "no",
+     "foot": "yes",
+     "highway": "footway",
+     "surface": "unpaved",
+     "width": "1"
+    },
+    "pedestrianAccess": "foot=yes; access=no (foot overrides)",
+    "surface": "unpaved",
+    "widthM": 1,
+    "widthBasis": "tagged width=1",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "4642837422",
+     "4642837423",
+     "4642837424",
+     "2048982165",
+     "4642837425",
+     "4642837426"
+    ],
+    "reason": "park-route candidate on the park walking network"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6604276,
+      43.3208299
+     ],
+     [
+      -73.6602619,
+      43.3208732
+     ],
+     [
+      -73.6601093,
+      43.3208421
+     ],
+     [
+      -73.6600097,
+      43.3208587
+     ],
+     [
+      -73.6599752,
+      43.3209003
+     ],
+     [
+      -73.6600069,
+      43.3209518
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w1568246028",
+    "group": "park-path",
+    "accepted": true,
+    "osmWayId": "1568246028",
+    "version": "1",
+    "timestamp": "2026-10-14T12:59:17Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/1568246028",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "footway",
+     "surface": "paved"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "paved",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "14283552483",
+     "14283552484",
+     "14283552485",
+     "14283552486",
+     "14283552487"
+    ],
+    "reason": "park-route candidate on the park walking network"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6624315,
+      43.3222605
+     ],
+     [
+      -73.6624368,
+      43.3222112
+     ],
+     [
+      -73.6624376,
+      43.3221173
+     ],
+     [
+      -73.6623985,
+      43.3219465
+     ],
+     [
+      -73.6623702,
+      43.3218708
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w20619871",
+    "group": "park-drive",
+    "accepted": true,
+    "osmWayId": "20619871",
+    "version": "5",
+    "timestamp": "2019-06-13T02:23:55Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/20619871",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "bicycle": "designated",
+     "covered": "no",
+     "foot": "designated",
+     "highway": "service",
+     "maxspeed": "5 mph",
+     "motor_vehicle": "designated",
+     "surface": "unpaved"
+    },
+    "pedestrianAccess": "foot=designated",
+    "surface": "unpaved",
+    "widthM": null,
+    "widthBasis": "the drive itself (drawn as a service road)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "221356604",
+     "2427424891",
+     "221356612",
+     "221356615",
+     "221356620",
+     "221356625",
+     "221356629",
+     "221356632",
+     "6543764117",
+     "221356635",
+     "221356639"
+    ],
+    "reason": "park drive, foot=designated: joins the park paths to Glen Street and Fire Road (pedestrian edge only)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6606516,
+      43.3187074
+     ],
+     [
+      -73.6608174,
+      43.3190738
+     ],
+     [
+      -73.6610875,
+      43.3193305
+     ],
+     [
+      -73.661311,
+      43.3196228
+     ],
+     [
+      -73.6615601,
+      43.3198828
+     ],
+     [
+      -73.6618674,
+      43.3198639
+     ],
+     [
+      -73.662105,
+      43.3203328
+     ],
+     [
+      -73.6622905,
+      43.3207168
+     ],
+     [
+      -73.6623728,
+      43.3208077
+     ],
+     [
+      -73.6627004,
+      43.3209725
+     ],
+     [
+      -73.6626426,
+      43.3213062
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w20632862",
+    "group": "park-drive",
+    "accepted": true,
+    "osmWayId": "20632862",
+    "version": "8",
+    "timestamp": "2022-09-19T18:30:27Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/20632862",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "bicycle": "designated",
+     "covered": "no",
+     "foot": "designated",
+     "highway": "service",
+     "maxspeed": "5 mph",
+     "motor_vehicle": "designated",
+     "name": "Crandall Place",
+     "tiger:cfcc": "A41",
+     "tiger:county": "Warren, NY",
+     "tiger:name_base": "Crandall",
+     "tiger:name_type": "Pl"
+    },
+    "pedestrianAccess": "foot=designated",
+    "surface": null,
+    "widthM": null,
+    "widthBasis": "the drive itself (drawn as a service road)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "1075878749",
+     "10037716349",
+     "2427424900",
+     "221490011",
+     "1075879581",
+     "1075878569",
+     "221490016",
+     "1075879726",
+     "1141399685",
+     "221356604"
+    ],
+    "reason": "park drive, foot=designated: joins the park paths to Glen Street and Fire Road (pedestrian edge only)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6582037,
+      43.3197698
+     ],
+     [
+      -73.6583191,
+      43.3197217
+     ],
+     [
+      -73.6591586,
+      43.3193718
+     ],
+     [
+      -73.6594087,
+      43.3192676
+     ],
+     [
+      -73.659554,
+      43.3191743
+     ],
+     [
+      -73.6596349,
+      43.3186375
+     ],
+     [
+      -73.6600182,
+      43.3184568
+     ],
+     [
+      -73.6603061,
+      43.3184296
+     ],
+     [
+      -73.6604391,
+      43.3184933
+     ],
+     [
+      -73.6606516,
+      43.3187074
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w470028691",
+    "group": "park-drive",
+    "accepted": true,
+    "osmWayId": "470028691",
+    "version": "4",
+    "timestamp": "2022-09-19T18:30:27Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/470028691",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "bicycle": "designated",
+     "foot": "designated",
+     "highway": "service",
+     "maxspeed": "5 mph",
+     "motor_vehicle": "designated",
+     "mtb:scale": "0",
+     "surface": "paved",
+     "trail_visibility": "excellent"
+    },
+    "pedestrianAccess": "foot=designated",
+    "surface": "paved",
+    "widthM": null,
+    "widthBasis": "the drive itself (drawn as a service road)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "5376585354",
+     "10037716305",
+     "4642834469",
+     "6543764120",
+     "6543764153"
+    ],
+    "reason": "park drive, foot=designated: joins the park paths to Glen Street and Fire Road (pedestrian edge only)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6591867,
+      43.320656
+     ],
+     [
+      -73.6593032,
+      43.3206179
+     ],
+     [
+      -73.659317,
+      43.3206134
+     ],
+     [
+      -73.6603455,
+      43.3205257
+     ],
+     [
+      -73.6609491,
+      43.3204572
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w557479773",
+    "group": "park-drive",
+    "accepted": true,
+    "osmWayId": "557479773",
+    "version": "2",
+    "timestamp": "2019-06-13T02:23:55Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/557479773",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "bicycle": "designated",
+     "covered": "no",
+     "foot": "designated",
+     "highway": "service",
+     "maxspeed": "5 mph",
+     "motor_vehicle": "designated",
+     "mtb:scale": "0",
+     "surface": "unpaved",
+     "trail_visibility": "excellent"
+    },
+    "pedestrianAccess": "foot=designated",
+    "surface": "unpaved",
+    "widthM": null,
+    "widthBasis": "the drive itself (drawn as a service road)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "221356620",
+     "4642834470"
+    ],
+    "reason": "park drive, foot=designated: joins the park paths to Glen Street and Fire Road (pedestrian edge only)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6615601,
+      43.3198828
+     ],
+     [
+      -73.6611644,
+      43.3204353
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w671888405",
+    "group": "park-drive",
+    "accepted": true,
+    "osmWayId": "671888405",
+    "version": "3",
+    "timestamp": "2026-10-14T12:59:17Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/671888405",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "bicycle": "designated",
+     "covered": "no",
+     "foot": "designated",
+     "highway": "service",
+     "maxspeed": "5 mph",
+     "motor_vehicle": "designated",
+     "source": "gis.ny.gov/gisdata",
+     "surface": "unpaved"
+    },
+    "pedestrianAccess": "foot=designated",
+    "surface": "unpaved",
+    "widthM": null,
+    "widthBasis": "the drive itself (drawn as a service road)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "3044870866",
+     "14283552491",
+     "6291787655",
+     "6543764118",
+     "6291787654",
+     "6291787653",
+     "6291787651",
+     "6291787649",
+     "6291787648",
+     "6543764119",
+     "221356625"
+    ],
+    "reason": "park drive, foot=designated: joins the park paths to Glen Street and Fire Road (pedestrian edge only)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6637669,
+      43.3220621
+     ],
+     [
+      -73.663742,
+      43.3219789
+     ],
+     [
+      -73.663682,
+      43.3217787
+     ],
+     [
+      -73.6635752,
+      43.3213103
+     ],
+     [
+      -73.6634231,
+      43.3206428
+     ],
+     [
+      -73.6632703,
+      43.3197478
+     ],
+     [
+      -73.6631686,
+      43.3193058
+     ],
+     [
+      -73.6631061,
+      43.3192763
+     ],
+     [
+      -73.6630156,
+      43.3192588
+     ],
+     [
+      -73.6622293,
+      43.3195728
+     ],
+     [
+      -73.6618674,
+      43.3198639
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w696794869",
+    "group": "park-drive",
+    "accepted": true,
+    "osmWayId": "696794869",
+    "version": "1",
+    "timestamp": "2019-06-13T02:23:55Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/696794869",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "bicycle": "designated",
+     "covered": "no",
+     "foot": "designated",
+     "highway": "service",
+     "maxspeed": "5 mph",
+     "motor_vehicle": "designated",
+     "surface": "unpaved"
+    },
+    "pedestrianAccess": "foot=designated",
+    "surface": "unpaved",
+    "widthM": null,
+    "widthBasis": "the drive itself (drawn as a service road)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "221356639",
+     "6543764118"
+    ],
+    "reason": "park drive, foot=designated: joins the park paths to Glen Street and Fire Road (pedestrian edge only)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6626426,
+      43.3213062
+     ],
+     [
+      -73.6635752,
+      43.3213103
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w696794870",
+    "group": "park-drive",
+    "accepted": true,
+    "osmWayId": "696794870",
+    "version": "1",
+    "timestamp": "2019-06-13T02:23:55Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/696794870",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "bicycle": "designated",
+     "foot": "designated",
+     "highway": "service",
+     "maxspeed": "5 mph",
+     "motor_vehicle": "designated",
+     "service": "parking_aisle"
+    },
+    "pedestrianAccess": "foot=designated",
+    "surface": null,
+    "widthM": null,
+    "widthBasis": "the drive itself (drawn as a service road)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "4642837422",
+     "6543764120"
+    ],
+    "reason": "park drive, foot=designated: joins the park paths to Glen Street and Fire Road (pedestrian edge only)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6604276,
+      43.3208299
+     ],
+     [
+      -73.6603455,
+      43.3205257
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w696794874",
+    "group": "park-drive",
+    "accepted": true,
+    "osmWayId": "696794874",
+    "version": "1",
+    "timestamp": "2019-06-13T02:23:55Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/696794874",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "bicycle": "designated",
+     "covered": "no",
+     "foot": "designated",
+     "highway": "service",
+     "maxspeed": "5 mph",
+     "motor_vehicle": "designated",
+     "mtb:scale": "0",
+     "surface": "unpaved",
+     "trail_visibility": "excellent"
+    },
+    "pedestrianAccess": "foot=designated",
+    "surface": "unpaved",
+    "widthM": null,
+    "widthBasis": "the drive itself (drawn as a service road)",
+    "bridge": false,
+    "layer": 0,
+    "nodeIds": [
+     "6543764153",
+     "4642834470",
+     "221356629"
+    ],
+    "reason": "park drive, foot=designated: joins the park paths to Glen Street and Fire Road (pedestrian edge only)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6609491,
+      43.3204572
+     ],
+     [
+      -73.6611644,
+      43.3204353
+     ],
+     [
+      -73.662105,
+      43.3203328
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w1086513560:5-10",
+    "group": "coles-corridor",
+    "accepted": true,
+    "osmWayId": "1086513560",
+    "version": "2",
+    "timestamp": "2022-08-28T20:39:42Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/1086513560",
+    "sourceFile": "tools/gf/data/trails/osm-coles-corridor-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "ground",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeRange": [
+     5,
+     10
+    ],
+    "nodeIds": [
+     "9955567627",
+     "9955567628",
+     "9955567629",
+     "9955567630",
+     "9955567634",
+     "9955567666"
+    ],
+    "reason": "on the shortest foot-permitted walk from a woods entrance to the Thrill Hill site (nodes 5..10 of 11)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6717361,
+      43.3204115
+     ],
+     [
+      -73.6724016,
+      43.3202987
+     ],
+     [
+      -73.67358,
+      43.3201739
+     ],
+     [
+      -73.6738374,
+      43.320233
+     ],
+     [
+      -73.6739067,
+      43.320314
+     ],
+     [
+      -73.674031,
+      43.3204594
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w1086513561:0-4",
+    "group": "coles-corridor",
+    "accepted": true,
+    "osmWayId": "1086513561",
+    "version": "3",
+    "timestamp": "2022-08-28T20:39:42Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/1086513561",
+    "sourceFile": "tools/gf/data/trails/osm-coles-corridor-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "path"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": null,
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeRange": [
+     0,
+     4
+    ],
+    "nodeIds": [
+     "9955567634",
+     "9955563287",
+     "9955567635",
+     "9955567636",
+     "9955567637"
+    ],
+    "reason": "on the shortest foot-permitted walk from a woods entrance to the Thrill Hill site (nodes 0..4 of 15)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6739067,
+      43.320314
+     ],
+     [
+      -73.6743455,
+      43.3203143
+     ],
+     [
+      -73.6743717,
+      43.3203143
+     ],
+     [
+      -73.6747668,
+      43.3202108
+     ],
+     [
+      -73.6748232,
+      43.3201664
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w1086513562:3-4",
+    "group": "coles-corridor",
+    "accepted": true,
+    "osmWayId": "1086513562",
+    "version": "1",
+    "timestamp": "2022-08-15T19:34:27Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/1086513562",
+    "sourceFile": "tools/gf/data/trails/osm-coles-corridor-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "foot": "yes",
+     "highway": "path"
+    },
+    "pedestrianAccess": "foot=yes",
+    "surface": null,
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeRange": [
+     3,
+     4
+    ],
+    "nodeIds": [
+     "9955567703",
+     "7985360333"
+    ],
+    "reason": "on the shortest foot-permitted walk from a woods entrance to the Thrill Hill site (nodes 3..4 of 5)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6687784,
+      43.3233462
+     ],
+     [
+      -73.6690853,
+      43.3234057
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w1086513564:6-7",
+    "group": "coles-corridor",
+    "accepted": true,
+    "osmWayId": "1086513564",
+    "version": "1",
+    "timestamp": "2022-08-15T19:34:27Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/1086513564",
+    "sourceFile": "tools/gf/data/trails/osm-crandall-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "ground",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeRange": [
+     6,
+     7
+    ],
+    "nodeIds": [
+     "9955563814",
+     "9955567683"
+    ],
+    "reason": "on the shortest foot-permitted walk from a woods entrance to the Thrill Hill site (nodes 6..7 of 13)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6677681,
+      43.3217922
+     ],
+     [
+      -73.6679448,
+      43.3217629
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w1086513566:3-6",
+    "group": "coles-corridor",
+    "accepted": true,
+    "osmWayId": "1086513566",
+    "version": "1",
+    "timestamp": "2022-08-15T19:34:27Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/1086513566",
+    "sourceFile": "tools/gf/data/trails/osm-coles-corridor-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "ground",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeRange": [
+     3,
+     6
+    ],
+    "nodeIds": [
+     "9955567620",
+     "9955567621",
+     "9955567708",
+     "9955567622"
+    ],
+    "reason": "on the shortest foot-permitted walk from a woods entrance to the Thrill Hill site (nodes 3..6 of 10)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6704395,
+      43.3224498
+     ],
+     [
+      -73.6710184,
+      43.3222195
+     ],
+     [
+      -73.6714257,
+      43.3221539
+     ],
+     [
+      -73.6719309,
+      43.3219415
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w1086513568",
+    "group": "coles-corridor",
+    "accepted": true,
+    "osmWayId": "1086513568",
+    "version": "2",
+    "timestamp": "2022-08-28T20:39:42Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/1086513568",
+    "sourceFile": "tools/gf/data/trails/osm-coles-corridor-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "ground",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeRange": [
+     0,
+     7
+    ],
+    "nodeIds": [
+     "9955567631",
+     "9955567632",
+     "9955567633",
+     "9984087972",
+     "9955567700",
+     "9955567701",
+     "9955567702",
+     "9955567622"
+    ],
+    "reason": "on the shortest foot-permitted walk from a woods entrance to the Thrill Hill site"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6740813,
+      43.3205308
+     ],
+     [
+      -73.6741354,
+      43.3209491
+     ],
+     [
+      -73.6737708,
+      43.3211404
+     ],
+     [
+      -73.6737385,
+      43.3211523
+     ],
+     [
+      -73.6734019,
+      43.3212765
+     ],
+     [
+      -73.6728211,
+      43.3215391
+     ],
+     [
+      -73.6723221,
+      43.3217758
+     ],
+     [
+      -73.6719309,
+      43.3219415
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w1086513569",
+    "group": "coles-corridor",
+    "accepted": true,
+    "osmWayId": "1086513569",
+    "version": "1",
+    "timestamp": "2022-08-15T19:34:27Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/1086513569",
+    "sourceFile": "tools/gf/data/trails/osm-coles-corridor-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "bridge": "yes",
+     "highway": "path",
+     "layer": "1",
+     "surface": "ground"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "ground",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": true,
+    "layer": 1,
+    "nodeRange": [
+     0,
+     1
+    ],
+    "nodeIds": [
+     "9955567666",
+     "9955567631"
+    ],
+    "reason": "on the shortest foot-permitted walk from a woods entrance to the Thrill Hill site"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.674031,
+      43.3204594
+     ],
+     [
+      -73.6740813,
+      43.3205308
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w1086513571",
+    "group": "coles-corridor",
+    "accepted": true,
+    "osmWayId": "1086513571",
+    "version": "2",
+    "timestamp": "2022-08-15T19:40:04Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/1086513571",
+    "sourceFile": "tools/gf/data/trails/osm-coles-corridor-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "path",
+     "name": "Avenue of the Pines",
+     "surface": "ground"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "ground",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeRange": [
+     0,
+     9
+    ],
+    "nodeIds": [
+     "9955567627",
+     "9955567675",
+     "9955567676",
+     "9955567677",
+     "9955567678",
+     "9955567679",
+     "9955567680",
+     "9955567681",
+     "9955567682",
+     "9955567683"
+    ],
+    "reason": "on the shortest foot-permitted walk from a woods entrance to the Thrill Hill site"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6717361,
+      43.3204115
+     ],
+     [
+      -73.6711512,
+      43.3205109
+     ],
+     [
+      -73.670538,
+      43.3206528
+     ],
+     [
+      -73.6698973,
+      43.3208067
+     ],
+     [
+      -73.6692279,
+      43.321
+     ],
+     [
+      -73.6686284,
+      43.3212206
+     ],
+     [
+      -73.668281,
+      43.3214064
+     ],
+     [
+      -73.6681312,
+      43.3215107
+     ],
+     [
+      -73.6680217,
+      43.3217123
+     ],
+     [
+      -73.6679448,
+      43.3217629
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w1086513573",
+    "group": "coles-corridor",
+    "accepted": true,
+    "osmWayId": "1086513573",
+    "version": "1",
+    "timestamp": "2022-08-15T19:34:27Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/1086513573",
+    "sourceFile": "tools/gf/data/trails/osm-coles-corridor-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "ground",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeRange": [
+     0,
+     5
+    ],
+    "nodeIds": [
+     "9955567703",
+     "9955567704",
+     "9955567705",
+     "9955567706",
+     "9955567707",
+     "9955567620"
+    ],
+    "reason": "on the shortest foot-permitted walk from a woods entrance to the Thrill Hill site"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6687784,
+      43.3233462
+     ],
+     [
+      -73.6690896,
+      43.3230138
+     ],
+     [
+      -73.6694565,
+      43.3228453
+     ],
+     [
+      -73.6697076,
+      43.3227204
+     ],
+     [
+      -73.6702485,
+      43.3225237
+     ],
+     [
+      -73.6704395,
+      43.3224498
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w1089938465:0-1",
+    "group": "coles-corridor",
+    "accepted": true,
+    "osmWayId": "1089938465",
+    "version": "1",
+    "timestamp": "2022-08-28T20:39:42Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/1089938465",
+    "sourceFile": "tools/gf/data/trails/osm-coles-corridor-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "foot": "yes",
+     "highway": "path"
+    },
+    "pedestrianAccess": "foot=yes",
+    "surface": null,
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeRange": [
+     0,
+     1
+    ],
+    "nodeIds": [
+     "7985360319",
+     "7985360317"
+    ],
+    "reason": "the path over the crest of the first Camel Hump (the gathering site) (nodes 0..1 of 12)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.675341,
+      43.3207755
+     ],
+     [
+      -73.6750837,
+      43.321229
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w1328140737",
+    "group": "coles-corridor",
+    "accepted": true,
+    "osmWayId": "1328140737",
+    "version": "1",
+    "timestamp": "2024-10-25T12:27:09Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/1328140737",
+    "sourceFile": "tools/gf/data/trails/osm-coles-corridor-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "path",
+     "surface": "unpaved"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "unpaved",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeRange": [
+     0,
+     1
+    ],
+    "nodeIds": [
+     "12288007832",
+     "9955563814"
+    ],
+    "reason": "on the shortest foot-permitted walk from a woods entrance to the Thrill Hill site"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6675911,
+      43.3215299
+     ],
+     [
+      -73.6677681,
+      43.3217922
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w1328141829",
+    "group": "coles-corridor",
+    "accepted": true,
+    "osmWayId": "1328141829",
+    "version": "1",
+    "timestamp": "2024-10-25T12:33:10Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/1328141829",
+    "sourceFile": "tools/gf/data/trails/osm-coles-corridor-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "highway": "path",
+     "horse": "unknown",
+     "surface": "unpaved"
+    },
+    "pedestrianAccess": "no restriction tagged",
+    "surface": "unpaved",
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeRange": [
+     0,
+     1
+    ],
+    "nodeIds": [
+     "12288027448",
+     "221466297"
+    ],
+    "reason": "on the shortest foot-permitted walk from a woods entrance to the Thrill Hill site"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6707731,
+      43.323663
+     ],
+     [
+      -73.6703771,
+      43.3240651
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w856427843:26-28",
+    "group": "coles-corridor",
+    "accepted": true,
+    "osmWayId": "856427843",
+    "version": "3",
+    "timestamp": "2022-08-28T20:39:42Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/856427843",
+    "sourceFile": "tools/gf/data/trails/osm-coles-corridor-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "foot": "yes",
+     "highway": "path"
+    },
+    "pedestrianAccess": "foot=yes",
+    "surface": null,
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeRange": [
+     26,
+     28
+    ],
+    "nodeIds": [
+     "7985360319",
+     "7985360318",
+     "9955567637"
+    ],
+    "reason": "on the shortest foot-permitted walk from a woods entrance to the Thrill Hill site (nodes 26..28 of 29)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.675341,
+      43.3207755
+     ],
+     [
+      -73.674885,
+      43.3202135
+     ],
+     [
+      -73.6748232,
+      43.3201664
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "w856427846:0-3",
+    "group": "coles-corridor",
+    "accepted": true,
+    "osmWayId": "856427846",
+    "version": "4",
+    "timestamp": "2024-10-25T12:33:10Z",
+    "sourceUrl": "https://www.openstreetmap.org/way/856427846",
+    "sourceFile": "tools/gf/data/trails/osm-coles-corridor-context.xml",
+    "retrieved": "2026-11-07",
+    "historicalBasis": "Dave local knowledge, 2026-11-07: the park trails existed in 1993 (not a survey; modern 2022-23 OSM coordinates)",
+    "tags": {
+     "foot": "yes",
+     "highway": "path"
+    },
+    "pedestrianAccess": "foot=yes",
+    "surface": null,
+    "widthM": 2,
+    "widthBasis": "assumption: 2 m gameplay default (not surveyed)",
+    "bridge": false,
+    "layer": 0,
+    "nodeRange": [
+     0,
+     3
+    ],
+    "nodeIds": [
+     "7985360333",
+     "9955567709",
+     "7985360332",
+     "12288027448"
+    ],
+    "reason": "on the shortest foot-permitted walk from a woods entrance to the Thrill Hill site (nodes 0..3 of 9)"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6690853,
+      43.3234057
+     ],
+     [
+      -73.6691491,
+      43.3234153
+     ],
+     [
+      -73.6694884,
+      43.3234664
+     ],
+     [
+      -73.6707731,
+      43.323663
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "entrance-8421747670",
+    "kind": "entrance",
+    "accepted": true,
+    "nodeId": "8421747670",
+    "way": "w98662142",
+    "street": null,
+    "sidewalkWay": "906951444",
+    "evidence": "the accepted way's node is on the mapped sidewalk w906951444"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.6600312,
+     43.3174372
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "entrance-14283552483",
+    "kind": "entrance",
+    "accepted": true,
+    "nodeId": "14283552483",
+    "way": "w1568246028",
+    "street": null,
+    "sidewalkWay": "1568246029",
+    "evidence": "the accepted way's node is on the mapped sidewalk w1568246029"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.6624315,
+     43.3222605
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "entrance-1075878749",
+    "kind": "entrance",
+    "accepted": true,
+    "nodeId": "1075878749",
+    "way": "w20632862",
+    "street": "Glen Street",
+    "sidewalkWay": null,
+    "evidence": "the accepted way's node is on Glen Street (OSM shares the node)"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.6582037,
+     43.3197698
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "entrance-5376585354",
+    "kind": "entrance",
+    "accepted": true,
+    "nodeId": "5376585354",
+    "way": "w470028691",
+    "street": "Glen Street",
+    "sidewalkWay": null,
+    "evidence": "the accepted way's node is on Glen Street (OSM shares the node)"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.6591867,
+     43.320656
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "entrance-3044870866",
+    "kind": "entrance",
+    "accepted": true,
+    "nodeId": "3044870866",
+    "way": "w671888405",
+    "street": "Fire Road",
+    "sidewalkWay": null,
+    "evidence": "the accepted way's node is on Fire Road (OSM shares the node)"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.6637669,
+     43.3220621
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "entrance-12288007832",
+    "kind": "entrance",
+    "accepted": true,
+    "nodeId": "12288007832",
+    "way": "w1328140737",
+    "street": "Park View Avenue",
+    "sidewalkWay": null,
+    "evidence": "the accepted way's node is on Park View Avenue (OSM shares the node)"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.6675911,
+     43.3215299
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "entrance-221466297",
+    "kind": "entrance",
+    "accepted": true,
+    "nodeId": "221466297",
+    "way": "w1328141829",
+    "street": "Angel Lane",
+    "sidewalkWay": null,
+    "evidence": "the accepted way's node is on Angel Lane (OSM shares the node)"
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -73.6703771,
+     43.3240651
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1096083286",
+    "accepted": false,
+    "osmWayId": "1096083286",
+    "version": "1",
+    "reason": "context only: sidewalk (the game's own sidewalks are used; crossings are CC-006)",
+    "tags": {
+     "footway": "sidewalk",
+     "highway": "footway"
+    },
+    "candidateFile": "osm-park-path-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6569833,
+      43.3186008
+     ],
+     [
+      -73.6572199,
+      43.318787
+     ],
+     [
+      -73.6577631,
+      43.3192227
+     ],
+     [
+      -73.6579744,
+      43.3193832
+     ],
+     [
+      -73.6582658,
+      43.3196707
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1096083292",
+    "accepted": false,
+    "osmWayId": "1096083292",
+    "version": "2",
+    "reason": "context only: crossing (the game's own sidewalks are used; crossings are CC-006)",
+    "tags": {
+     "crossing": "marked",
+     "crossing:markings": "yes",
+     "footway": "crossing",
+     "highway": "footway"
+    },
+    "candidateFile": "osm-park-path-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6582658,
+      43.3196707
+     ],
+     [
+      -73.6583191,
+      43.3197217
+     ],
+     [
+      -73.6583607,
+      43.3197615
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1096083293",
+    "accepted": false,
+    "osmWayId": "1096083293",
+    "version": "2",
+    "reason": "context only: sidewalk (the game's own sidewalks are used; crossings are CC-006)",
+    "tags": {
+     "footway": "sidewalk",
+     "highway": "footway",
+     "surface": "concrete"
+    },
+    "candidateFile": "osm-park-path-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6583607,
+      43.3197615
+     ],
+     [
+      -73.6588509,
+      43.3201926
+     ],
+     [
+      -73.6590592,
+      43.3203902
+     ],
+     [
+      -73.6592571,
+      43.3205672
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1096083294",
+    "accepted": false,
+    "osmWayId": "1096083294",
+    "version": "2",
+    "reason": "context only: crossing (the game's own sidewalks are used; crossings are CC-006)",
+    "tags": {
+     "crossing": "unmarked",
+     "crossing:markings": "no",
+     "footway": "crossing",
+     "highway": "footway"
+    },
+    "candidateFile": "osm-park-path-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6592571,
+      43.3205672
+     ],
+     [
+      -73.6593032,
+      43.3206179
+     ],
+     [
+      -73.6593399,
+      43.3206585
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1096083295",
+    "accepted": false,
+    "osmWayId": "1096083295",
+    "version": "2",
+    "reason": "context only: crossing (the game's own sidewalks are used; crossings are CC-006)",
+    "tags": {
+     "crossing": "marked",
+     "crossing:markings": "yes",
+     "footway": "crossing",
+     "highway": "footway"
+    },
+    "candidateFile": "osm-park-path-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6592571,
+      43.3205672
+     ],
+     [
+      -73.6591569,
+      43.3206275
+     ],
+     [
+      -73.6590553,
+      43.3206886
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1096083296",
+    "accepted": false,
+    "osmWayId": "1096083296",
+    "version": "3",
+    "reason": "context only: sidewalk (the game's own sidewalks are used; crossings are CC-006)",
+    "tags": {
+     "covered": "no",
+     "footway": "sidewalk",
+     "highway": "footway",
+     "surface": "asphalt"
+    },
+    "candidateFile": "osm-park-path-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6624606,
+      43.3222534
+     ],
+     [
+      -73.6628031,
+      43.3221831
+     ],
+     [
+      -73.6630966,
+      43.3221186
+     ],
+     [
+      -73.6636986,
+      43.3219875
+     ],
+     [
+      -73.663742,
+      43.3219789
+     ],
+     [
+      -73.6638678,
+      43.3219522
+     ],
+     [
+      -73.6640346,
+      43.3219257
+     ],
+     [
+      -73.6644318,
+      43.3218915
+     ],
+     [
+      -73.6647462,
+      43.3218742
+     ],
+     [
+      -73.6651805,
+      43.3218471
+     ],
+     [
+      -73.6656067,
+      43.3218194
+     ],
+     [
+      -73.6660882,
+      43.3217709
+     ],
+     [
+      -73.6662687,
+      43.321747
+     ],
+     [
+      -73.6662222,
+      43.3214685
+     ],
+     [
+      -73.6661302,
+      43.3211232
+     ],
+     [
+      -73.6660643,
+      43.3207481
+     ],
+     [
+      -73.6659746,
+      43.3202029
+     ],
+     [
+      -73.6658917,
+      43.3197394
+     ],
+     [
+      -73.6658361,
+      43.319418
+     ],
+     [
+      -73.6657259,
+      43.3187348
+     ],
+     [
+      -73.6656274,
+      43.3182571
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1096083297",
+    "accepted": false,
+    "osmWayId": "1096083297",
+    "version": "2",
+    "reason": "context only: crossing (the game's own sidewalks are used; crossings are CC-006)",
+    "tags": {
+     "crossing": "uncontrolled",
+     "crossing:island": "no",
+     "crossing:markings": "zebra",
+     "footway": "crossing",
+     "highway": "footway",
+     "surface": "asphalt",
+     "tactile_paving": "no"
+    },
+    "candidateFile": "osm-park-path-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6611057,
+      43.3225426
+     ],
+     [
+      -73.6611502,
+      43.3225934
+     ],
+     [
+      -73.6612118,
+      43.322664
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1568246029",
+    "accepted": false,
+    "osmWayId": "1568246029",
+    "version": "1",
+    "reason": "context only: sidewalk (the game's own sidewalks are used; crossings are CC-006)",
+    "tags": {
+     "covered": "no",
+     "footway": "sidewalk",
+     "highway": "footway",
+     "surface": "concrete"
+    },
+    "candidateFile": "osm-park-path-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6593399,
+      43.3206585
+     ],
+     [
+      -73.659891,
+      43.3213107
+     ],
+     [
+      -73.6605766,
+      43.3220438
+     ],
+     [
+      -73.6606419,
+      43.3221115
+     ],
+     [
+      -73.6610359,
+      43.32252
+     ],
+     [
+      -73.6611057,
+      43.3225426
+     ],
+     [
+      -73.6612096,
+      43.3225184
+     ],
+     [
+      -73.6612897,
+      43.3224796
+     ],
+     [
+      -73.6613703,
+      43.3224824
+     ],
+     [
+      -73.6624315,
+      43.3222605
+     ],
+     [
+      -73.6624606,
+      43.3222534
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w356119184",
+    "accepted": false,
+    "osmWayId": "356119184",
+    "version": "2",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "highway": "footway"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6625183,
+      43.3231677
+     ],
+     [
+      -73.6624358,
+      43.3231946
+     ],
+     [
+      -73.6624044,
+      43.3232221
+     ],
+     [
+      -73.6623946,
+      43.323241
+     ],
+     [
+      -73.6624564,
+      43.3234317
+     ],
+     [
+      -73.6624455,
+      43.3235239
+     ],
+     [
+      -73.6623935,
+      43.3235727
+     ],
+     [
+      -73.6623665,
+      43.3236058
+     ],
+     [
+      -73.6623581,
+      43.3236212
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w696794875",
+    "accepted": false,
+    "osmWayId": "696794875",
+    "version": "2",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "highway": "footway",
+     "leisure": "track",
+     "sport": "running"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6633075,
+      43.3238053
+     ],
+     [
+      -73.6646615,
+      43.3236915
+     ],
+     [
+      -73.6647506,
+      43.323651
+     ],
+     [
+      -73.6648054,
+      43.3236261
+     ],
+     [
+      -73.6648818,
+      43.3235362
+     ],
+     [
+      -73.6649155,
+      43.3234168
+     ],
+     [
+      -73.664893,
+      43.3232664
+     ],
+     [
+      -73.6647851,
+      43.3231683
+     ],
+     [
+      -73.6646997,
+      43.3231225
+     ],
+     [
+      -73.6645604,
+      43.3230947
+     ],
+     [
+      -73.6631578,
+      43.323219
+     ],
+     [
+      -73.6630162,
+      43.3232795
+     ],
+     [
+      -73.6628858,
+      43.323389
+     ],
+     [
+      -73.6628498,
+      43.3235133
+     ],
+     [
+      -73.6629128,
+      43.3236441
+     ],
+     [
+      -73.6630139,
+      43.323739
+     ],
+     [
+      -73.6631801,
+      43.3238093
+     ],
+     [
+      -73.6633075,
+      43.3238053
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w807910278",
+    "accepted": false,
+    "osmWayId": "807910278",
+    "version": "1",
+    "reason": "context only: sidewalk (the game's own sidewalks are used; crossings are CC-006)",
+    "tags": {
+     "footway": "sidewalk",
+     "highway": "footway",
+     "surface": "concrete"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6682902,
+      43.3256695
+     ],
+     [
+      -73.6681969,
+      43.3257824
+     ],
+     [
+      -73.6680881,
+      43.3259139
+     ],
+     [
+      -73.668061,
+      43.3259467
+     ],
+     [
+      -73.667894,
+      43.3261488
+     ],
+     [
+      -73.6678048,
+      43.3262581
+     ],
+     [
+      -73.6677628,
+      43.3263094
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w807910290",
+    "accepted": false,
+    "osmWayId": "807910290",
+    "version": "1",
+    "reason": "context only: sidewalk (the game's own sidewalks are used; crossings are CC-006)",
+    "tags": {
+     "footway": "sidewalk",
+     "highway": "footway",
+     "surface": "concrete"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6677628,
+      43.3263094
+     ],
+     [
+      -73.6677242,
+      43.3263565
+     ],
+     [
+      -73.6676053,
+      43.3265014
+     ],
+     [
+      -73.6675599,
+      43.3265569
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w807910291",
+    "accepted": false,
+    "osmWayId": "807910291",
+    "version": "1",
+    "reason": "not open to walkers (access=private)",
+    "tags": {
+     "access": "private",
+     "highway": "footway",
+     "incline": "down",
+     "surface": "wood"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6677902,
+      43.3263884
+     ],
+     [
+      -73.6677242,
+      43.3263565
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w807910295",
+    "accepted": false,
+    "osmWayId": "807910295",
+    "version": "1",
+    "reason": "not open to walkers (access=private)",
+    "tags": {
+     "access": "private",
+     "highway": "footway",
+     "surface": "concrete"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6680447,
+      43.3262099
+     ],
+     [
+      -73.667894,
+      43.3261488
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w807910296",
+    "accepted": false,
+    "osmWayId": "807910296",
+    "version": "1",
+    "reason": "not open to walkers (access=no)",
+    "tags": {
+     "access": "no",
+     "foot": "destination",
+     "highway": "footway",
+     "surface": "concrete"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.667894,
+      43.3261488
+     ],
+     [
+      -73.6678211,
+      43.326119
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w807910299",
+    "accepted": false,
+    "osmWayId": "807910299",
+    "version": "1",
+    "reason": "not open to walkers (access=private)",
+    "tags": {
+     "access": "private",
+     "highway": "footway",
+     "surface": "concrete"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.668061,
+      43.3259467
+     ],
+     [
+      -73.6681479,
+      43.3259823
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w807910300",
+    "accepted": false,
+    "osmWayId": "807910300",
+    "version": "1",
+    "reason": "not open to walkers (access=private)",
+    "tags": {
+     "access": "private",
+     "highway": "footway",
+     "surface": "concrete"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.668262,
+      43.3258076
+     ],
+     [
+      -73.6681969,
+      43.3257824
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w807910301",
+    "accepted": false,
+    "osmWayId": "807910301",
+    "version": "1",
+    "reason": "not open to walkers (access=private)",
+    "tags": {
+     "access": "private",
+     "handrail": "yes",
+     "highway": "steps",
+     "incline": "up",
+     "step_count": "4",
+     "surface": "concrete",
+     "tactile_paving": "no"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.668262,
+      43.3258076
+     ],
+     [
+      -73.6682927,
+      43.3258197
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w807910304",
+    "accepted": false,
+    "osmWayId": "807910304",
+    "version": "1",
+    "reason": "not open to walkers (access=private)",
+    "tags": {
+     "access": "private",
+     "highway": "footway",
+     "surface": "concrete"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6675343,
+      43.3264758
+     ],
+     [
+      -73.6673455,
+      43.3264071
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w856427843",
+    "accepted": false,
+    "osmWayId": "856427843",
+    "version": "3",
+    "reason": "partly accepted: only the nodes on the minimal corridor are kept",
+    "tags": {
+     "foot": "yes",
+     "highway": "path"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6771843,
+      43.324509
+     ],
+     [
+      -73.6773538,
+      43.3244684
+     ],
+     [
+      -73.6775534,
+      43.3243076
+     ],
+     [
+      -73.6778409,
+      43.324253
+     ],
+     [
+      -73.6781392,
+      43.3242795
+     ],
+     [
+      -73.6783072,
+      43.3243477
+     ],
+     [
+      -73.6785125,
+      43.324431
+     ],
+     [
+      -73.6788687,
+      43.3243982
+     ],
+     [
+      -73.6792731,
+      43.324265
+     ],
+     [
+      -73.6793724,
+      43.3240892
+     ],
+     [
+      -73.6792608,
+      43.3237866
+     ],
+     [
+      -73.6790903,
+      43.3236588
+     ],
+     [
+      -73.6788113,
+      43.3234674
+     ],
+     [
+      -73.6786822,
+      43.3233878
+     ],
+     [
+      -73.678616,
+      43.3233282
+     ],
+     [
+      -73.6784615,
+      43.323189
+     ],
+     [
+      -73.6781225,
+      43.3226937
+     ],
+     [
+      -73.6780344,
+      43.3226164
+     ],
+     [
+      -73.677866,
+      43.3223608
+     ],
+     [
+      -73.677593,
+      43.3218933
+     ],
+     [
+      -73.6775509,
+      43.3218361
+     ],
+     [
+      -73.6772298,
+      43.3213992
+     ],
+     [
+      -73.6766932,
+      43.3206678
+     ],
+     [
+      -73.6766518,
+      43.320539
+     ],
+     [
+      -73.6766166,
+      43.3203314
+     ],
+     [
+      -73.6755465,
+      43.320704
+     ],
+     [
+      -73.675341,
+      43.3207755
+     ],
+     [
+      -73.674885,
+      43.3202135
+     ],
+     [
+      -73.6748232,
+      43.3201664
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w856427845",
+    "accepted": false,
+    "osmWayId": "856427845",
+    "version": "2",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "foot": "yes",
+     "highway": "path"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6647248,
+      43.3227737
+     ],
+     [
+      -73.6649343,
+      43.322804
+     ],
+     [
+      -73.6663181,
+      43.323004
+     ],
+     [
+      -73.6664689,
+      43.3230265
+     ],
+     [
+      -73.6677332,
+      43.3231938
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w856427846",
+    "accepted": false,
+    "osmWayId": "856427846",
+    "version": "4",
+    "reason": "partly accepted: only the nodes on the minimal corridor are kept",
+    "tags": {
+     "foot": "yes",
+     "highway": "path"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6690853,
+      43.3234057
+     ],
+     [
+      -73.6691491,
+      43.3234153
+     ],
+     [
+      -73.6694884,
+      43.3234664
+     ],
+     [
+      -73.6707731,
+      43.323663
+     ],
+     [
+      -73.6710441,
+      43.3237045
+     ],
+     [
+      -73.6748287,
+      43.3241825
+     ],
+     [
+      -73.6757579,
+      43.3243113
+     ],
+     [
+      -73.6763953,
+      43.3243996
+     ],
+     [
+      -73.6771843,
+      43.324509
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1086513558",
+    "accepted": false,
+    "osmWayId": "1086513558",
+    "version": "1",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "highway": "path"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6647506,
+      43.323651
+     ],
+     [
+      -73.6650518,
+      43.3236789
+     ],
+     [
+      -73.6654388,
+      43.3236528
+     ],
+     [
+      -73.6656323,
+      43.323587
+     ],
+     [
+      -73.6659273,
+      43.3234576
+     ],
+     [
+      -73.6663143,
+      43.3232217
+     ],
+     [
+      -73.66642,
+      43.3230888
+     ],
+     [
+      -73.6664689,
+      43.3230265
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1086513559",
+    "accepted": false,
+    "osmWayId": "1086513559",
+    "version": "1",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6645604,
+      43.3230947
+     ],
+     [
+      -73.6647696,
+      43.3229529
+     ],
+     [
+      -73.6649343,
+      43.322804
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1086513560",
+    "accepted": false,
+    "osmWayId": "1086513560",
+    "version": "2",
+    "reason": "partly accepted: only the nodes on the minimal corridor are kept",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6718345,
+      43.3212928
+     ],
+     [
+      -73.6718045,
+      43.321123
+     ],
+     [
+      -73.6717746,
+      43.320988
+     ],
+     [
+      -73.6717408,
+      43.3208727
+     ],
+     [
+      -73.6717374,
+      43.3206185
+     ],
+     [
+      -73.6717361,
+      43.3204115
+     ],
+     [
+      -73.6724016,
+      43.3202987
+     ],
+     [
+      -73.67358,
+      43.3201739
+     ],
+     [
+      -73.6738374,
+      43.320233
+     ],
+     [
+      -73.6739067,
+      43.320314
+     ],
+     [
+      -73.674031,
+      43.3204594
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1086513561",
+    "accepted": false,
+    "osmWayId": "1086513561",
+    "version": "3",
+    "reason": "partly accepted: only the nodes on the minimal corridor are kept",
+    "tags": {
+     "highway": "path"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6739067,
+      43.320314
+     ],
+     [
+      -73.6743455,
+      43.3203143
+     ],
+     [
+      -73.6743717,
+      43.3203143
+     ],
+     [
+      -73.6747668,
+      43.3202108
+     ],
+     [
+      -73.6748232,
+      43.3201664
+     ],
+     [
+      -73.6750557,
+      43.3199628
+     ],
+     [
+      -73.675149,
+      43.3198414
+     ],
+     [
+      -73.6752905,
+      43.3196573
+     ],
+     [
+      -73.6755005,
+      43.3194996
+     ],
+     [
+      -73.6758684,
+      43.3194816
+     ],
+     [
+      -73.675891,
+      43.3196589
+     ],
+     [
+      -73.6759881,
+      43.3198297
+     ],
+     [
+      -73.6764418,
+      43.3201188
+     ],
+     [
+      -73.6765886,
+      43.3202453
+     ],
+     [
+      -73.6766166,
+      43.3203314
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1086513562",
+    "accepted": false,
+    "osmWayId": "1086513562",
+    "version": "1",
+    "reason": "partly accepted: only the nodes on the minimal corridor are kept",
+    "tags": {
+     "foot": "yes",
+     "highway": "path"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6678864,
+      43.323215
+     ],
+     [
+      -73.6681618,
+      43.3232425
+     ],
+     [
+      -73.6685368,
+      43.3232994
+     ],
+     [
+      -73.6687784,
+      43.3233462
+     ],
+     [
+      -73.6690853,
+      43.3234057
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1086513563",
+    "accepted": false,
+    "osmWayId": "1086513563",
+    "version": "1",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "bridge": "yes",
+     "foot": "yes",
+     "highway": "path",
+     "layer": "1"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6677332,
+      43.3231938
+     ],
+     [
+      -73.6678864,
+      43.323215
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1086513564",
+    "accepted": false,
+    "osmWayId": "1086513564",
+    "version": "1",
+    "reason": "partly accepted: only the nodes on the minimal corridor are kept",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6664689,
+      43.3230265
+     ],
+     [
+      -73.6665202,
+      43.3229355
+     ],
+     [
+      -73.6666467,
+      43.3226953
+     ],
+     [
+      -73.6668572,
+      43.3223332
+     ],
+     [
+      -73.6671345,
+      43.3219742
+     ],
+     [
+      -73.6674189,
+      43.3218748
+     ],
+     [
+      -73.6677681,
+      43.3217922
+     ],
+     [
+      -73.6679448,
+      43.3217629
+     ],
+     [
+      -73.66813,
+      43.3217745
+     ],
+     [
+      -73.668407,
+      43.3218649
+     ],
+     [
+      -73.6684912,
+      43.3218924
+     ],
+     [
+      -73.6690686,
+      43.3220425
+     ],
+     [
+      -73.6693787,
+      43.3221171
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1086513565",
+    "accepted": false,
+    "osmWayId": "1086513565",
+    "version": "1",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "bridge": "yes",
+     "highway": "path",
+     "layer": "1",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6693787,
+      43.3221171
+     ],
+     [
+      -73.6694852,
+      43.3221493
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1086513566",
+    "accepted": false,
+    "osmWayId": "1086513566",
+    "version": "1",
+    "reason": "partly accepted: only the nodes on the minimal corridor are kept",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6694852,
+      43.3221493
+     ],
+     [
+      -73.6697443,
+      43.3222292
+     ],
+     [
+      -73.6702138,
+      43.3223557
+     ],
+     [
+      -73.6704395,
+      43.3224498
+     ],
+     [
+      -73.6710184,
+      43.3222195
+     ],
+     [
+      -73.6714257,
+      43.3221539
+     ],
+     [
+      -73.6719309,
+      43.3219415
+     ],
+     [
+      -73.6720758,
+      43.3216363
+     ],
+     [
+      -73.6718848,
+      43.321384
+     ],
+     [
+      -73.6718759,
+      43.3213679
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1086513567",
+    "accepted": false,
+    "osmWayId": "1086513567",
+    "version": "1",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "bridge": "yes",
+     "highway": "path",
+     "layer": "1",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6718759,
+      43.3213679
+     ],
+     [
+      -73.6718345,
+      43.3212928
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1086513570",
+    "accepted": false,
+    "osmWayId": "1086513570",
+    "version": "1",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.668407,
+      43.3218649
+     ],
+     [
+      -73.6688199,
+      43.3217144
+     ],
+     [
+      -73.6697459,
+      43.3214971
+     ],
+     [
+      -73.6701392,
+      43.3213948
+     ],
+     [
+      -73.6708867,
+      43.3212158
+     ],
+     [
+      -73.671299,
+      43.3211401
+     ],
+     [
+      -73.671545,
+      43.3210152
+     ],
+     [
+      -73.6717408,
+      43.3208727
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1086513572",
+    "accepted": false,
+    "osmWayId": "1086513572",
+    "version": "1",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6783072,
+      43.3243477
+     ],
+     [
+      -73.678426,
+      43.3242106
+     ],
+     [
+      -73.6784949,
+      43.3240208
+     ],
+     [
+      -73.6785611,
+      43.3238153
+     ],
+     [
+      -73.6786463,
+      43.3235606
+     ],
+     [
+      -73.6786822,
+      43.3233878
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1086513574",
+    "accepted": false,
+    "osmWayId": "1086513574",
+    "version": "3",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6691491,
+      43.3234153
+     ],
+     [
+      -73.6698082,
+      43.3232981
+     ],
+     [
+      -73.6703179,
+      43.323247
+     ],
+     [
+      -73.6709653,
+      43.3232099
+     ],
+     [
+      -73.6717412,
+      43.3231096
+     ],
+     [
+      -73.6727361,
+      43.3230033
+     ],
+     [
+      -73.6737066,
+      43.3228821
+     ],
+     [
+      -73.6743885,
+      43.3226631
+     ],
+     [
+      -73.6746246,
+      43.3226868
+     ],
+     [
+      -73.6746787,
+      43.3229761
+     ],
+     [
+      -73.6746186,
+      43.323279
+     ],
+     [
+      -73.6746787,
+      43.3236068
+     ],
+     [
+      -73.6748235,
+      43.3239219
+     ],
+     [
+      -73.6748287,
+      43.3241825
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1086513575",
+    "accepted": false,
+    "osmWayId": "1086513575",
+    "version": "1",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6631801,
+      43.3238093
+     ],
+     [
+      -73.6628194,
+      43.3238402
+     ],
+     [
+      -73.6625479,
+      43.323795
+     ],
+     [
+      -73.6624201,
+      43.3237911
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1089938465",
+    "accepted": false,
+    "osmWayId": "1089938465",
+    "version": "1",
+    "reason": "partly accepted: only the nodes on the minimal corridor are kept",
+    "tags": {
+     "foot": "yes",
+     "highway": "path"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.675341,
+      43.3207755
+     ],
+     [
+      -73.6750837,
+      43.321229
+     ],
+     [
+      -73.6750969,
+      43.3215678
+     ],
+     [
+      -73.6749682,
+      43.321722
+     ],
+     [
+      -73.6747852,
+      43.3218835
+     ],
+     [
+      -73.6744684,
+      43.3219715
+     ],
+     [
+      -73.6742266,
+      43.3219393
+     ],
+     [
+      -73.6740086,
+      43.3218142
+     ],
+     [
+      -73.6739677,
+      43.3217773
+     ],
+     [
+      -73.6738025,
+      43.3216283
+     ],
+     [
+      -73.6737429,
+      43.3213681
+     ],
+     [
+      -73.6737385,
+      43.3211523
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1089938466",
+    "accepted": false,
+    "osmWayId": "1089938466",
+    "version": "1",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6748287,
+      43.3241825
+     ],
+     [
+      -73.6747987,
+      43.3243761
+     ],
+     [
+      -73.6747257,
+      43.3246492
+     ],
+     [
+      -73.6747386,
+      43.3248131
+     ],
+     [
+      -73.6748308,
+      43.3249911
+     ],
+     [
+      -73.6750669,
+      43.3249724
+     ],
+     [
+      -73.6755475,
+      43.3248022
+     ],
+     [
+      -73.6757857,
+      43.3246586
+     ],
+     [
+      -73.6758265,
+      43.3245322
+     ],
+     [
+      -73.6757579,
+      43.3243113
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1089938467",
+    "accepted": false,
+    "osmWayId": "1089938467",
+    "version": "1",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6757579,
+      43.3243113
+     ],
+     [
+      -73.6754218,
+      43.3235195
+     ],
+     [
+      -73.6751839,
+      43.3231419
+     ],
+     [
+      -73.6752812,
+      43.3226698
+     ],
+     [
+      -73.6750811,
+      43.3223512
+     ],
+     [
+      -73.6751568,
+      43.3221034
+     ],
+     [
+      -73.6754488,
+      43.3219696
+     ],
+     [
+      -73.6757516,
+      43.3223473
+     ],
+     [
+      -73.6760219,
+      43.3225125
+     ],
+     [
+      -73.676514,
+      43.3231301
+     ],
+     [
+      -73.6760219,
+      43.3238263
+     ],
+     [
+      -73.6762436,
+      43.3241567
+     ],
+     [
+      -73.6763953,
+      43.3243996
+     ],
+     [
+      -73.6765356,
+      43.3246641
+     ],
+     [
+      -73.6768925,
+      43.3247349
+     ],
+     [
+      -73.677298,
+      43.3246287
+     ],
+     [
+      -73.6773538,
+      43.3244684
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1089938469",
+    "accepted": false,
+    "osmWayId": "1089938469",
+    "version": "1",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6745199,
+      43.3173735
+     ],
+     [
+      -73.6745307,
+      43.3177785
+     ],
+     [
+      -73.674455,
+      43.3180617
+     ],
+     [
+      -73.6747281,
+      43.3183685
+     ],
+     [
+      -73.6748876,
+      43.3185652
+     ],
+     [
+      -73.6746443,
+      43.3187796
+     ],
+     [
+      -73.6746767,
+      43.3190747
+     ],
+     [
+      -73.6747876,
+      43.3192261
+     ],
+     [
+      -73.6750741,
+      43.3190884
+     ],
+     [
+      -73.6752688,
+      43.3191396
+     ],
+     [
+      -73.6751823,
+      43.3193677
+     ],
+     [
+      -73.675139,
+      43.3195251
+     ],
+     [
+      -73.6751066,
+      43.3197355
+     ],
+     [
+      -73.675149,
+      43.3198414
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1089938470",
+    "accepted": false,
+    "osmWayId": "1089938470",
+    "version": "1",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6775509,
+      43.3218361
+     ],
+     [
+      -73.6771257,
+      43.3216651
+     ],
+     [
+      -73.6766999,
+      43.3214222
+     ],
+     [
+      -73.6766727,
+      43.3212463
+     ],
+     [
+      -73.676659,
+      43.3208151
+     ],
+     [
+      -73.6766932,
+      43.3206678
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1089938471",
+    "accepted": false,
+    "osmWayId": "1089938471",
+    "version": "1",
+    "reason": "not on the accepted network (outside the minimum Cole's Woods corridor, or not joined to it)",
+    "tags": {
+     "highway": "path",
+     "surface": "ground"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6766999,
+      43.3214222
+     ],
+     [
+      -73.6761213,
+      43.3211314
+     ],
+     [
+      -73.6756942,
+      43.3208344
+     ],
+     [
+      -73.6755465,
+      43.320704
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1096083298",
+    "accepted": false,
+    "osmWayId": "1096083298",
+    "version": "1",
+    "reason": "context only: sidewalk (the game's own sidewalks are used; crossings are CC-006)",
+    "tags": {
+     "footway": "sidewalk",
+     "highway": "footway"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6612118,
+      43.322664
+     ],
+     [
+      -73.6612222,
+      43.3227054
+     ],
+     [
+      -73.6612506,
+      43.3227497
+     ],
+     [
+      -73.6616646,
+      43.3232099
+     ],
+     [
+      -73.662217,
+      43.3238319
+     ],
+     [
+      -73.6622726,
+      43.3239138
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1096083309",
+    "accepted": false,
+    "osmWayId": "1096083309",
+    "version": "1",
+    "reason": "context only: sidewalk (the game's own sidewalks are used; crossings are CC-006)",
+    "tags": {
+     "footway": "sidewalk",
+     "highway": "footway"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6606097,
+      43.3223312
+     ],
+     [
+      -73.660811,
+      43.3225778
+     ],
+     [
+      -73.6610509,
+      43.3228531
+     ],
+     [
+      -73.661464,
+      43.3233264
+     ],
+     [
+      -73.6618376,
+      43.3237651
+     ],
+     [
+      -73.6620035,
+      43.3239444
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1096083310",
+    "accepted": false,
+    "osmWayId": "1096083310",
+    "version": "2",
+    "reason": "context only: crossing (the game's own sidewalks are used; crossings are CC-006)",
+    "tags": {
+     "crossing": "marked",
+     "crossing:markings": "yes",
+     "footway": "crossing",
+     "highway": "footway"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6620035,
+      43.3239444
+     ],
+     [
+      -73.6620918,
+      43.3240043
+     ],
+     [
+      -73.6621589,
+      43.3240498
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "excluded-w1422094135",
+    "accepted": false,
+    "osmWayId": "1422094135",
+    "version": "2",
+    "reason": "context only: crossing (the game's own sidewalks are used; crossings are CC-006)",
+    "tags": {
+     "crossing": "uncontrolled",
+     "crossing:markings": "ladder",
+     "crossing:signals": "no",
+     "footway": "crossing",
+     "highway": "footway"
+    },
+    "candidateFile": "osm-coles-corridor-candidates.geojson"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -73.6765012,
+      43.3263524
+     ],
+     [
+      -73.6764545,
+      43.3263024
+     ],
+     [
+      -73.6764121,
+      43.3262572
+     ]
+    ]
+   }
+  }
+ ]
+}
