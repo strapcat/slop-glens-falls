@@ -1,0 +1,1028 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "w98662142",
+      "properties": {
+        "osmWayId": "98662142",
+        "version": "3",
+        "timestamp": "2022-05-20T22:08:01Z",
+        "nodeIds": [
+          "8421747670",
+          "1141399720",
+          "1141401827",
+          "1141399685"
+        ],
+        "tags": {
+          "covered": "no",
+          "highway": "footway",
+          "name": "Newell Way",
+          "source": "survey",
+          "survey:date": "2022-05-20"
+        },
+        "candidateOnly": true,
+        "role": "park-route-candidate",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/98662142"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6600312,
+            43.3174372
+          ],
+          [
+            -73.6602875,
+            43.3178524
+          ],
+          [
+            -73.6604757,
+            43.3181683
+          ],
+          [
+            -73.6604391,
+            43.3184933
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w234501321",
+      "properties": {
+        "osmWayId": "234501321",
+        "version": "2",
+        "timestamp": "2018-01-31T21:10:08Z",
+        "nodeIds": [
+          "2427424914",
+          "2427424910"
+        ],
+        "tags": {
+          "bridge": "yes",
+          "highway": "footway",
+          "layer": "1",
+          "surface": "wood"
+        },
+        "candidateOnly": true,
+        "role": "park-route-candidate",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/234501321"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6594001,
+            43.3199277
+          ],
+          [
+            -73.659335,
+            43.3197855
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w234501322",
+      "properties": {
+        "osmWayId": "234501322",
+        "version": "1",
+        "timestamp": "2013-08-22T00:47:12Z",
+        "nodeIds": [
+          "2427424910",
+          "2427424909"
+        ],
+        "tags": {
+          "highway": "footway",
+          "surface": "dirt"
+        },
+        "candidateOnly": true,
+        "role": "park-route-candidate",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/234501322"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.659335,
+            43.3197855
+          ],
+          [
+            -73.6593689,
+            43.3197115
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w234501323",
+      "properties": {
+        "osmWayId": "234501323",
+        "version": "2",
+        "timestamp": "2018-01-31T21:10:08Z",
+        "nodeIds": [
+          "2427424893",
+          "2427424892"
+        ],
+        "tags": {
+          "bridge": "yes",
+          "highway": "footway",
+          "layer": "1",
+          "surface": "wood"
+        },
+        "candidateOnly": true,
+        "role": "park-route-candidate",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/234501323"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6600739,
+            43.31911
+          ],
+          [
+            -73.6602234,
+            43.3190781
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w234501324",
+      "properties": {
+        "osmWayId": "234501324",
+        "version": "1",
+        "timestamp": "2013-08-22T00:47:12Z",
+        "nodeIds": [
+          "2427424900",
+          "2427424901"
+        ],
+        "tags": {
+          "highway": "footway",
+          "surface": "dirt"
+        },
+        "candidateOnly": true,
+        "role": "park-route-candidate",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/234501324"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6591586,
+            43.3193718
+          ],
+          [
+            -73.6593949,
+            43.3193759
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w234501325",
+      "properties": {
+        "osmWayId": "234501325",
+        "version": "2",
+        "timestamp": "2018-01-31T21:10:08Z",
+        "nodeIds": [
+          "2427424904",
+          "2427424907"
+        ],
+        "tags": {
+          "bridge": "yes",
+          "highway": "footway",
+          "layer": "1",
+          "surface": "wood"
+        },
+        "candidateOnly": true,
+        "role": "park-route-candidate",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/234501325"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6600935,
+            43.3194119
+          ],
+          [
+            -73.6600518,
+            43.3197096
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w234501326",
+      "properties": {
+        "osmWayId": "234501326",
+        "version": "2",
+        "timestamp": "2018-01-31T21:10:08Z",
+        "nodeIds": [
+          "2427424901",
+          "2427424903"
+        ],
+        "tags": {
+          "bridge": "yes",
+          "highway": "footway",
+          "layer": "1",
+          "surface": "wood"
+        },
+        "candidateOnly": true,
+        "role": "park-route-candidate",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/234501326"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6593949,
+            43.3193759
+          ],
+          [
+            -73.6597103,
+            43.3194043
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w234501327",
+      "properties": {
+        "osmWayId": "234501327",
+        "version": "1",
+        "timestamp": "2013-08-22T00:47:12Z",
+        "nodeIds": [
+          "2427424892",
+          "2427424895",
+          "2427424904"
+        ],
+        "tags": {
+          "highway": "footway",
+          "surface": "dirt"
+        },
+        "candidateOnly": true,
+        "role": "park-route-candidate",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/234501327"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6602234,
+            43.3190781
+          ],
+          [
+            -73.6602004,
+            43.3191635
+          ],
+          [
+            -73.6600935,
+            43.3194119
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w234501328",
+      "properties": {
+        "osmWayId": "234501328",
+        "version": "1",
+        "timestamp": "2013-08-22T00:47:12Z",
+        "nodeIds": [
+          "2427424907",
+          "2427424913",
+          "2427424914"
+        ],
+        "tags": {
+          "highway": "footway",
+          "surface": "dirt"
+        },
+        "candidateOnly": true,
+        "role": "park-route-candidate",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/234501328"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6600518,
+            43.3197096
+          ],
+          [
+            -73.6595357,
+            43.3199258
+          ],
+          [
+            -73.6594001,
+            43.3199277
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w234501329",
+      "properties": {
+        "osmWayId": "234501329",
+        "version": "1",
+        "timestamp": "2013-08-22T00:47:12Z",
+        "nodeIds": [
+          "2427424892",
+          "2427424888",
+          "2427424887",
+          "2427424889",
+          "2427424891"
+        ],
+        "tags": {
+          "highway": "footway",
+          "surface": "dirt"
+        },
+        "candidateOnly": true,
+        "role": "park-route-candidate",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/234501329"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6602234,
+            43.3190781
+          ],
+          [
+            -73.6604179,
+            43.3190367
+          ],
+          [
+            -73.6605496,
+            43.3190288
+          ],
+          [
+            -73.6606617,
+            43.319044
+          ],
+          [
+            -73.6608174,
+            43.3190738
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w234501330",
+      "properties": {
+        "osmWayId": "234501330",
+        "version": "1",
+        "timestamp": "2013-08-22T00:47:12Z",
+        "nodeIds": [
+          "2427424903",
+          "2427424902",
+          "2427424899",
+          "2427424898",
+          "2427424893"
+        ],
+        "tags": {
+          "highway": "footway",
+          "surface": "dirt"
+        },
+        "candidateOnly": true,
+        "role": "park-route-candidate",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/234501330"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6597103,
+            43.3194043
+          ],
+          [
+            -73.6597677,
+            43.3193967
+          ],
+          [
+            -73.6598276,
+            43.3193702
+          ],
+          [
+            -73.6599036,
+            43.3193365
+          ],
+          [
+            -73.6600739,
+            43.31911
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w470028972",
+      "properties": {
+        "osmWayId": "470028972",
+        "version": "2",
+        "timestamp": "2019-06-13T02:23:55Z",
+        "nodeIds": [
+          "4642837422",
+          "4642837423",
+          "4642837424",
+          "2048982165",
+          "4642837425",
+          "4642837426"
+        ],
+        "tags": {
+          "access": "no",
+          "foot": "yes",
+          "highway": "footway",
+          "surface": "unpaved",
+          "width": "1"
+        },
+        "candidateOnly": true,
+        "role": "park-route-candidate",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/470028972"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6604276,
+            43.3208299
+          ],
+          [
+            -73.6602619,
+            43.3208732
+          ],
+          [
+            -73.6601093,
+            43.3208421
+          ],
+          [
+            -73.6600097,
+            43.3208587
+          ],
+          [
+            -73.6599752,
+            43.3209003
+          ],
+          [
+            -73.6600069,
+            43.3209518
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w1096083286",
+      "properties": {
+        "osmWayId": "1096083286",
+        "version": "1",
+        "timestamp": "2022-09-19T18:30:27Z",
+        "nodeIds": [
+          "8421747669",
+          "10037716287",
+          "10037716297",
+          "10037716298",
+          "10037716299"
+        ],
+        "tags": {
+          "footway": "sidewalk",
+          "highway": "footway"
+        },
+        "candidateOnly": true,
+        "role": "context-only-no-crossings",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/1096083286"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6569833,
+            43.3186008
+          ],
+          [
+            -73.6572199,
+            43.318787
+          ],
+          [
+            -73.6577631,
+            43.3192227
+          ],
+          [
+            -73.6579744,
+            43.3193832
+          ],
+          [
+            -73.6582658,
+            43.3196707
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w1096083292",
+      "properties": {
+        "osmWayId": "1096083292",
+        "version": "2",
+        "timestamp": "2026-06-27T22:45:04Z",
+        "nodeIds": [
+          "10037716299",
+          "10037716349",
+          "10037716300"
+        ],
+        "tags": {
+          "crossing": "marked",
+          "crossing:markings": "yes",
+          "footway": "crossing",
+          "highway": "footway"
+        },
+        "candidateOnly": true,
+        "role": "context-only-no-crossings",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/1096083292"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6582658,
+            43.3196707
+          ],
+          [
+            -73.6583191,
+            43.3197217
+          ],
+          [
+            -73.6583607,
+            43.3197615
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w1096083293",
+      "properties": {
+        "osmWayId": "1096083293",
+        "version": "2",
+        "timestamp": "2023-05-07T10:20:33Z",
+        "nodeIds": [
+          "10037716300",
+          "10037716301",
+          "10037716302",
+          "10037716303"
+        ],
+        "tags": {
+          "footway": "sidewalk",
+          "highway": "footway",
+          "surface": "concrete"
+        },
+        "candidateOnly": true,
+        "role": "context-only-no-crossings",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/1096083293"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6583607,
+            43.3197615
+          ],
+          [
+            -73.6588509,
+            43.3201926
+          ],
+          [
+            -73.6590592,
+            43.3203902
+          ],
+          [
+            -73.6592571,
+            43.3205672
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w1096083294",
+      "properties": {
+        "osmWayId": "1096083294",
+        "version": "2",
+        "timestamp": "2026-06-27T22:45:04Z",
+        "nodeIds": [
+          "10037716303",
+          "10037716305",
+          "10037716304"
+        ],
+        "tags": {
+          "crossing": "unmarked",
+          "crossing:markings": "no",
+          "footway": "crossing",
+          "highway": "footway"
+        },
+        "candidateOnly": true,
+        "role": "context-only-no-crossings",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/1096083294"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6592571,
+            43.3205672
+          ],
+          [
+            -73.6593032,
+            43.3206179
+          ],
+          [
+            -73.6593399,
+            43.3206585
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w1096083295",
+      "properties": {
+        "osmWayId": "1096083295",
+        "version": "2",
+        "timestamp": "2026-06-27T22:45:04Z",
+        "nodeIds": [
+          "10037716303",
+          "10037716307",
+          "10037716306"
+        ],
+        "tags": {
+          "crossing": "marked",
+          "crossing:markings": "yes",
+          "footway": "crossing",
+          "highway": "footway"
+        },
+        "candidateOnly": true,
+        "role": "context-only-no-crossings",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/1096083295"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6592571,
+            43.3205672
+          ],
+          [
+            -73.6591569,
+            43.3206275
+          ],
+          [
+            -73.6590553,
+            43.3206886
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w1096083296",
+      "properties": {
+        "osmWayId": "1096083296",
+        "version": "3",
+        "timestamp": "2026-10-14T12:59:17Z",
+        "nodeIds": [
+          "10037716313",
+          "14283552488",
+          "14283552489",
+          "14283552490",
+          "14283552491",
+          "14283552492",
+          "14283552493",
+          "14283552494",
+          "14283552495",
+          "14283552496",
+          "14283552497",
+          "14283552498",
+          "14283552499",
+          "14283552500",
+          "14283568701",
+          "14283568702",
+          "14283568703",
+          "14283568704",
+          "14283568705",
+          "14283568706",
+          "14283568707"
+        ],
+        "tags": {
+          "covered": "no",
+          "footway": "sidewalk",
+          "highway": "footway",
+          "surface": "asphalt"
+        },
+        "candidateOnly": true,
+        "role": "context-only-no-crossings",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/1096083296"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6624606,
+            43.3222534
+          ],
+          [
+            -73.6628031,
+            43.3221831
+          ],
+          [
+            -73.6630966,
+            43.3221186
+          ],
+          [
+            -73.6636986,
+            43.3219875
+          ],
+          [
+            -73.663742,
+            43.3219789
+          ],
+          [
+            -73.6638678,
+            43.3219522
+          ],
+          [
+            -73.6640346,
+            43.3219257
+          ],
+          [
+            -73.6644318,
+            43.3218915
+          ],
+          [
+            -73.6647462,
+            43.3218742
+          ],
+          [
+            -73.6651805,
+            43.3218471
+          ],
+          [
+            -73.6656067,
+            43.3218194
+          ],
+          [
+            -73.6660882,
+            43.3217709
+          ],
+          [
+            -73.6662687,
+            43.321747
+          ],
+          [
+            -73.6662222,
+            43.3214685
+          ],
+          [
+            -73.6661302,
+            43.3211232
+          ],
+          [
+            -73.6660643,
+            43.3207481
+          ],
+          [
+            -73.6659746,
+            43.3202029
+          ],
+          [
+            -73.6658917,
+            43.3197394
+          ],
+          [
+            -73.6658361,
+            43.319418
+          ],
+          [
+            -73.6657259,
+            43.3187348
+          ],
+          [
+            -73.6656274,
+            43.3182571
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w1096083297",
+      "properties": {
+        "osmWayId": "1096083297",
+        "version": "2",
+        "timestamp": "2023-03-29T23:13:19Z",
+        "nodeIds": [
+          "10037716311",
+          "10037716315",
+          "10037716314"
+        ],
+        "tags": {
+          "crossing": "uncontrolled",
+          "crossing:island": "no",
+          "crossing:markings": "zebra",
+          "footway": "crossing",
+          "highway": "footway",
+          "surface": "asphalt",
+          "tactile_paving": "no"
+        },
+        "candidateOnly": true,
+        "role": "context-only-no-crossings",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/1096083297"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6611057,
+            43.3225426
+          ],
+          [
+            -73.6611502,
+            43.3225934
+          ],
+          [
+            -73.6612118,
+            43.322664
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w1568246028",
+      "properties": {
+        "osmWayId": "1568246028",
+        "version": "1",
+        "timestamp": "2026-10-14T12:59:17Z",
+        "nodeIds": [
+          "14283552483",
+          "14283552484",
+          "14283552485",
+          "14283552486",
+          "14283552487"
+        ],
+        "tags": {
+          "highway": "footway",
+          "surface": "paved"
+        },
+        "candidateOnly": true,
+        "role": "park-route-candidate",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/1568246028"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6624315,
+            43.3222605
+          ],
+          [
+            -73.6624368,
+            43.3222112
+          ],
+          [
+            -73.6624376,
+            43.3221173
+          ],
+          [
+            -73.6623985,
+            43.3219465
+          ],
+          [
+            -73.6623702,
+            43.3218708
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "w1568246029",
+      "properties": {
+        "osmWayId": "1568246029",
+        "version": "1",
+        "timestamp": "2026-10-14T12:59:17Z",
+        "nodeIds": [
+          "10037716304",
+          "10037716308",
+          "10037716309",
+          "10037716337",
+          "10037716310",
+          "10037716311",
+          "10037716312",
+          "10772046532",
+          "10772046531",
+          "14283552483",
+          "10037716313"
+        ],
+        "tags": {
+          "covered": "no",
+          "footway": "sidewalk",
+          "highway": "footway",
+          "surface": "concrete"
+        },
+        "candidateOnly": true,
+        "role": "context-only-no-crossings",
+        "acceptedForImplementation": false,
+        "sourceUrl": "https://www.openstreetmap.org/way/1568246029"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -73.6593399,
+            43.3206585
+          ],
+          [
+            -73.659891,
+            43.3213107
+          ],
+          [
+            -73.6605766,
+            43.3220438
+          ],
+          [
+            -73.6606419,
+            43.3221115
+          ],
+          [
+            -73.6610359,
+            43.32252
+          ],
+          [
+            -73.6611057,
+            43.3225426
+          ],
+          [
+            -73.6612096,
+            43.3225184
+          ],
+          [
+            -73.6612897,
+            43.3224796
+          ],
+          [
+            -73.6613703,
+            43.3224824
+          ],
+          [
+            -73.6624315,
+            43.3222605
+          ],
+          [
+            -73.6624606,
+            43.3222534
+          ]
+        ]
+      }
+    }
+  ],
+  "provenance": {
+    "source": "OpenStreetMap API 0.6 map bbox=-73.667,43.3163,-73.6577,43.323",
+    "retrievedDateET": "2026-11-07",
+    "coordinateOrder": "longitude,latitude",
+    "crs": "WGS84 (GeoJSON/RFC7946)",
+    "attribution": "\u00a9 OpenStreetMap contributors",
+    "license": "ODbL 1.0 https://www.openstreetmap.org/copyright",
+    "selection": "Ways with path/footway/track/steps/pedestrian/cycleway and at least one vertex inside OSM Crandall Park w98662107. Point-in-polygon candidate selection, NOT clipping, completeness, traversability, or topology validation. Full original geometries preserved."
+  }
+}

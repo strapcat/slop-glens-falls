@@ -17,7 +17,7 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 // (pedestrian-routes.js; New York's: 1.7 and 2.8 m), and groundAt(x, z, ux, uz), the ground those heights are above for
 // someone walking along (ux, uz) (a city on a terrain, e.g. Glens Falls; none: New York's streets, at y = 0)
 function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCross, walkOn, visible, nearView }, options = {}) {
-  const { numPeds = NUM_PEDS, sidewalkY = 0.22, crosswalkY = 0.012, onSidewalk = null, trackInsets = null, groundAt = null, textureFallback = false } = options;
+  const { numPeds = NUM_PEDS, sidewalkY = 0.22, crosswalkY = 0.012, onSidewalk = null, trackInsets = null, groundAt = null, textureFallback = false, routes: wrapRoutes = null } = options;
   let clock = 0;
   let focusX = 0, focusZ = 140;
   let hasView = false;
@@ -41,6 +41,7 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
     const female = hash(i, 1) < 0.48;
     const hairRoll = hash(i, 2);
     peds.push({
+      index: i,
       placed: false,
       crossesStreets: i % 6 === 0, // some start near crossings; everyone can use them along their route
       x: 0,
@@ -94,8 +95,11 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
   }
 
   const KERB = 1.6; // how far along a crosswalk track pedestrians wait to cross (the curb is 2 m along)
-  const pedRoutes = createPedestrianRoutes(onSidewalk ? { walkable: network.walkable, onSidewalk } : network, blockAt,
+  const baseRoutes = createPedestrianRoutes(onSidewalk ? { walkable: network.walkable, onSidewalk } : network, blockAt,
     trackInsets ? { insets: trackInsets } : undefined);
+  // options.routes (opt-in, e.g. Glens Falls's park trails, gf-trail-network.js): wraps the routes (the same along /
+  // across / next / canDodge; given the road network too); next() and groundAt() are also given the pedestrian
+  const pedRoutes = wrapRoutes ? wrapRoutes(baseRoutes, network) : baseRoutes;
   const track = { ax: 0, az: 0, ux: 0, uz: 1, len: 1, node: null, side: 0, line: 0, route: null };
 
   function sidewalkTrack(e) {
@@ -403,7 +407,7 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
       p.goalTime = clock + 120 + Math.random() * 180;
     }
     if (!p.nextRoute && p.route && ahead < 4) {
-      p.nextRoute = pedRoutes.next(p.route, p.dir, p.goalX, p.goalZ);
+      p.nextRoute = pedRoutes.next(p.route, p.dir, p.goalX, p.goalZ, p);
       p.nextLeg = 0;
       if (!p.node && p.nextRoute) atCurb(p);
     }
@@ -589,7 +593,7 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
   const SIDEWALK_Y = sidewalkY;
   const CROSSWALK_Y = crosswalkY;
   function pedGround(p, x, z) {
-    const base = groundAt ? groundAt(x, z, p.ux || 0, p.uz || 0) : 0;
+    const base = groundAt ? groundAt(x, z, p.ux || 0, p.uz || 0, p) : 0;
     if (!p.node) return base + SIDEWALK_Y;
     const t = (x - p.ax) * p.ux + (z - p.az) * p.uz;
     return base + (t > 2 && t < p.len - 2 ? CROSSWALK_Y : SIDEWALK_Y);

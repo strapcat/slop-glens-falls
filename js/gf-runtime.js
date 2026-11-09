@@ -5,6 +5,7 @@ import { setCityRuntime } from './city-runtime.js';
 import { GF_TERRAIN } from './gf-terrain-data.js';
 import { GF_BRIDGES } from './gf-bridges.js';
 import { createGfSurface } from './gf-surface.js';
+import { GF_TRAILS } from './gf-trails.js';
 import { ROAD_LIFT } from './gf-drape.js';
 
 // Glens Falls in the city runtime (city-runtime.js): imported first by gf-main.js, before any shared module runs.
@@ -14,7 +15,8 @@ import { ROAD_LIFT } from './gf-drape.js';
 
 const ROAD_SOURCE = gfRoadSource(GF_GEO);
 const GF_BLOCKS = createGfBlocks(GF_GEO);
-const GF_SURFACE = createGfSurface({ terrain: GF_TERRAIN, geo: GF_GEO, bridges: GF_BRIDGES });
+// CC-005c: the mapped footbridges on the accepted trails (gf-trails.js) are decks for walkers (gf-surface.js footDecks)
+const GF_SURFACE = createGfSurface({ terrain: GF_TERRAIN, geo: GF_GEO, bridges: GF_BRIDGES, footDecks: GF_TRAILS.footDecks });
 const { minX, maxX, minZ, maxZ } = ROAD_SOURCE.bounds;
 
 // The player's ground: what each mode last stood on decides between a bridge deck and the ground beneath it

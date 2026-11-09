@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="openstreetmap-cgimap 2.1.1 (1227796 spike-07.openstreetmap.org)" copyright="OpenStreetMap and contributors" attribution="http://www.openstreetmap.org/copyright" license="http://opendatacommons.org/licenses/odbl/1-0/">
+ <node id="221480519" visible="true" version="4" changeset="25042871" timestamp="2014-08-27T02:10:45Z" user="Radon214" uid="1728211" lat="43.3196588" lon="-73.6659275"/>
+ <node id="1141399678" visible="true" version="2" changeset="25042871" timestamp="2014-08-27T02:10:45Z" user="Radon214" uid="1728211" lat="43.3190858" lon="-73.6594310"/>
+ <node id="1141399715" visible="true" version="2" changeset="25042871" timestamp="2014-08-27T02:10:45Z" user="Radon214" uid="1728211" lat="43.3181073" lon="-73.6595832"/>
+ <node id="1141399720" visible="true" version="2" changeset="25042871" timestamp="2014-08-27T02:10:45Z" user="Radon214" uid="1728211" lat="43.3178524" lon="-73.6602875"/>
+ <node id="1141400546" visible="true" version="2" changeset="25042871" timestamp="2014-08-27T02:10:45Z" user="Radon214" uid="1728211" lat="43.3189351" lon="-73.6631514"/>
+ <node id="1141400601" visible="true" version="3" changeset="71521825" timestamp="2019-06-23T02:17:31Z" user="Radon214" uid="1728211" lat="43.3170316" lon="-73.6625076"/>
+ <node id="1141401009" visible="true" version="3" changeset="71521825" timestamp="2019-06-23T02:17:31Z" user="Radon214" uid="1728211" lat="43.3167687" lon="-73.6632944"/>
+ <node id="3044870852" visible="true" version="1" changeset="25042871" timestamp="2014-08-27T02:10:41Z" user="Radon214" uid="1728211" lat="43.3196151" lon="-73.6581879"/>
+ <node id="3044870854" visible="true" version="1" changeset="25042871" timestamp="2014-08-27T02:10:41Z" user="Radon214" uid="1728211" lat="43.3176310" lon="-73.6629136"/>
+ <node id="3044870855" visible="true" version="2" changeset="71521825" timestamp="2019-06-23T02:17:31Z" user="Radon214" uid="1728211" lat="43.3168147" lon="-73.6634764"/>
+ <node id="3044870856" visible="true" version="1" changeset="25042871" timestamp="2014-08-27T02:10:41Z" user="Radon214" uid="1728211" lat="43.3182123" lon="-73.6628207"/>
+ <node id="3044870858" visible="true" version="1" changeset="25042871" timestamp="2014-08-27T02:10:41Z" user="Radon214" uid="1728211" lat="43.3217654" lon="-73.6663366"/>
+ <node id="3044870863" visible="true" version="1" changeset="25042871" timestamp="2014-08-27T02:10:41Z" user="Radon214" uid="1728211" lat="43.3218707" lon="-73.6645904"/>
+ <node id="3044870864" visible="true" version="1" changeset="25042871" timestamp="2014-08-27T02:10:41Z" user="Radon214" uid="1728211" lat="43.3219299" lon="-73.6639250"/>
+ <node id="3044870865" visible="true" version="2" changeset="71199653" timestamp="2019-06-13T02:23:55Z" user="Radon214" uid="1728211" lat="43.3223564" lon="-73.6619463"/>
+ <node id="3044870874" visible="true" version="2" changeset="71199653" timestamp="2019-06-13T02:23:55Z" user="Radon214" uid="1728211" lat="43.3225666" lon="-73.6610945"/>
+ <node id="3044870878" visible="true" version="1" changeset="25042871" timestamp="2014-08-27T02:10:41Z" user="Radon214" uid="1728211" lat="43.3208260" lon="-73.6594688"/>
+ <node id="3044870879" visible="true" version="1" changeset="25042871" timestamp="2014-08-27T02:10:41Z" user="Radon214" uid="1728211" lat="43.3216830" lon="-73.6602554"/>
+ <node id="3044870881" visible="true" version="1" changeset="25042871" timestamp="2014-08-27T02:10:41Z" user="Radon214" uid="1728211" lat="43.3205461" lon="-73.6591884"/>
+ <node id="6565376116" visible="true" version="1" changeset="71521825" timestamp="2019-06-23T02:17:31Z" user="Radon214" uid="1728211" lat="43.3172181" lon="-73.6630929"/>
+ <node id="10778434631" visible="true" version="1" changeset="134391752" timestamp="2023-04-01T18:46:04Z" user="Radon214" uid="1728211" lat="43.3222276" lon="-73.6625439"/>
+ <node id="10778434656" visible="true" version="1" changeset="134391752" timestamp="2023-04-01T18:46:04Z" user="Radon214" uid="1728211" lat="43.3177534" lon="-73.6605553"/>
+ <node id="10778434657" visible="true" version="1" changeset="134391752" timestamp="2023-04-01T18:46:04Z" user="Radon214" uid="1728211" lat="43.3173037" lon="-73.6626919"/>
+ <way id="98662107" visible="true" version="10" changeset="134391752" timestamp="2023-04-01T18:46:04Z" user="Radon214" uid="1728211">
+  <nd ref="1141400546"/>
+  <nd ref="3044870856"/>
+  <nd ref="3044870855"/>
+  <nd ref="1141401009"/>
+  <nd ref="6565376116"/>
+  <nd ref="3044870854"/>
+  <nd ref="10778434657"/>
+  <nd ref="1141400601"/>
+  <nd ref="10778434656"/>
+  <nd ref="1141399720"/>
+  <nd ref="1141399715"/>
+  <nd ref="1141399678"/>
+  <nd ref="3044870852"/>
+  <nd ref="3044870881"/>
+  <nd ref="3044870878"/>
+  <nd ref="3044870879"/>
+  <nd ref="3044870874"/>
+  <nd ref="3044870865"/>
+  <nd ref="10778434631"/>
+  <nd ref="3044870864"/>
+  <nd ref="3044870863"/>
+  <nd ref="3044870858"/>
+  <nd ref="221480519"/>
+  <nd ref="1141400546"/>
+  <tag k="addr:city" v="Glens Falls"/>
+  <tag k="addr:housename" v="Pavilion "/>
+  <tag k="addr:housenumber" v="576"/>
+  <tag k="addr:postcode" v="12801"/>
+  <tag k="addr:state" v="NY"/>
+  <tag k="addr:street" v="Glen Street"/>
+  <tag k="leisure" v="park"/>
+  <tag k="name" v="Crandall Park"/>
+  <tag k="nysgissam:nysaddresspointid" v="WARR049188"/>
+  <tag k="wikidata" v="Q34820683"/>
+ </way>
+</osm>

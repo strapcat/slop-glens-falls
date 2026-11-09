@@ -691,6 +691,124 @@ Cole's Woods relief, with every road, car, walker, building, tree and pond on it
 - **Screenshots:** `screenshots/cc005b-{downtown,river,hill,overview}-{before,after}.png` (helicopter views from the
   same teleports: x, z, heading and altitude over what is beneath, so the camera is lower or higher where the ground is).
 
+### Trails and Thrill Hill (CC-005c)
+
+Walkers, the player and the cyclist can follow the sourced paths through Crandall Park and the shortest sourced
+corridor through Cole's Woods to Thrill Hill. On the hill a **fictional** keg party burns at night and leaves ash, charred
+logs and red cups by day.
+
+- **Inputs** (`data/trails/`, the CC-005c kit, unedited; its `SHA256SUMS` verifies every committed file): the OSM
+  extracts (`osm-park.xml`, `osm-crandall-context.xml`, `osm-coles-corridor-context.xml`), the candidate GeoJSONs, the
+  county ski loop and its DEM profile, and the Thrill Hill search area. The two map PDFs and the PNGs are referenced by
+  hash and not committed: no reuse grant for the artwork was established.
+- **Selection** (`select-gf-crandall-trails.mjs` → `data/gf_crandall_trails.geojson`, regenerates byte for byte):
+  - **park paths:** the OSM park walking ways;
+  - **park drives:** the park's `foot=designated` service drives. They are the only links between the park's path
+    groups (Dave: "don't isolate"). They are already drawn as the game's service roads and are not driven, so they are
+    not drawn again;
+  - **Cole's Woods:** only the shortest foot-permitted route over the OSM network from each woods entrance (Park View
+    Avenue at the Fire Road curve, 742.8 m; Angel Lane, 969.7 m) to Thrill Hill. Ways are kept as node ranges, so the
+    rest of the woods stays out.
+  - Everything else is listed with a reason: 46 excluded features.
+- **Thrill Hill:** Dave marked the **Camel Humps vicinity** on a schematic map (local knowledge, not an official name;
+  the map is not reproduced here). The game needs one point, so it uses a **provisional interpretation**, not a
+  location Dave confirmed:
+  - the anchor is the **trail crest**: the highest point of the game's terrain along the accepted hill path (OSM way
+    1089938465), at 117.18 m NAVD88. The generator splits the path there, so walkers make for the top itself;
+  - county ski loop vertex **#137** (117.39 m), the loop's highest vertex on the first hump, is the reference the
+    route selection started from. It lies 10.7 m from the crest. That is a separation between two candidate points
+    on unsurveyed lines, **not a measure of accuracy**.
+  - `screenshots/cc005c-hill-candidates.png` compares every candidate, labelled, on the CC-005b terrain:
+    - the crest;
+    - the path junction below it;
+    - county vertices #134–#144;
+    - six terrain summits inside the kit's 65 m search area, including S1, 117.92 m, 9.7 m from the crest.
+  - The choice is for review.
+- **Graph** (`build-gf-crandall-trails.mjs` → `js/gf-trails.js`, regenerates byte for byte, tested): 46 edges in 3
+  components, with 7 entrances.
+  - Lengths: path 2,027.7 m, footbridge 97.3 m, drive 1,494.1 m.
+  - Each line is cut where it reaches its street's outer walking line (the road's half width + 1.2 m).
+  - Widths: the one tagged path is 1 m; the others are a **2 m gameplay assumption** (labelled in every edge's
+    `widthBasis`); the drives take their service road's 5 m.
+  - The generator refuses coordinates outside the town, a missing source or access tag, impossible widths, duplicates,
+    zero-length edges and any component without an entrance.
+  - It also refuses any edge whose **whole surface** meets mapped water (footbridges excepted) or a building footprint.
+    The test is exact, not sampled (`js/gf-trail-clearance.js`): each segment is swept by a disc of half the path's
+    width, a capsule. The union of those capsules contains the drawn ribbon, its round joins and the outside of every
+    bend, so an obstacle anywhere on the surface is found, including between any two sample lines or stations.
+- **Entrances:** a street entrance joins the game's own sidewalk on the same side of the street. Park View Avenue's
+  meets it at the Fire Road curve, where the game's sidewalk stops short of the junction.
+  - At run time (`js/gf-trail-network.js`), each trail end attaches to the nearest point of a sidewalk track, at most
+    15 m away.
+  - The straight connector never comes within 1 m of a street's centre line, so no street is crossed.
+  - Swept by a 0.48 m body, the connector must also clear water, buildings and every kept trunk (exact capsule test,
+    in the game and the tests).
+  - Measured attachments run from 0.5 m to 9.7 m; each connector's nearest obstacle is at least 8 m away.
+  - Angel Lane has no sidewalks in the game's network, so it is an entrance for the player only.
+  - Walking from the park to the hill uses the existing sidewalks and the signalled Glen Street / Fire Road junction.
+    No CC-006 crosswalks are added.
+- **Footbridges** (5, 97 m): `gf-surface.js` has an opt-in `footDecks` list using the road decks' rule: straight between
+  the ground at the two abutments, never under it, as wide as the bridge. `support()` stands on these decks; `road()`
+  and `deckAt()` (vehicles) never see them. Each is drawn as a plank deck with post-and-rail sides, and the rails are
+  player colliders, stopping 1.2 m short of each end. The decks stand at most 0.64 m over the ground; two of them cross
+  mapped pond water.
+- **Trees:** 70 LiDAR trees are left out (`placeGfTrees` opt-in `exclude`; 11 in the park, 59 in the woods). These are
+  exactly the trees whose trunk square reaches a path or footbridge corridor: half the path width + 0.48 m, the player's
+  body. Drives are not included. No tree is moved, and none is removed for the party.
+- **Walkers:** pedestrians whose index is 3 modulo 10 (12 of the 120) are trail walkers. `pedestrian-system.js` has an
+  opt-in `routes` wrapper, and New York is unchanged.
+  - At a split sidewalk a trail walker turns in 7 times in 10. It walks a lane 0.4 m right of the path's centre (1 m on
+    a drive), using a shortest-path table to a target, then leaves by an entrance of the same component.
+    - In the woods, the target is the crest.
+    - In the park, it is a path node.
+  - On a trail the walker stands on the drawn path (ground or deck + 3 cm). Nobody dodges sideways off a trail.
+- **Thrill Hill party** (`js/gf-thrill-hill-plan.js` holds the layout, schedule and the scene's provenance;
+  `js/gf-thrill-hill.js` draws it): **a fictional scene**. It depicts no real event or person.
+  - Placement is a fixed rule, not a survey. The fire goes at the first site 4.5–7.5 m off the trail centre line beside
+    the crest that has:
+    - no kept trunk within 3.5 m (it found 12.4 m);
+    - its ring at least 1 m beyond the path's edge;
+    - no water;
+    - < 0.6 m of relief across the circle.
+  - A circle of 8 of the game's generic people (their own `PersonCrowd`) stands round it, with the keg 3.4 m away.
+  - The fire's stone ring and the keg are player colliders; the cups are visual only.
+  - **Night** is the twilight and midnight presets: `interiorGlow` above 0.65, the threshold that switches on vehicle
+    lamps. At night the fire burns with flames, embers and one flickering point light (a clustered light, parked and
+    dark by day), and the group walks up the trail from 45 m or more down it.
+  - From the crest, each person takes a route to their place round the fire ring, the keg and every kept trunk. The
+    route is a 0.25 m grid search kept 0.45 m from each (body 0.35 + 0.1 margin), then straightened only where the
+    straight line, swept by the body, stays clear. The way out is the same route walked back. A place with no clear
+    route stays empty; none does today.
+  - Every piece of every route, and every step taken through 15 simulated minutes of random clock changes (reversals
+    mid-way included), clears the fire, the keg and the trunks by the body's width (tested exactly).
+  - **Day** is golden hour and midday. The group walks away, leaving ash, charred logs, the keg and 14 empty red cups.
+  - The first setting on load places everyone at once; later changes send them walking.
+  - The schedule is deterministic and idempotent. A repeated setting changes nothing. Each person exists once through
+    any sequence of changes and through `advance()`.
+  - `?party=off` leaves the scene out.
+- **Diagnostics:** `slopGlensFalls.trails` (data, network, meshes, `walkers()`), `slopGlensFalls.party` (scene, plan,
+  `stats()`), `slopGlensFalls.selectTime(id)`.
+- **Uncertainties:** the trails existed in 1993 according to Dave; the exact 1993 alignments are not documented. The
+  OSM geometry is current, and widths other than those tagged are assumed. The hill point is a provisional
+  interpretation of a vicinity mark (see the candidate comparison); no accuracy is claimed for it. The party is
+  invented.
+- **Screenshots** (`screenshots/cc005c-*`):
+  - before/after pairs from the same cameras: woods path, Crandall Pond footbridge, Park View and Glen St entrances,
+    the hill crest, and the hill's side/oblique relief;
+  - the party from one camera at golden hour, twilight, midnight and the morning after;
+  - the coverage diagram, the hill layout and the labelled hill candidate comparison.
+- **Tests:** `tests/gf-crandall-trails.test.mjs` covers:
+  - the kit's hashes, and both generators regenerating byte for byte;
+  - malformed inputs;
+  - accepted-only sources;
+  - lanes clear of buildings, water (off a deck) and every kept trunk;
+  - foot decks;
+  - the exact tree set;
+  - entrances and their connectors;
+  - seeded walkers entering, reaching the crest and leaving;
+  - the party's layout and its night/day schedule;
+  - the wiring.
+
 ## Source and licence
 
 Data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the
@@ -699,4 +817,5 @@ Data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), a
 here, in `GF_GEO.attribution` and on screen in the debug and game views. The other dataset is USGS 3DEP, for the building
 heights and the trees (LiDAR) and the terrain (the 1 m DEM) (public domain; credited "USGS 3D Elevation Program" in the
 game view, in `GF_LIDAR_HEIGHTS.credit`, `GF_TREES.credit` and the terrain's header, see LiDAR heights, Trees and
-Topography). No geography is placed by hand.
+Topography). No geography is placed by hand. The Thrill Hill party (CC-005c) is fictional scene dressing, placed by a
+fixed rule beside the sourced trail crest.
