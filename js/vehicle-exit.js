@@ -33,7 +33,7 @@ const EXIT_SPEED = 1.0; // m/s: the taxi must be (almost) stopped to get out
 // The helicopter sets down only when (all of): horizontal speed under maxSpeed, vertical under maxVertical, its origin
 // within maxHeight of the support under it (its hover floor is 0.25 m), the support under every skid end dry and
 // valid, and those skid ends within maxRelief of each other (a gentle slope)
-const LAND = { maxSpeed: 2.0, maxVertical: 1.5, maxHeight: 1.2, maxRelief: 0.5, skidY: 0.022 };
+const LAND = { maxSpeed: 2.0, maxVertical: 1.5, maxHeight: 1.2, maxRelief: 0.5, skidY: 0.022, floor: 0.25 };
 // Getting in: within this far of the vehicle's footprint (and the helicopter only when landed). It reaches every
 // exit spot the search can choose (the farthest: the taxi's 3.2 m side, 2.34 m from its body; the helicopter's 4.0 m
 // side, 2.75 m), so where you got out you can always get back in
@@ -131,7 +131,9 @@ function landingGate(h, probe) {
   }
   if (h.position.y - centre > LAND.maxHeight) return { ok: false, reason: 'too high to land' };
   if (Math.abs(h.speed || 0) > LAND.maxSpeed) return { ok: false, reason: 'too fast to land' };
-  if (Math.abs(h.verticalSpeed || 0) > LAND.maxVertical) return { ok: false, reason: 'descending too fast' };
+  // (at its hover floor, 0.25 m over the support, it cannot sink further, whatever the descent key still asks for)
+  const atFloor = h.position.y - centre <= LAND.floor + 0.01;
+  if (!atFloor && Math.abs(h.verticalSpeed || 0) > LAND.maxVertical) return { ok: false, reason: 'descending too fast' };
   const lo = Math.min(...under), hi = Math.max(...under);
   if (hi - lo > LAND.maxRelief) return { ok: false, reason: 'ground too steep' };
   // set down with its origin on the highest support under the skids (the tubes 0.022 m above it), never into the ground

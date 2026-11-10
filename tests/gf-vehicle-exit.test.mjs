@@ -196,7 +196,8 @@ test('helicopter: sets down only slow, low and over dry, gentle ground; then exi
   const dry = { support: () => 0, water: () => false };
   assert.deepEqual(landingGate(h, dry), { ok: true, y: 0 });
   assert.equal(landingGate({ ...h, speed: 3 }, dry).reason, 'too fast to land');
-  assert.equal(landingGate({ ...h, verticalSpeed: -2 }, dry).reason, 'descending too fast');
+  assert.equal(landingGate({ ...h, position: { x: 0, y: 0.8, z: 0 }, verticalSpeed: -2 }, dry).reason, 'descending too fast');
+  assert.equal(landingGate({ ...h, verticalSpeed: -16 }, dry).ok, true, 'at its hover floor it cannot sink further: the held descent key does not block landing');
   assert.equal(landingGate({ ...h, position: { x: 0, y: 20, z: 0 } }, dry).reason, 'too high to land');
   assert.equal(landingGate(h, { ...dry, water: (x) => x > 0.5 }).reason, 'over water', 'one skid over water is enough to refuse');
   assert.equal(landingGate(h, { ...dry, support: (x, z) => z * 0.3 }).reason, 'ground too steep');

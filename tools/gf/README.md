@@ -837,7 +837,7 @@ New York does not load it.
   A spot off the carriageway (a kerb island, the park, a trail) is preferred. Only if none passes does it use the
   first clear road shoulder rather than refuse. If nothing passes, F is refused with the commonest reason.
 - **The helicopter:** it sets down only if all of these hold:
-  - under 2 m/s horizontally and 1.5 m/s vertically;
+  - under 2 m/s horizontally and 1.5 m/s vertically (not counted at its hover floor, where it cannot sink further);
   - its origin within 1.2 m of the support (its hover floor is 0.25 m);
   - support at all four skid ends and the centre, none of it water, with the skid ends within 0.5 m of each other.
 
