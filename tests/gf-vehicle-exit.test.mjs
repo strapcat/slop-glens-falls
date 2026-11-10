@@ -153,6 +153,10 @@ test('safe spot: water, buildings, trunks, steep ground and drops are skipped; t
   const cands = exitCandidates(car, 'car');
   assert.equal(cands.length, 3 * 2 * 4 + 2 * 2);
   assert.ok(cands.every((c) => bodyDistance(car, 'car', c.x, c.z) >= PERSON_RADIUS + 0.05), 'every candidate clear of the taxi by a body');
+  // and every exit spot is within reach to get back in (taxi and helicopter)
+  for (const type of ['car', 'helicopter']) {
+    for (const c of exitCandidates(car, type)) assert.ok(bodyDistance(car, type, c.x, c.z) <= ENTER_REACH[type], `${type} ${c.where}: back in from where you got out`);
+  }
   // water on the left: the right side
   const wet = { ...open, water: (x) => x > 0.9 };
   assert.match(findExitSpot(car, 'car', wet, 0.03).where, /^right 1\.65/);
@@ -312,5 +316,5 @@ test('New York: no exit key, no new modules, and the controllers behave as befor
   m.resolveHorizontalCollision(q, 0.48);
   assert.deepEqual([q.x, q.z], [5, 5]);
   assert.equal(m.parkedColliders, undefined);
-  assert.equal(ENTER_REACH.car, 1.4);
+  assert.deepEqual(ENTER_REACH, { car: 2.5, helicopter: 3.0 });
 });

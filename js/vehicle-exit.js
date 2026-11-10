@@ -34,8 +34,10 @@ const EXIT_SPEED = 1.0; // m/s: the taxi must be (almost) stopped to get out
 // within maxHeight of the support under it (its hover floor is 0.25 m), the support under every skid end dry and
 // valid, and those skid ends within maxRelief of each other (a gentle slope)
 const LAND = { maxSpeed: 2.0, maxVertical: 1.5, maxHeight: 1.2, maxRelief: 0.5, skidY: 0.022 };
-// Getting in: within this far of the vehicle's footprint (and the helicopter only when landed)
-const ENTER_REACH = { car: 1.4, helicopter: 1.8 };
+// Getting in: within this far of the vehicle's footprint (and the helicopter only when landed). It reaches every
+// exit spot the search can choose (the farthest: the taxi's 3.2 m side, 2.34 m from its body; the helicopter's 4.0 m
+// side, 2.75 m), so where you got out you can always get back in
+const ENTER_REACH = { car: 2.5, helicopter: 3.0 };
 
 // The vehicle's footprint as a collider (controllers.js buildingContact: an oriented box), owned by its entity
 function vehicleBody(entity, type) {

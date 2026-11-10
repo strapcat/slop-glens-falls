@@ -844,7 +844,8 @@ New York does not load it.
   Roofs are not support in the surface contract, so a helicopter over a roof is simply too high. Set down, its skids
   sit on the highest support under them and its rotor stops. It stays on its skids, ignoring the throttle, until the
   pilot climbs (Space/E). Getting out follows the taxi's rules round its own footprint: the skids, back to the tail.
-- **Getting in:** within 1.4 m of the taxi's body or 1.8 m of a landed helicopter's. The walker is then aboard:
+- **Getting in:** within 2.5 m of the taxi's body or 3.0 m of a landed helicopter's (it reaches every spot the exit
+  search can choose, so you can always get back in where you got out). The walker is then aboard:
   hidden, no longer strolling about on its own, with no body. Pressing 1 brings it back where it was left.
 - **Parked vehicles:** any vehicle not being driven stays exactly where it was left (the taxi whenever you are not in
   it, the helicopter once landed and empty).
