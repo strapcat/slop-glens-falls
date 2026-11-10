@@ -69,6 +69,7 @@ const GF_PRELOADS = [
   'gf-trail-meshes.js',
   'gf-thrill-hill-plan.js',
   'gf-thrill-hill.js',
+  'vehicle-exit.js',
   'gf-main.js'
 ];
 

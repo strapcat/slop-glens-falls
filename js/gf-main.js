@@ -36,6 +36,7 @@ import { buildTrailMeshes } from './gf-trail-meshes.js';
 import { planThrillHillParty, THRILL_HILL_SCENE } from './gf-thrill-hill-plan.js';
 import { buildThrillHillParty } from './gf-thrill-hill.js';
 import { cityUniforms } from './tsl-materials.js';
+import { createVehicleExit, trafficBodies, EXIT_KEY } from './vehicle-exit.js';
 
 // Glens Falls game view (index.html?city=glensfalls): the town from GF_GEO (roads, water, blocks) on its sourced terrain
 // (CC-005b: USGS 3DEP bare earth, gf-terrain.js, asked through gf-surface.js by everything that stands on it), its road graph
@@ -275,6 +276,22 @@ async function initApp() {
   // Glens Falls names in the HUD (controllers.js labels the car New York's yellow cab)
   controllerManager.entities.car.label = 'Taxi';
   controllerManager.entities.cyclist.label = 'Cyclist';
+  // CC-005d: F gets out of the taxi or a landed helicopter onto safe ground beside it, and back in (vehicle-exit.js).
+  // The walker's height is the surface it would stand on (a deck or the ground, + ROAD_LIFT); water is mapped water
+  // at or above that; the carriageway is anywhere off the kerb islands (GF_BLOCKS)
+  const vehicleExit = createVehicleExit(controllerManager, {
+    walkerGround(x, z, nearY) {
+      const y = GF_SURFACE.support(x, z, Number.isFinite(nearY) ? nearY - ROAD_LIFT : NaN);
+      return Number.isFinite(y) ? y + ROAD_LIFT : NaN;
+    },
+    support: (x, z) => GF_SURFACE.support(x, z, NaN),
+    water(x, z, y) {
+      const w = GF_SURFACE.water.surfaceAt(x, z);
+      return w !== null && y - ROAD_LIFT <= w + 0.05;
+    },
+    blocked: (x, z, y, r) => controllerManager.bodyBlockedAt(x, z, y, r),
+    roadway: (x, z) => !GF_BLOCKS.blockAt(x, z)
+  });
   // Reuse teleport placement so saved players return at rest, close to their last positions.
   try {
     const saved = JSON.parse(localStorage.getItem(STATE_KEY));
@@ -480,7 +497,40 @@ async function initApp() {
       item.appendChild(label);
       return item;
     });
-    elControlsHint.replaceChildren(...items);
+    elControlsHint.replaceChildren(...items, exitHint);
+    exitHintText = '';
+    updateExitHint(true);
+  }
+
+  // CC-005d: the F chip: what F does now, or why it can't (refreshed a few times a second and on every press)
+  const exitHint = document.createElement('span');
+  exitHint.className = 'hint hint-exit';
+  const exitKbd = document.createElement('kbd');
+  exitKbd.textContent = 'F';
+  const exitLabel = document.createElement('span');
+  exitLabel.className = 'hint-label';
+  exitHint.append(exitKbd, exitLabel);
+  let exitHintText = '', exitHintAt = 0, exitFlash = null;
+  function updateExitHint(force = false, now = performance.now()) {
+    if (!force && now < exitHintAt) return;
+    exitHintAt = now + 250;
+    const st = exitFlash && now < exitFlash.until ? exitFlash : vehicleExit.status();
+    const text = st.ok ? st.action : `${st.action}: ${st.reason}`;
+    if (text === exitHintText) return;
+    exitHintText = text;
+    exitLabel.textContent = text;
+    exitHint.classList.toggle('hint-blocked', !st.ok);
+    const diag = globalThis.slopGlensFalls?.vehicleExit;
+    if (diag) diag.hint = text;
+  }
+  function pressExit() {
+    const r = vehicleExit.press();
+    if (r.ok) selectMode(r.mode);
+    vehicleExit.refresh();
+    trafficSystem.setParked(trafficBodies(controllerManager));
+    exitFlash = r.ok ? null : { ...r, ok: false, until: performance.now() + 1500 };
+    updateExitHint(true);
+    return r;
   }
 
   function placeModeIndicator() {
@@ -606,7 +656,9 @@ async function initApp() {
     else if (cameras[e.code]) selectCamera(cameras[e.code], true);
     else if (e.code === 'KeyV') cycleCamera(e.shiftKey ? -1 : 1);
     else if (e.code === 'KeyH' && hudToggleBtn) hudToggleBtn.click();
+    else if (e.code === EXIT_KEY && !e.repeat) pressExit();
   });
+  globalThis.slopGlensFalls.vehicleExit = { status: () => vehicleExit.status(), press: pressExit, get last() { return vehicleExit.last; }, hint: '' };
 
   window.addEventListener('resize', () => {
     cameraSystem.onResize(window.innerWidth, window.innerHeight);
@@ -698,6 +750,8 @@ async function initApp() {
   // Console / automated checks: run the clock and the traffic ahead by `seconds` (30 steps a second) without rendering,
   // e.g. to let queues form at the signals where frames are slow
   globalThis.slopGlensFalls.advance = (seconds) => {
+    vehicleExit.refresh();
+    trafficSystem.setParked(trafficBodies(controllerManager));
     for (let i = 0; i < seconds * 30; i++) {
       elapsed += 1 / 30;
       trafficSystem.update(1 / 30, elapsed, cameraSystem.currentPos, controllerManager.getActiveEntity(), controllerManager.activeMode, cameraSystem.camera);
@@ -723,7 +777,11 @@ async function initApp() {
     elapsed += dt;
 
     gamepadControls.update(dt);
+    // CC-005d: the parked vehicles, for the walker to bump into and the traffic to keep clear of
+    vehicleExit.refresh();
+    trafficSystem.setParked(trafficBodies(controllerManager));
     controllerManager.update(dt, elapsed, cameraSystem.initialized ? cameraSystem.currentPos : null);
+    updateExitHint(false, now);
     cameraSystem.update(dt, elapsed);
     ground.terrain.update(cameraSystem.camera.position);
     treeField.update(cameraSystem.currentPos);

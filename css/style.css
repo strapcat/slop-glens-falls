@@ -786,6 +786,11 @@ body.hud-minimized .icon-show {
   margin-left: 4px;
 }
 
+/* CC-005d (Glens Falls): the enter / exit chip, dimmed with its reason while it can't be used */
+.hint-exit.hint-blocked .hint-label {
+  opacity: 0.62;
+}
+
 .mode-switch {
   position: relative;
   display: flex;
