@@ -809,6 +809,55 @@ logs and red cups by day.
   - the party's layout and its night/day schedule;
   - the wiring.
 
+### On foot from a vehicle (CC-005d)
+
+In Glens Falls, **F** gets you out of the taxi or a landed helicopter onto safe ground beside it, and back in.
+`js/vehicle-exit.js` is pure: no three.js and no city names. The city passes it a probe; `gf-main.js` wires it.
+New York does not load it.
+
+- **The key and the HUD:** `F`. A chip in the controls hint says what F does now (*Exit taxi*, *Land & exit*,
+  *Exit helicopter*, *Enter taxi*, *Enter helicopter*) or, dimmed, why not (*stop to get out*, *too high to land*,
+  *over water*, *no room alongside*, …). A refused press shows its reason for 1.5 s. The mode buttons and keys 1–4
+  keep their old meaning (switch to that entity wherever it is); F owns walking to and from a parked vehicle. Not from
+  the bicycle.
+- **Getting out of the taxi:** only below 1 m/s. The search tries, in order:
+  1. the driver's (left) side, then the right, at 1.65, 2.4 and 3.2 m out from the centre line, each at 0.6, −0.6,
+     1.6 and −1.6 m along;
+  2. behind and then in front, 1.2 and 2.2 m beyond the bumpers.
+
+  It takes the first spot that passes every check:
+  - finite ground under it (`GF_SURFACE.support`, seeded with the taxi's level, so a deck stays a deck);
+  - not mapped water at that height;
+  - no more than **1.0 m** above or below the taxi's own ground (never off a bridge or a retaining wall);
+  - the ground within 0.6 m rising or falling no more than **0.35 m** (the wheels' climb step);
+  - clear of the taxi's footprint by the walker's 0.48 m body;
+  - clear of every building, trunk, footbridge rail and party prop collider, and any parked vehicle (the walker's own
+    contact test).
+
+  A spot off the carriageway (a kerb island, the park, a trail) is preferred. Only if none passes does it use the
+  first clear road shoulder rather than refuse. If nothing passes, F is refused with the commonest reason.
+- **The helicopter:** it sets down only if all of these hold:
+  - under 2 m/s horizontally and 1.5 m/s vertically;
+  - its origin within 1.2 m of the support (its hover floor is 0.25 m);
+  - support at all four skid ends and the centre, none of it water, with the skid ends within 0.5 m of each other.
+
+  Roofs are not support in the surface contract, so a helicopter over a roof is simply too high. Set down, its skids
+  sit on the highest support under them and its rotor stops. It stays on its skids, ignoring the throttle, until the
+  pilot climbs (Space/E). Getting out follows the taxi's rules round its own footprint: the skids, back to the tail.
+- **Getting in:** within 1.4 m of the taxi's body or 1.8 m of a landed helicopter's. The walker is then aboard:
+  hidden, no longer strolling about on its own, with no body. Pressing 1 brings it back where it was left.
+- **Parked vehicles:** any vehicle not being driven stays exactly where it was left (the taxi whenever you are not in
+  it, the helicopter once landed and empty).
+  - **To the walker:** it is a solid body (`controllers.js` `setParkedColliders`).
+  - **To traffic** (`traffic.js` opt-in `setParked`): AI cars keep behind it in their lane like a stopped car, change
+    lanes only clear of it, and never spawn within 25 m of it. Nobody drives it or pushes it. On a one-lane street they
+    wait behind it.
+- **New York:** neither call is made, so both lists stay empty and every path is unchanged. The controllers' new
+  branches key on flags only this module sets (`landed`, `boarded`); `tests/gf-vehicle-exit.test.mjs` checks the
+  defaults (the idle walker strolls on, the helicopter hovers at its old floor, no parked bodies).
+- **Not included:** touch and gamepad bindings, getting off the bicycle, door or seat animations, interiors, saving the
+  parked state across reloads (a reload restores the vehicles where they were, unparked).
+
 ## Source and licence
 
 Data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the
