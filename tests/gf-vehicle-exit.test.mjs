@@ -297,7 +297,7 @@ test('New York: no exit key, no new modules, and the controllers behave as befor
   // the walker's WebGL 2 fallback is opt-in (Glens Falls's world sets it; New York's never does)
   assert.match(ctl, /new PersonCrowd\(1, \{ farDistance: Infinity, textureFallback: !!this\.world\.textureFallback \}\)/);
   assert.match(read('js/gf-runtime.js'), /textureFallback: true,/);
-  for (const f of ['js/city-runtime.js', 'js/nyc-main.js', 'js/city-config.js']) if (fs.existsSync(path.join(root, f))) assert.doesNotMatch(read(f), /textureFallback/, f);
+  for (const f of ['js/city-runtime.js', 'js/nyc-main.js', 'js/nyc-runtime.js', 'js/city-config.js']) if (fs.existsSync(path.join(root, f))) assert.doesNotMatch(read(f), /textureFallback/, f);
   // without the opt-ins: the inactive walker strolls on, the helicopter hovers at its 0.25 m floor and its rotor turns
   const m = harness();
   m.activeMode = 'car';
