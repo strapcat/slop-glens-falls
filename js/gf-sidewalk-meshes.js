@@ -9,8 +9,8 @@ import { createSidewalkStrips } from './gf-sidewalk-strips.js';
 // CC-005e: Glens Falls's curbs, tree lawns and walks as meshes: the strips of gf-sidewalk-strips.js (the layout and its
 // sources: gf-sidewalks.js) in four materials, granite, concrete (walk flags, driveway aprons), grass (lawns, ramps) and
 // the gutter's asphalt. The strips are cut into CELL-metre cells, each built the first time the camera comes within
-// RANGE of it and shown only while it is (beyond that the terrain's own colours, gf-ground.js, show the bands): about
-// one draw call per material per cell in range.
+// RANGE of it and shown only while it is (beyond that the terrain's own colours, gf-ground.js, show the bands): one draw
+// call per material per cell in range (the ramps share the lawn's).
 
 const CELL = 250;
 const RANGE = 650; // m from the camera to a cell's nearest point
@@ -49,8 +49,10 @@ function concreteMaterial() {
     const stain = smoothstep(0.55, 0.9, noise2D(wxz.mul(0.9).add(17.0))).mul(0.14);
     const grit = noise2D(wxz.mul(14.0)).sub(0.5).mul(0.07).mul(detail);
     const base = mix(color(0x8f8a80), color(0xaba69c), tone).mul(flagTone).mul(float(1.0).sub(stain)).add(grit);
-    const joints = gridLine(along, SIDEWALK.flag, 0.004).mul(joint).mul(detail);
-    return base.mul(float(1.0).sub(joints.mul(0.55))).mul(tint);
+    // the tooled joint (about 2 cm) and the grime either side of it, both faded with distance
+    const joints = gridLine(along, SIDEWALK.flag, 0.01).mul(joint).mul(detail);
+    const grime = gridLine(along, SIDEWALK.flag, 0.035).mul(joint).mul(detail);
+    return base.mul(float(1.0).sub(joints.mul(0.5))).mul(float(1.0).sub(grime.mul(0.12))).mul(tint);
   })();
   return mat;
 }
@@ -109,7 +111,16 @@ function createGfSidewalkMeshes(scene, sidewalks) {
   function buildCell(cell) {
     const t0 = performance.now();
     const meshes = [];
-    for (const [name, B] of Object.entries(strips.build(cell.segs))) {
+    const bufs = strips.build(cell.segs);
+    // the ramps share the lawn's mesh (one draw call)
+    if (bufs.ramp) {
+      const L = bufs.lawn || (bufs.lawn = { pos: [], along: [], joint: [], col: [], grass: [], idx: [] });
+      const o = L.pos.length / 3;
+      for (const k of ['pos', 'along', 'joint', 'col', 'grass']) for (const v of bufs.ramp[k]) L[k].push(v);
+      for (const i of bufs.ramp.idx) L.idx.push(i + o);
+      delete bufs.ramp;
+    }
+    for (const [name, B] of Object.entries(bufs)) {
       if (!B.idx.length) continue;
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(B.pos, 3));
@@ -123,7 +134,7 @@ function createGfSidewalkMeshes(scene, sidewalks) {
       const nrm = g.attributes.normal;
       for (let v = 0; v < nrm.count; v++) if (nrm.getY(v) < -0.2) nrm.setXYZ(v, -nrm.getX(v), -nrm.getY(v), -nrm.getZ(v));
       g.computeBoundingSphere();
-      const m = new THREE.Mesh(g, materials[name === 'ramp' ? 'lawn' : name]);
+      const m = new THREE.Mesh(g, materials[name]);
       m.name = `Sidewalk-${name}`;
       m.receiveShadow = true;
       m.castShadow = name === 'granite';
