@@ -52,7 +52,7 @@ function concreteMaterial() {
     // the tooled joint (about 2 cm) and the grime either side of it, both faded with distance
     const joints = gridLine(along, SIDEWALK.flag, 0.01).mul(joint).mul(detail);
     const grime = gridLine(along, SIDEWALK.flag, 0.035).mul(joint).mul(detail);
-    return base.mul(float(1.0).sub(joints.mul(0.5))).mul(float(1.0).sub(grime.mul(0.12))).mul(tint);
+    return base.mul(float(1.0).sub(joints.mul(0.7))).mul(float(1.0).sub(grime.mul(0.2))).mul(tint);
   })();
   return mat;
 }
