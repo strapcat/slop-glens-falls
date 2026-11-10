@@ -70,6 +70,10 @@ const GF_PRELOADS = [
   'gf-thrill-hill-plan.js',
   'gf-thrill-hill.js',
   'vehicle-exit.js',
+  'gf-downtown.js',
+  'gf-sidewalks.js',
+  'gf-sidewalk-strips.js',
+  'gf-sidewalk-meshes.js',
   'gf-main.js'
 ];
 

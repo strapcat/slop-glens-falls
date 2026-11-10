@@ -1,4 +1,4 @@
-import { GF_BLOCKS, GF_SURFACE, GF_TERRAIN } from './gf-runtime.js'; // first: installs Glens Falls in the city runtime before any shared module runs
+import { GF_BLOCKS, GF_SURFACE, GF_TERRAIN, GF_SIDEWALKS, onRaised } from './gf-runtime.js'; // first: installs Glens Falls in the city runtime before any shared module runs
 import * as THREE from 'three/webgpu';
 import { pass, mrt, output, normalView, positionView, metalness, roughness, vec2, smoothstep } from 'three/tsl';
 import { ssr } from 'three/addons/tsl/display/SSRNode.js';
@@ -37,6 +37,8 @@ import { planThrillHillParty, THRILL_HILL_SCENE } from './gf-thrill-hill-plan.js
 import { buildThrillHillParty } from './gf-thrill-hill.js';
 import { cityUniforms } from './tsl-materials.js';
 import { createVehicleExit, trafficBodies, EXIT_KEY } from './vehicle-exit.js';
+import { SIDEWALK } from './gf-sidewalks.js';
+import { createGfSidewalkMeshes } from './gf-sidewalk-meshes.js';
 
 // Glens Falls game view (index.html?city=glensfalls): the town from GF_GEO (roads, water, blocks) on its sourced terrain
 // (CC-005b: USGS 3DEP bare earth, gf-terrain.js, asked through gf-surface.js by everything that stands on it), its road graph
@@ -45,19 +47,29 @@ import { createVehicleExit, trafficBodies, EXIT_KEY } from './vehicle-exit.js';
 // landmarks, buildings, street details, map, teleports or audio.
 
 const NUM_CARS = 40;
-// Pedestrians walk the sidewalk band between each block's curb and its lot (1.8 m wide), on two walking lines 0.6 and
-// 1.2 m from the roadway, on the terrain (a deck where their track runs along a bridge); there are no crosswalks yet.
-// Their sidewalk is the ground's own (2 cm above it); crossing a road they walk on its draped asphalt. CC-005c: a fixed
+// Pedestrians walk the sidewalk band between each block's curb and its lot, on the terrain (a deck where their track
+// runs along a bridge); there are no crosswalks yet. CC-005e: on the walk's concrete (gf-sidewalks.js onWalk), never its
+// tree lawn: the walking lines (insetsFor) about 0.6 and 1.2 m from the roadway on a downtown walk (concrete to the
+// curb), 1.9 and 2.5 m on a residential one (behind the lawn); 2 cm above the raised walk (raiseAt); crossing a road
+// they step down onto its draped asphalt. CC-005c: a fixed
 // share of them (gf-trail-network.js) also turn into Crandall Park and Cole's Woods at the trail entrances, walk the
 // sourced paths (gf-trails.js) to a place in the park or to Thrill Hill, and come back out
 const TRAIL_NET = createTrailNetwork(GF_TRAILS);
+// CC-005e: a walker's ground with the raised curbs, lawns and walks (gf-sidewalks.js raiseAt) under its feet
+function raisedGround(groundAt) {
+  return (x, z, ux, uz, p) => {
+    const y = groundAt(x, z, ux, uz, p);
+    const r = GF_SIDEWALKS.raiseAt(x, z);
+    return r > 0 ? Math.max(y, GF_SURFACE.ground(x, z) + r) : y;
+  };
+}
 const PEDESTRIANS = {
   numPeds: 120,
   sidewalkY: 0.02,
   crosswalkY: ROAD_LIFT + 0.012,
-  onSidewalk: GF_BLOCKS.onSidewalk,
-  trackInsets: [0.6, 1.2],
-  groundAt: trailGroundAt(GF_SURFACE),
+  onSidewalk: GF_SIDEWALKS.onWalk,
+  trackInsets: GF_SIDEWALKS.insetsFor,
+  groundAt: raisedGround(trailGroundAt(GF_SURFACE)),
   // the WebGL 2 fallback reads the crowd poses from a data texture (its plain-attribute read ignores the bone index)
   textureFallback: true
 };
@@ -175,7 +187,7 @@ async function initApp() {
 
   // 3. The terrain, roads, water and bridge decks; road graph & traffic, road markings
   await showLoadingStage('Laying out the terrain, roads and water...');
-  const ground = buildGfTerrainGround(scene, GF_GEO, GF_SURFACE, GF_BLOCKS, GF_BRIDGES);
+  const ground = buildGfTerrainGround(scene, GF_GEO, GF_SURFACE, GF_BLOCKS, GF_BRIDGES, GF_SIDEWALKS.downtown);
   {
     const h = GF_TERRAIN.header;
     const waterTypes = GF_SURFACE.water.bodies.reduce((o, b) => ({ ...o, [b.type]: (o[b.type] || 0) + 1 }), {});
@@ -183,6 +195,9 @@ async function initApp() {
   }
   // CC-005c: the park and woods paths and their footbridges (gf-trail-meshes.js)
   const trailMeshes = buildTrailMeshes(scene, GF_TRAILS, GF_SURFACE);
+  // CC-005e: granite curbs, tree lawns and concrete walks along the roads (gf-sidewalk-meshes.js), built round the
+  // camera as it goes
+  const sidewalkMeshes = createGfSidewalkMeshes(scene, GF_SIDEWALKS);
   markInit('ground');
   await showLoadingStage('Raising buildings...');
   // OSM footprints, flat-roofed. Heights: OSM height or levels where tagged; else measured from USGS 3DEP LiDAR
@@ -273,16 +288,18 @@ async function initApp() {
     ...trailMeshes.colliders, ...(party ? party.colliders : [])], { ...PLAYER_WORLD, spawn });
   // The terrain's chunks round the start, built now so that the shader warm-up sees them
   ground.terrain.update({ x: spawn.x, y: GF_SURFACE.ground(spawn.x, spawn.z) + 3, z: spawn.z });
+  sidewalkMeshes.update({ x: spawn.x, y: GF_SURFACE.ground(spawn.x, spawn.z) + 3, z: spawn.z });
   // Glens Falls names in the HUD (controllers.js labels the car New York's yellow cab)
   controllerManager.entities.car.label = 'Taxi';
   controllerManager.entities.cyclist.label = 'Cyclist';
   // CC-005d: F gets out of the taxi or a landed helicopter onto safe ground beside it, and back in (vehicle-exit.js).
-  // The walker's height is the surface it would stand on (a deck or the ground, + ROAD_LIFT); water is mapped water
-  // at or above that; the carriageway is anywhere off the kerb islands (GF_BLOCKS)
+  // The walker's height is the surface it would stand on (a deck or the ground, + ROAD_LIFT; CC-005e: a raised curb,
+  // lawn or walk, gf-runtime.js onRaised); water is mapped water at or above that; the carriageway is anywhere off the
+  // kerb islands (GF_BLOCKS)
   const vehicleExit = createVehicleExit(controllerManager, {
     walkerGround(x, z, nearY) {
       const y = GF_SURFACE.support(x, z, Number.isFinite(nearY) ? nearY - ROAD_LIFT : NaN);
-      return Number.isFinite(y) ? y + ROAD_LIFT : NaN;
+      return Number.isFinite(y) ? onRaised(x, z, y) + ROAD_LIFT : NaN;
     },
     support: (x, z) => GF_SURFACE.support(x, z, NaN),
     water(x, z, y) {
@@ -351,6 +368,8 @@ async function initApp() {
       // seed the deck-or-ground choice for a mode (a saved height), as the saved-player restore does
       setNear: PLAYER_WORLD.setNear
     },
+    // CC-005e: the sidewalks (layout, raise and walk tests, downtown envelope) and their meshes
+    sidewalks: { api: GF_SIDEWALKS, constants: SIDEWALK, meshes: sidewalkMeshes.stats, downtown: GF_SIDEWALKS.downtown },
     // CC-005: the LiDAR tree field (renderer stats) and the trees the placement skipped as a safety net
     trees: {
       stats: { ...treeField.stats, placed: treePlan.sites.length, usable: GF_TREES.counts.usable, cells: treeField.group.children.length, speciesCounts: treePlan.speciesCounts },
@@ -784,6 +803,7 @@ async function initApp() {
     updateExitHint(false, now);
     cameraSystem.update(dt, elapsed);
     ground.terrain.update(cameraSystem.camera.position);
+    sidewalkMeshes.update(cameraSystem.camera.position);
     treeField.update(cameraSystem.currentPos);
     trafficSystem.update(
       dt,

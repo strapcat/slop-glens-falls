@@ -12,6 +12,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Raster, rdp, rdpRing, ringArea, destair } from '../geo-util.mjs';
 import { LAT0, LON0, THETA, BBOX, BBOX_M, toLocal, q, flat } from './geo-frame.mjs';
+import { sidewalkBandAt } from '../../js/gf-sidewalks.js';
 
 const log = (...a) => console.log('[gf-geodata]', ...a);
 export const ATTRIBUTION = '© OpenStreetMap contributors (ODbL 1.0), https://www.openstreetmap.org/copyright';
@@ -326,7 +327,10 @@ export function buildWater(elements, box = BBOX_M) {
 // =====================================================================================================================
 // 3. BLOCKS (curb islands, after tools/geo-blocks.mjs: rasterise the roadways at curb width, label what's left)
 // =====================================================================================================================
-export const BLOCK_PARAMS = { res: 1, sidewalk: 1.8, minArea: 150, minHole: 10 };
+// sidewalk: the property line's distance in from the curb, in metres, or a function (x, z) -> metres with its .min and
+// .max. CC-005e: js/gf-sidewalks.js sidewalkBandAt: 1.8 m downtown (the Three Squares envelope, js/gf-downtown.js) as
+// CC-001's single band, 2.8 m elsewhere (room for a residential tree lawn between the curb and the walk)
+export const BLOCK_PARAMS = { res: 1, sidewalk: sidewalkBandAt, minArea: 150, minHole: 10 };
 
 // Even-odd scanline fill of several rings at once (a polygon with holes)
 function fillRings(R, rings, val) {
@@ -565,11 +569,24 @@ export function buildBlocks(cut, water, box = BBOX_M, params = BLOCK_PARAMS) {
 
   const stack = new Int32Array(W * H);
   const { lab, comps } = label(D, W, H, stack);
-  // Property line: island cells more than `sidewalk` from any road, water or outside cell
+  // Property line: island cells more than `sidewalk` from any road, water or outside cell (a function: its value at the
+  // cell's centre, asked only where the cell's distance lies between its .min and .max)
   const toEdge = R.edt((v) => v === 0);
-  const th = (sidewalk / res + 0.5) ** 2;
+  const thOf = (m) => (m / res + 0.5) ** 2;
   const P = new Uint8Array(W * H);
-  for (let k = 0; k < W * H; k++) P[k] = toEdge[k] > th ? 1 : 0;
+  if (typeof sidewalk === 'function') {
+    const lo = thOf(sidewalk.min), hi = thOf(sidewalk.max);
+    for (let k = 0; k < W * H; k++) {
+      const e = toEdge[k];
+      if (e <= lo) continue;
+      if (e > hi) { P[k] = 1; continue; }
+      const i = k % W, j = (k - i) / W;
+      P[k] = e > thOf(sidewalk(R.x0 + (i + 0.5) * res, R.z0 + (j + 0.5) * res)) ? 1 : 0;
+    }
+  } else {
+    const th = thOf(sidewalk);
+    for (let k = 0; k < W * H; k++) P[k] = toEdge[k] > th ? 1 : 0;
+  }
   const props = label(P, W, H, stack);
   const lotOf = new Map(); // island id -> its largest property-line component
   for (const pc of props.comps) {
