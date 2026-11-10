@@ -841,7 +841,8 @@ New York does not load it.
   - its origin within 1.2 m of the support (its hover floor is 0.25 m);
   - support at all four skid ends and the centre, none of it water, with the skid ends within 0.5 m of each other.
 
-  Roofs are not support in the surface contract, so a helicopter over a roof is simply too high. Set down, its skids
+  When several fail, the HUD gives where before how: no ground, over water or too high, then too fast or descending,
+  then too steep. Roofs are not support in the surface contract, so a helicopter over a roof is simply too high. Set down, its skids
   sit on the highest support under them and its rotor stops. It stays on its skids, ignoring the throttle, until the
   pilot climbs (Space/E). Getting out follows the taxi's rules round its own footprint: the skids, back to the tail.
 - **Getting in:** within 2.5 m of the taxi's body or 3.0 m of a landed helicopter's (it reaches every spot the exit

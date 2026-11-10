@@ -201,6 +201,8 @@ test('helicopter: sets down only slow, low and over dry, gentle ground; then exi
   assert.equal(landingGate(h, { ...dry, water: (x) => x > 0.5 }).reason, 'over water', 'one skid over water is enough to refuse');
   assert.equal(landingGate(h, { ...dry, support: (x, z) => z * 0.3 }).reason, 'ground too steep');
   assert.equal(landingGate(h, { ...dry, support: () => NaN }).reason, 'no ground below');
+  // where before how: over water while still descending says 'over water' (what the pilot must move for)
+  assert.equal(landingGate({ ...h, verticalSpeed: -3, speed: 4 }, { ...dry, water: () => true }).reason, 'over water');
   // on a gentle slope it sets down on the highest skid support (never into the ground)
   const gentle = landingGate({ ...h, position: { x: 0, y: 0.9, z: 0 } }, { ...dry, support: (x, z) => z * 0.05 });
   assert.ok(gentle.ok && Math.abs(gentle.y - 2.15 * 0.05) < 1e-9);

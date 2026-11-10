@@ -117,20 +117,22 @@ function findExitSpot(entity, type, probe, vehicleY) {
 // May the helicopter set down here and now? probe: { support(x, z) -> the bare support under it (NaN off the map),
 // water(x, z, y) }. Returns { ok, reason, y (where it sets down) }
 function landingGate(h, probe) {
-  if (Math.abs(h.speed || 0) > LAND.maxSpeed) return { ok: false, reason: 'too fast to land' };
-  if (Math.abs(h.verticalSpeed || 0) > LAND.maxVertical) return { ok: false, reason: 'descending too fast' };
+  // where first (no ground, water, too high: the reasons a pilot must move for), then how (speeds), then the slope
   const sin = Math.sin(h.heading || 0), cos = Math.cos(h.heading || 0), x = h.position.x, z = h.position.z;
   const centre = probe.support(x, z);
   if (!Number.isFinite(centre)) return { ok: false, reason: 'no ground below' };
-  if (h.position.y - centre > LAND.maxHeight) return { ok: false, reason: 'too high to land' };
-  // the four skid ends (x +-1.12, z -1.75 and +2.15)
-  let lo = Infinity, hi = -Infinity;
+  // the four skid ends (x +-1.12, z -1.75 and +2.15) and the centre
+  const under = [];
   for (const [s, a] of [[-1.12, 2.15], [1.12, 2.15], [-1.12, -1.75], [1.12, -1.75], [0, 0]]) {
     const px = x + cos * s + sin * a, pz = z - sin * s + cos * a, y = probe.support(px, pz);
     if (!Number.isFinite(y)) return { ok: false, reason: 'no ground below' };
     if (probe.water(px, pz, y)) return { ok: false, reason: 'over water' };
-    lo = Math.min(lo, y); hi = Math.max(hi, y);
+    under.push(y);
   }
+  if (h.position.y - centre > LAND.maxHeight) return { ok: false, reason: 'too high to land' };
+  if (Math.abs(h.speed || 0) > LAND.maxSpeed) return { ok: false, reason: 'too fast to land' };
+  if (Math.abs(h.verticalSpeed || 0) > LAND.maxVertical) return { ok: false, reason: 'descending too fast' };
+  const lo = Math.min(...under), hi = Math.max(...under);
   if (hi - lo > LAND.maxRelief) return { ok: false, reason: 'ground too steep' };
   // set down with its origin on the highest support under the skids (the tubes 0.022 m above it), never into the ground
   return { ok: true, y: hi };
