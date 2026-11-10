@@ -42,6 +42,8 @@ const PLAYER_WORLD = {
   groundNormalAt: (x, z, out) => GF_SURFACE.normal(x, z, out),
   setNear(mode, y) { nearY[mode] = y; },
   isPointOnSidewalk: () => false,
+  // CC-005d: the player's walker and cyclist drawn under the WebGL 2 fallback too (controllers.js, pedestrians.js)
+  textureFallback: true,
   spawn: null
 };
 

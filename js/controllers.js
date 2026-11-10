@@ -580,7 +580,9 @@ class ThirdPersonControllerManager {
     root.name = 'PlayerPerson';
 
     // One skinned person, posed in world space every frame by its rig (walk, run, turn, jump)
-    const crowd = new PersonCrowd(1, { farDistance: Infinity });
+    // world.textureFallback (opt-in): the WebGL 2 fallback reads the pose from a data texture (pedestrians.js), as the
+    // street crowd does; without it that backend cannot draw the player's walker. WebGPU is unaffected either way
+    const crowd = new PersonCrowd(1, { farDistance: Infinity, textureFallback: !!this.world.textureFallback });
     crowd.meshes.forEach((m) => this.scene.add(m));
     const rig = new PersonRig({ seed: 4.2, scale: 1.0, girth: 1.02, hair: 0.18, armSwing: 1.0 });
 
@@ -843,7 +845,7 @@ class ThirdPersonControllerManager {
 
     // Skinned rider (see pedestrians.js), posed every frame with its hands on the grips and feet on the pedals; the
     // helmet rides on its head
-    const riderCrowd = new PersonCrowd(1, { farDistance: Infinity });
+    const riderCrowd = new PersonCrowd(1, { farDistance: Infinity, textureFallback: !!this.world.textureFallback });
     riderCrowd.meshes.forEach((m) => this.scene.add(m));
     const riderRig = new PersonRig({ seed: 12.8, scale: 1.0, girth: 0.97, hair: 0.1 });
     const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.125, 14, 12), helmetMat);

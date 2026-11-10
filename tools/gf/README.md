@@ -854,6 +854,9 @@ New York does not load it.
   - **To traffic** (`traffic.js` opt-in `setParked`): AI cars keep behind it in their lane like a stopped car, change
     lanes only clear of it, and never spawn within 25 m of it. Nobody drives it or pushes it. On a one-lane street they
     wait behind it.
+- **The walker drawn everywhere:** the player's own walker and cyclist rider now take the street crowd's WebGL 2
+  data-texture fallback when the world asks for it (`controllers.js` opt-in `world.textureFallback`, set in
+  `gf-runtime.js`). Without it that backend never drew the player on foot. WebGPU is unaffected.
 - **New York:** neither call is made, so both lists stay empty and every path is unchanged. The controllers' new
   branches key on flags only this module sets (`landed`, `boarded`); `tests/gf-vehicle-exit.test.mjs` checks the
   defaults (the idle walker strolls on, the helicopter hovers at its old floor, no parked bodies).
