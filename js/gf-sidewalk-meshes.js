@@ -104,9 +104,10 @@ function createGfSidewalkMeshes(scene, sidewalks) {
   };
   for (const m of Object.values(materials)) m.side = THREE.DoubleSide;
   const strips = createSidewalkStrips(sidewalks, CELL);
-  const stats = { cells: strips.cells.size, built: 0, triangles: 0, visible: 0, drawCalls: 0 };
+  const stats = { cells: strips.cells.size, built: 0, triangles: 0, visible: 0, drawCalls: 0, buildMs: 0 };
 
   function buildCell(cell) {
+    const t0 = performance.now();
     const meshes = [];
     for (const [name, B] of Object.entries(strips.build(cell.segs))) {
       if (!B.idx.length) continue;
@@ -131,6 +132,7 @@ function createGfSidewalkMeshes(scene, sidewalks) {
       stats.triangles += B.idx.length / 3;
     }
     stats.built++;
+    stats.buildMs += performance.now() - t0;
     return meshes;
   }
 

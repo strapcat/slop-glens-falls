@@ -240,7 +240,7 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
   bridge), and on the draped asphalt where they cross a road. CC-005e: the lines are set per street side on the walk
   (`gf-sidewalks.js` `insetsFor`: about 0.6/1.2 m downtown, 1.9/2.5 m behind a residential lawn), `onSidewalk` is
   `onWalk`, and the walkers stand 0.02 m over the raised walk.
-- **Coverage:** 2187 of the network's 2498 edges have sidewalk tracks.
+- **Coverage:** 2187 of the network's 2498 edges have sidewalk tracks (CC-005e: 2126, all on the walk's concrete).
 - **Limits:** there are no crosswalks at Glens Falls junctions yet (`pedestrian-routes.js` `across()` only knows New
   York's grid corners), so pedestrians walk around their block but don't cross streets.
 
@@ -899,7 +899,8 @@ from the published bounding streets, along their OSM centrelines in the frozen e
   South St, South St north: 24 OSM nodes, 13.0 acres inside;
 - plus 20 m either side of every loop street (the far frontage of a bounding street is downtown too).
 
-The listed district is 23 acres (1984), so the envelope is tighter than the real district. Not included: lower Glen St
+With its frontage the envelope covers 29.5 acres. The 1984 listing is 23 acres, and the 2022 increase adds an area
+not fetched here, so the sizes are of the same order but the shape is not the surveyed one. Not included: lower Glen St
 south of Centennial Circle, Warren St east of the circle, Ridge St north of Maple St. Every vertex is an OSM node; no
 freehand shape.
 
