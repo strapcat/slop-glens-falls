@@ -713,6 +713,41 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     v.pSpeed = Math.max(0, player.vx * fx + player.vz * fz);
   }
 
+  // CC-005d (opt-in, setParked): the player's parked vehicles (a taxi left by the kerb, a landed helicopter), each
+  // { x, z, halfW, halfL, levelY? }. Traffic keeps behind one ahead in its lane (as behind a stopped car), changes
+  // lanes only clear of it and never spawns on it; nobody drives it or pushes it. None by default: then every result
+  // below is exactly what it was without them.
+  let parkedBodies = [];
+  function setParked(bodies) {
+    parkedBodies = Array.isArray(bodies) ? bodies.filter(Boolean) : [];
+  }
+  // Gap to the nearest parked body ahead of v in the lane `off` metres to its right (Infinity if none)
+  function parkedGap(v, off) {
+    let gap = Infinity;
+    if (!parkedBodies.length) return gap;
+    const fx = Math.sin(v.yaw), fz = Math.cos(v.yaw);
+    for (const b of parkedBodies) {
+      if (b.levelY !== undefined && v.levelY !== undefined && Math.abs(b.levelY - v.levelY) > 2.6) continue;
+      const dx = b.x - v.x, dz = b.z - v.z;
+      const ahead = dx * fx + dz * fz, right = dz * fx - dx * fz;
+      if (ahead < 0 || ahead > LOOKAHEAD) continue;
+      if (Math.abs(right - off) > v.halfWidth + b.halfW + 0.4) continue;
+      gap = Math.min(gap, ahead - v.half - b.halfL);
+    }
+    return gap;
+  }
+  // Is a parked body within reach of v's lane `off` metres to its right (beside it, ahead or behind)?
+  function parkedBeside(v, off) {
+    const fx = Math.sin(v.yaw), fz = Math.cos(v.yaw);
+    for (const b of parkedBodies) {
+      if (b.levelY !== undefined && v.levelY !== undefined && Math.abs(b.levelY - v.levelY) > 2.6) continue;
+      const dx = b.x - v.x, dz = b.z - v.z;
+      const ahead = dx * fx + dz * fz, right = dz * fx - dx * fz, reach = v.half + b.halfL + 6;
+      if (Math.abs(right - off) < v.halfWidth + b.halfW + 0.4 && ahead > -reach && ahead < reach) return true;
+    }
+    return false;
+  }
+
   // Gap to the player if it is ahead in the lane whose centre is `off` metres to the right of v
   function playerGap(v, off) {
     if (v.pAhead < 0 || v.pAhead > LOOKAHEAD) return Infinity;
@@ -1094,6 +1129,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     }
     const off = v.edge.lanes[t] - v.edge.lanes[v.lane] - v.dl;
     const reach = v.half + player.halfL + 6;
+    if (parkedBodies.length && parkedBeside(v, off)) return false;
     return !(Math.abs(v.pRight - off) < v.halfWidth + player.halfW + 0.4 && v.pAhead > -reach && v.pAhead < reach);
   }
 
@@ -1103,6 +1139,10 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     let worst = o ? brake(v, o.s - o.v.half - v.s - v.half, o.v.speed) : 0;
     const pg = playerGap(v, v.edge.lanes[t] - v.edge.lanes[v.lane] - v.dl);
     if (pg < LOOKAHEAD) worst = Math.min(worst, brake(v, pg, v.pSpeed));
+    if (parkedBodies.length) {
+      const kg = parkedGap(v, v.edge.lanes[t] - v.edge.lanes[v.lane] - v.dl);
+      if (kg < LOOKAHEAD) worst = Math.min(worst, brake(v, kg, 0));
+    }
     return freeAcc(v) + worst;
   }
 
@@ -1164,6 +1204,16 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
       if (pg < v.gap) {
         v.gap = pg;
         v.leaderSpeed = v.pSpeed;
+      }
+    }
+    if (parkedBodies.length) {
+      const kg = parkedGap(v, 0);
+      if (kg > 0 && kg < LOOKAHEAD) { // a parked vehicle ahead: a stopped leader
+        worst = Math.min(worst, brake(v, kg, 0));
+        if (kg < v.gap) {
+          v.gap = kg;
+          v.leaderSpeed = 0;
+        }
       }
     }
     const acc = Math.min(freeAcc(v) + worst, (cap - v.speed) * 2);
@@ -1988,6 +2038,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
       if (d <= (jump ? NEAR_RADIUS : VEHICLE_RADIUS)) continue;
       budget--;
       spawnVehicle(v, jump ? 0 : 100, NEAR_RADIUS, !jump);
+      // never on a parked vehicle of the player's (CC-005d): such a placement is undone, to be tried again later
+      if (parkedBodies.length && v.edge && parkedBodies.some((b) => Math.hypot(v.x - b.x, v.z - b.z) < 25)) v.edge = null;
     }
     buildOccupancy();
     for (const m of bodyMeshes) m.count = 0;
@@ -2086,6 +2138,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     group,
     update,
     setCollisionListener,
+    setParked,
     cars,
     buses,
     peds: pedestrianSystem.peds,

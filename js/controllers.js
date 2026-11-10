@@ -367,8 +367,10 @@ class ThirdPersonControllerManager {
     const active = this.entities[mode];
     if (active.mesh) active.mesh.visible = true;
     if (active.helmet) active.helmet.visible = true;
-    if (mode === 'person') active._charHidden = false;
-    else if (mode === 'cyclist') {
+    if (mode === 'person') {
+      active._charHidden = false;
+      active.boarded = false; // CC-005d: a person who boarded a vehicle steps out where it was left
+    } else if (mode === 'cyclist') {
       active._riderHidden = false;
       active._posedX = NaN;
     }
@@ -493,6 +495,84 @@ class ThirdPersonControllerManager {
   }
 
   // =========================================================================
+  // CC-005d (opt-in; vehicle-exit.js drives these, New York never calls them): park a vehicle where it stands, set a
+  // helicopter down, put the walker beside a vehicle or aboard one, and the parked vehicles' bodies, which the active
+  // player bumps into like a building (setParkedColliders; none by default)
+  // =========================================================================
+  parkVehicle(mode) {
+    const e = this.entities[mode];
+    if (!e) return;
+    e.speed = 0;
+    if (mode === 'car') {
+      e.vx = e.vz = e.angularVel = e.steerAngle = 0;
+      e.pitchVel = e.rollVel = e.heaveVel = 0;
+      e.prevX = e.position.x;
+      e.prevZ = e.position.z;
+      if (e.carState) e.carState.value.x = e.carState.value.w = 0;
+    } else if (mode === 'helicopter') {
+      e.verticalSpeed = 0;
+    }
+  }
+
+  // The helicopter settled with its skids on the support at y (the skid tubes' undersides sit 0.022 m above the origin)
+  landHelicopter(y) {
+    const h = this.entities.helicopter;
+    this.parkVehicle('helicopter');
+    h.position.y = y;
+    h.landed = true;
+    h.pitchAngle = h.rollAngle = 0;
+    if (h.tiltPivot) {
+      h.tiltPivot.rotation.x = h.tiltPivot.rotation.z = 0;
+      h.tiltPivot.position.y = 0;
+    }
+    if (h.mesh) h.mesh.position.copy?.(h.position);
+  }
+
+  // The walker standing at (x, y, z) facing `heading`, feet planted afresh there
+  placePerson(x, y, z, heading) {
+    const p = this.entities.person;
+    p.position.x = x;
+    p.position.y = y;
+    p.position.z = z;
+    p.heading = heading;
+    p.speed = 0;
+    p.verticalVel = 0;
+    p.boarded = false;
+    p._charHidden = false;
+    if (p.mesh) {
+      p.mesh.visible = true;
+      p.mesh.position.copy?.(p.position);
+    }
+    if (p.rig) {
+      p.rig.reset(x, z, heading, personGround, this);
+      p.crowd.begin();
+      p.crowd.add(p.rig, 0);
+      p.crowd.end();
+    }
+  }
+
+  // The walker aboard a vehicle: hidden, not walking on by itself, no body of its own
+  boardPerson() {
+    const p = this.entities.person;
+    p.boarded = true;
+    p.speed = 0;
+    p.verticalVel = 0;
+  }
+
+  setParkedColliders(list) {
+    this.parkedColliders = Array.isArray(list) ? list : [];
+  }
+
+  // Would a walker of `radius` standing at (x, y, z) be inside a building, trunk, rail or prop collider, or a parked
+  // vehicle? (the exit search's test; the same contact the walker's own movement uses)
+  bodyBlockedAt(x, z, y, radius = 0.48) {
+    const body = collisionBody('person', radius, 0);
+    for (const c of this.nearColliders(x, z, radius + 6)) if (buildingContact(c, x, y, z, body)) return true;
+    for (const c of this.parkedColliders || []) if (buildingContact(c, x, y, z, body)) return true;
+    return false;
+  }
+
+  // =========================================================================
   // 1. PERSON (SKINNED NYC PEDESTRIAN WITH PLANTED-FOOTSTEP IK GAIT, see pedestrians.js)
   // =========================================================================
   createPersonEntity() {
@@ -500,7 +580,9 @@ class ThirdPersonControllerManager {
     root.name = 'PlayerPerson';
 
     // One skinned person, posed in world space every frame by its rig (walk, run, turn, jump)
-    const crowd = new PersonCrowd(1, { farDistance: Infinity });
+    // world.textureFallback (opt-in): the WebGL 2 fallback reads the pose from a data texture (pedestrians.js), as the
+    // street crowd does; without it that backend cannot draw the player's walker. WebGPU is unaffected either way
+    const crowd = new PersonCrowd(1, { farDistance: Infinity, textureFallback: !!this.world.textureFallback });
     crowd.meshes.forEach((m) => this.scene.add(m));
     const rig = new PersonRig({ seed: 4.2, scale: 1.0, girth: 1.02, hair: 0.18, armSwing: 1.0 });
 
@@ -763,7 +845,7 @@ class ThirdPersonControllerManager {
 
     // Skinned rider (see pedestrians.js), posed every frame with its hands on the grips and feet on the pedals; the
     // helmet rides on its head
-    const riderCrowd = new PersonCrowd(1, { farDistance: Infinity });
+    const riderCrowd = new PersonCrowd(1, { farDistance: Infinity, textureFallback: !!this.world.textureFallback });
     riderCrowd.meshes.forEach((m) => this.scene.add(m));
     const riderRig = new PersonRig({ seed: 12.8, scale: 1.0, girth: 0.97, hair: 0.1 });
     const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.125, 14, 12), helmetMat);
@@ -1044,6 +1126,18 @@ class ThirdPersonControllerManager {
         }
       }
     }
+    // CC-005d: the parked vehicles (opt-in; none by default), pushed out of like a wall; never the one being moved
+    const parked = this.parkedColliders;
+    if (parked && parked.length) {
+      for (const c of parked) {
+        if (c.owner && c.owner === (entity || this.getActiveEntity?.())) continue;
+        if (buildingContact(c, pos.x, pos.y, pos.z, body, contact)) {
+          pos.x += contact.nx * contact.depth;
+          pos.z += contact.nz * contact.depth;
+          if (carEntity) carEntity.speed *= 0.4;
+        }
+      }
+    }
   }
 
   // Pose the skinned characters once every entity has moved: the pedestrian's rig walks (or runs, turns, jumps) it to
@@ -1057,7 +1151,7 @@ class ThirdPersonControllerManager {
     if (p) {
       const dx = focus ? p.position.x - focus.x : 0;
       const dz = focus ? p.position.z - focus.z : 0;
-      if (this.activeMode === 'person' || dx * dx + dz * dz <= maxDistSq) {
+      if (this.activeMode === 'person' || (!p.boarded && dx * dx + dz * dz <= maxDistSq)) {
         p._charHidden = false;
         if (p.mesh) p.mesh.visible = true;
         const air = p.position.y - this.getGroundHeight(p.position.x, p.position.z, 'person');
@@ -1120,11 +1214,16 @@ class ThirdPersonControllerManager {
 
   update(dt, elapsed, focusPos = null) {
     const heli = this.entities.helicopter;
-    heli.mainRotorPivot.rotation.y += dt * 24.0;
-    heli.tailRotorPivot.rotation.x += dt * 32.0;
+    // (a landed helicopter nobody is aboard has its engine off: CC-005d)
+    if (!(heli.landed && this.activeMode !== 'helicopter')) {
+      heli.mainRotorPivot.rotation.y += dt * 24.0;
+      heli.tailRotorPivot.rotation.x += dt * 32.0;
+    }
 
     if (this.activeMode === 'person') {
       this.updatePerson(dt, elapsed);
+    } else if (this.entities.person.boarded) {
+      // aboard a vehicle (CC-005d): it stays with the vehicle, out of sight
     } else {
       // Keep the sidewalk pedestrian walking naturally when not actively controlled
       const p = this.entities.person;
@@ -1401,6 +1500,19 @@ class ThirdPersonControllerManager {
     let vertInput = 0;
     if (this.keys.up) vertInput = this.keys.up;
     else if (this.keys.down) vertInput = -this.keys.down;
+
+    // CC-005d: landed (set down by vehicle-exit.js), it sits on its skids until the pilot climbs away
+    if (h.landed) {
+      if (vertInput > 0) {
+        h.landed = false;
+      } else {
+        h.speed = h.verticalSpeed = 0;
+        h.pitchAngle = h.rollAngle = 0;
+        h.tiltPivot.rotation.x = h.tiltPivot.rotation.z = 0;
+        h.tiltPivot.position.y = 0;
+        return;
+      }
+    }
 
     if (fwdInput !== 0) {
       h.speed += fwdInput * 24.0 * dt;
