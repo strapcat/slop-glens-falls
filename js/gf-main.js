@@ -13,7 +13,7 @@ import { CameraSystem, CAMERA_PRESETS } from './cameras.js';
 import { LightingSystem } from './lighting.js';
 import { ROAD_SOURCE, PLAYER_WORLD, isTypingInField } from './city-runtime.js';
 import { GF_GEO } from './gf-geodata.js';
-import { gfSpawn } from './gf-roadgraph.js';
+import { gfSpawn, driveLinks } from './gf-roadgraph.js';
 import { buildGfTerrainGround, ROAD_LIFT } from './gf-ground.js';
 import { DRAPE_TOL } from './gf-drape.js';
 import { GF_BRIDGES } from './gf-bridges.js';
@@ -40,6 +40,11 @@ import { cityUniforms } from './tsl-materials.js';
 import { createVehicleExit, trafficBodies, EXIT_KEY } from './vehicle-exit.js';
 import { SIDEWALK } from './gf-sidewalks.js';
 import { createGfSidewalkMeshes } from './gf-sidewalk-meshes.js';
+import { GF_FURNITURE } from './gf-furniture.js';
+import { createGfCrossings } from './gf-crossings.js';
+import { placeStopSigns, edgeClasses } from './gf-stop-signs.js';
+import { placeStreetLights, CLEAR as LAMP_CLEAR } from './gf-street-lights.js';
+import { buildGfStreetFurniture } from './gf-street-furniture-meshes.js';
 
 // Glens Falls game view (index.html?city=glensfalls): the town from GF_GEO (roads, water, blocks) on its sourced terrain
 // (CC-005b: USGS 3DEP bare earth, gf-terrain.js, asked through gf-surface.js by everything that stands on it), its road graph
@@ -49,7 +54,7 @@ import { createGfSidewalkMeshes } from './gf-sidewalk-meshes.js';
 
 const NUM_CARS = 40;
 // Pedestrians walk the sidewalk band between each block's curb and its lot, on the terrain (a deck where their track
-// runs along a bridge); there are no crosswalks yet. CC-005e: on the walk's concrete (gf-sidewalks.js onWalk), never its
+// runs along a bridge); CC-006: they cross the streets on the crosswalks (GF_CROSSINGS below). CC-005e: on the walk's concrete (gf-sidewalks.js onWalk), never its
 // tree lawn: the walking lines (insetsFor) about 0.6 and 1.2 m from the roadway on a downtown walk (concrete to the
 // curb), 1.9 and 2.5 m on a residential one (behind the lawn); 2 cm above the raised walk (raiseAt); crossing a road
 // they step down onto its draped asphalt. CC-005c: a fixed
@@ -64,12 +69,24 @@ function raisedGround(groundAt) {
     return r > 0 ? Math.max(y, GF_SURFACE.ground(x, z) + r) : y;
   };
 }
+// CC-006: crosswalks (gf-crossings.js) on every arm of a signalled junction and on the arms the sourced marked crossings
+// lie on (OSM crossing=marked|zebra or markings, gf-furniture.js, and gf-signals.js's crossing=traffic_signals): the
+// pedestrians cross there, on the WALK at a signal and when the traffic can stop elsewhere (traffic.js mayCross)
+const GF_CROSSINGS = createGfCrossings({
+  marked: [
+    ...GF_FURNITURE.crossings.map(([x, z, osm, kind]) => ({ x, z, osm: String(osm), kind })),
+    ...GF_SIGNALS.crossings.map(([x, z, osm]) => ({ x, z, osm: String(osm), kind: 'traffic_signals' }))
+  ],
+  blockAt: GF_BLOCKS.blockAt,
+  onWalk: GF_SIDEWALKS.onWalk
+});
 const PEDESTRIANS = {
   numPeds: 120,
   sidewalkY: 0.02,
   crosswalkY: ROAD_LIFT + 0.012,
   onSidewalk: GF_SIDEWALKS.onWalk,
   trackInsets: GF_SIDEWALKS.insetsFor,
+  crossings: GF_CROSSINGS.crossingsFor,
   groundAt: raisedGround(trailGroundAt(GF_SURFACE)),
   // the WebGL 2 fallback reads the crowd poses from a data texture (its plain-attribute read ignores the bone index)
   textureFallback: true
@@ -275,6 +292,60 @@ async function initApp() {
   // on the draped asphalt, high enough above it to clear the ribbon wherever its chord bows up (DRAPE_TOL)
   buildRoadPaint(scene, trafficSystem.network, null, { surfaceAt: roadSurface, lift: 0.012 + DRAPE_TOL });
   markInit('roadPaint');
+  // CC-006: stop signs (gf-stop-signs.js: OSM highway=stop / traffic_sign=stop where they meet an approach, INFERRED on
+  // the minor approaches of the other unsignalled junctions), which traffic.js's cars stop at (edge.stopSign, opt-in);
+  // crosswalk bars; street lights (gf-street-lights.js: ASSUMED spacing, plus the OSM lamps on a curb band)
+  const stopPlan = placeStopSigns({
+    network: trafficSystem.network,
+    stops: GF_FURNITURE.stops.map(([x, z, osm, all, direction]) => ({ x, z, osm: String(osm), all: !!all, direction })),
+    giveWays: GF_FURNITURE.giveWays.map(([x, z, osm]) => ({ x, z, osm: String(osm) })),
+    blockAt: GF_BLOCKS.blockAt,
+    classOf: edgeClasses(driveLinks(GF_GEO))
+  });
+  for (const e of stopPlan.stopEdges.keys()) e.stopSign = true;
+  const paintedCrosswalks = trafficSystem.network.nodes.flatMap((n) => GF_CROSSINGS.crossingAt(n));
+  const midBlock = GF_CROSSINGS.midBlock(trafficSystem.network);
+  // posts a lamp keeps clear of: trunks, signal heads (gf-signal-heads.js: 1.5 m before the stop line, 0.8 m past the
+  // road's half width) and stop signs; and buildings
+  const posts = [];
+  for (const n of trafficSystem.network.nodes) {
+    if (!n.signal) continue;
+    for (const e of n.in) posts.push({ x: e.sx + e.dx * (e.len - 1.5) + e.rx * (e.half + 0.8), z: e.sz + e.dz * (e.len - 1.5) + e.rz * (e.half + 0.8) });
+  }
+  for (const g of stopPlan.drawn) posts.push(g);
+  const near = (list, cell) => {
+    const grid = new Map();
+    for (const p of list) {
+      const cx = (p.minX !== undefined ? (p.minX + p.maxX) / 2 : p.x), cz = (p.minZ !== undefined ? (p.minZ + p.maxZ) / 2 : p.z);
+      const k = Math.floor(cx / cell) * 100000 + Math.floor(cz / cell);
+      if (!grid.has(k)) grid.set(k, []);
+      grid.get(k).push(p);
+    }
+    return (x, z) => {
+      const out = [];
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const p of grid.get((Math.floor(x / cell) + i) * 100000 + Math.floor(z / cell) + j) || []) out.push(p);
+      return out;
+    };
+  };
+  const trunksNear = near(treePlan.trunks, 8), postsNear = near(posts, 8), buildingsNear = near(buildings.colliders, 32);
+  const lampPlan = placeStreetLights(GF_SIDEWALKS, {
+    osmLamps: GF_FURNITURE.lamps.map(([x, z, osm]) => ({ x, z, osm: String(osm) })),
+    avoid(x, z) {
+      if (trunksNear(x, z).some((t) => Math.hypot((t.minX + t.maxX) / 2 - x, (t.minZ + t.maxZ) / 2 - z) < (t.maxX - t.minX) / 2 + LAMP_CLEAR.trunk)) return 'trunk';
+      if (postsNear(x, z).some((p) => Math.hypot(p.x - x, p.z - z) < LAMP_CLEAR.post)) return 'post';
+      if (buildingsNear(x, z).some((c) => x >= c.minX - LAMP_CLEAR.building && x <= c.maxX + LAMP_CLEAR.building && z >= c.minZ - LAMP_CLEAR.building && z <= c.maxZ + LAMP_CLEAR.building && polygonContains(c.polygon, x, z))) return 'building';
+      return null;
+    }
+  });
+  const furniture = buildGfStreetFurniture(scene, {
+    crosswalks: [...paintedCrosswalks, ...midBlock.painted.map((m) => m.crossing)],
+    signs: stopPlan.drawn,
+    lamps: lampPlan.lamps,
+    surface: (x, z) => roadSurface(x, z, 0, 1),
+    ground: GF_SURFACE.ground
+  });
+  console.info(`[gf] street furniture: ${paintedCrosswalks.length} junction crosswalks (${trafficSystem.network.nodes.filter((n) => n.signal && GF_CROSSINGS.crossingAt(n).length).length} signalled junctions) + ${midBlock.painted.length} mid-block, ${GF_CROSSINGS.matched.size} sourced crossings on an arm; stop signs ${stopPlan.counts.osmSigns} OSM (${stopPlan.counts.osmMatched} of ${GF_FURNITURE.stops.length} nodes matched) + ${stopPlan.counts.inferredSigns} inferred at ${stopPlan.counts.inferredJunctions} junctions, ${stopPlan.counts.drawn} drawn; ${lampPlan.counts.assumed} assumed + ${lampPlan.counts.osm} OSM street lights; ${furniture.stats.drawCalls} draw calls, ${furniture.stats.poolLights} pooled lights`);
+  markInit('streetFurniture');
 
   // 4. Player (Person, Car, Cyclist, Helicopter) & cameras
   await showLoadingStage('Preparing player, vehicles and controls...');
@@ -387,6 +458,15 @@ async function initApp() {
         const probe = createTreeField(null, treePlan.sites, buildings.colliders);
         return { placed: treePlan.sites.length, kept: probe.stats.trees, wouldDrop: treePlan.sites.length - probe.stats.trees };
       }
+    },
+    // CC-006: crosswalks, stop signs (sourced, inferred, unmatched OSM nodes) and street lights, and their meshes
+    streetFurniture: {
+      crossings: GF_CROSSINGS,
+      paintedCrosswalks: paintedCrosswalks.length,
+      midBlock: { painted: midBlock.painted.length, lost: midBlock.lost },
+      stops: { counts: stopPlan.counts, unmatched: stopPlan.unmatched, signs: stopPlan.drawn.map(({ edge, ...g }) => ({ ...g, edge: edge.id })) },
+      lamps: { counts: lampPlan.counts, lamps: lampPlan.lamps },
+      meshes: furniture.stats
     },
     // CC-005c: the trails (graph, entrances and their sidewalk attachments, meshes, trees cleared), the trail walkers
     // and the fictional Thrill Hill party (its layout, who is where, the fire's state)
@@ -811,6 +891,7 @@ async function initApp() {
     cameraSystem.update(dt, elapsed);
     ground.terrain.update(cameraSystem.camera.position);
     sidewalkMeshes.update(cameraSystem.camera.position);
+    furniture.update(cameraSystem.camera.position, dt);
     treeField.update(cameraSystem.currentPos);
     trafficSystem.update(
       dt,

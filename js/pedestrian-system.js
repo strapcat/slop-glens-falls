@@ -14,10 +14,11 @@ const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 // options: numPeds, the heights pedestrians walk at on the sidewalks and crosswalks (sidewalkY, crosswalkY: New York's
 // raised curbs and painted roadway), onSidewalk(x, z) for routes' detours and dodges where the network's own (its curb
 // rectangles) doesn't describe the sidewalks, and trackInsets, the walking lines' distances beyond the roadway
-// (pedestrian-routes.js; New York's: 1.7 and 2.8 m), and groundAt(x, z, ux, uz), the ground those heights are above for
+// (pedestrian-routes.js; New York's: 1.7 and 2.8 m), crossings (opt-in: a node's crosswalk tracks, pedestrian-routes.js;
+// New York: its grid corners), and groundAt(x, z, ux, uz), the ground those heights are above for
 // someone walking along (ux, uz) (a city on a terrain, e.g. Glens Falls; none: New York's streets, at y = 0)
 function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCross, walkOn, visible, nearView }, options = {}) {
-  const { numPeds = NUM_PEDS, sidewalkY = 0.22, crosswalkY = 0.012, onSidewalk = null, trackInsets = null, groundAt = null, textureFallback = false, routes: wrapRoutes = null } = options;
+  const { numPeds = NUM_PEDS, sidewalkY = 0.22, crosswalkY = 0.012, onSidewalk = null, trackInsets = null, crossings = null, groundAt = null, textureFallback = false, routes: wrapRoutes = null } = options;
   let clock = 0;
   let focusX = 0, focusZ = 140;
   let hasView = false;
@@ -96,7 +97,7 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
 
   const KERB = 1.6; // how far along a crosswalk track pedestrians wait to cross (the curb is 2 m along)
   const baseRoutes = createPedestrianRoutes(onSidewalk ? { walkable: network.walkable, onSidewalk } : network, blockAt,
-    trackInsets ? { insets: trackInsets } : undefined);
+    trackInsets || crossings ? { ...(trackInsets ? { insets: trackInsets } : {}), ...(crossings ? { crossings } : {}) } : undefined);
   // options.routes (opt-in, e.g. Glens Falls's park trails, gf-trail-network.js): wraps the routes (the same along /
   // across / next / canDodge; given the road network too); next() and groundAt() are also given the pedestrian
   const pedRoutes = wrapRoutes ? wrapRoutes(baseRoutes, network) : baseRoutes;
@@ -463,7 +464,7 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
       // room to walk before standing: up to the curb unless p may cross, and up to the back of whoever is ahead
       const s = curbProgress(p);
       if (s <= KERB + 1e-6) {
-        const walk = walkOn(p.side);
+        const walk = walkOn(p.side, p.node);
         if (!walk) p.walkAt = -1;
         else if (p.walkAt < 0) p.walkAt = clock + p.walkDelay;
         // React to WALK independently of the queue or vehicles still clearing the crossing.
@@ -515,8 +516,11 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
     p.dodge += clamp(p.dodgeTarget - p.dodge, -dodgeStep, dodgeStep);
     p.x = p.ax + p.ux * t + p.uz * p.dodge;
     p.z = p.az + p.uz * t - p.ux * p.dodge;
-    if (p.node && ((t > KERB && t < p.len - KERB) || (p.waiting && walkOn(p.side)))) {
-      p.coord = p.side >= 2 ? p.x : p.z;
+    if (p.node && ((t > KERB && t < p.len - KERB) || (p.waiting && walkOn(p.side, p.node)))) {
+      // where across the road p is, in the frame traffic.js measures its lanes in (laneCoord): x or z on the grid, the
+      // road's lateral axis at a centreline junction (Glens Falls's crosswalks)
+      const road = p.node.general && p.node.road ? p.node.road[p.side] : null;
+      p.coord = road ? p.x * road.clx + p.z * road.clz : p.side >= 2 ? p.x : p.z;
       if (!p.node.walkers.length) walkedNodes.push(p.node);
       p.node.walkers.push(p);
     }

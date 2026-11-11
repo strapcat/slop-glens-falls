@@ -1,8 +1,9 @@
 // Lazily connected sidewalk tracks; junctions stay on the same curb island. Crosswalk tracks are separate,
 // and pedestrian-system.js checks traffic permissions before entering them. insets: how far beyond the roadway's half
 // width the walking lines along each side run (New York's 4.6 m sidewalks: 1.7 and 2.8 m), or a function (edge, side)
-// giving them for one side of one edge (side -1 or 1).
-function createPedestrianRoutes({ walkable, onSidewalk }, blockAt, { insets = [1.7, 2.8] } = {}) {
+// giving them for one side of one edge (side -1 or 1). crossings (opt-in, e.g. Glens Falls's crosswalks): a
+// function (node) giving that node's crosswalk tracks, [{ a, b, side, line }], in place of New York's grid corners.
+function createPedestrianRoutes({ walkable, onSidewalk }, blockAt, { insets = [1.7, 2.8], crossings: crossingsAt = null } = {}) {
   const sidewalks = new Map(), crossings = new Map(), junctions = new Map(), connections = new WeakMap();
   const point = (track, end) => ({ x: track.ax + track.ux * track.len * end, z: track.az + track.uz * track.len * end });
   const segment = (a, b, extra = {}) => {
@@ -52,6 +53,13 @@ function createPedestrianRoutes({ walkable, onSidewalk }, blockAt, { insets = [1
     if (crossings.has(n)) return crossings.get(n);
     const result = [];
     crossings.set(n, result);
+    if (crossingsAt) {
+      for (const c of crossingsAt(n)) {
+        if (!onSidewalk(c.a.x, c.a.z) || !onSidewalk(c.b.x, c.b.z) || !clear(c.a, c.b)) continue;
+        result.push(segment(c.a, c.b, { node: n, side: c.side, line: c.line, from: n, to: n }));
+      }
+      return result;
+    }
     if (!n.signal) return result;
     for (let side = 0; side < 4; side++) {
       const road = n.road[side];
