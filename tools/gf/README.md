@@ -1062,8 +1062,8 @@ three.js), `js/gf-street-furniture-meshes.js` (drawing), `js/gf-furniture.js` (g
   0.3 s, while the glow is on. No lamp has a light of its own.
 
 **Cost** (headless Chromium, software WebGL, so frame times are only relative; car on Glen St at Monument Square and
-on Maple St, golden hour and midnight): +5 to +8 draw calls (crosswalk bars, two sign meshes, lamps; their shadow
-passes), +237k to +246k triangles (the 5,802 lamps are one instanced mesh with no sun shadows), 32 point lights at
+on Maple St, golden hour and midnight): +2 to +8 draw calls (crosswalk bars, two sign meshes, lamps; the signs' shadow
+passes), +180k to +237k triangles (the 5,802 lamps are one instanced mesh with no sun shadows), 32 point lights at
 night, 164-214 ms more start-up, and median frame time +3% to +12%.
 
 **Limits.**
