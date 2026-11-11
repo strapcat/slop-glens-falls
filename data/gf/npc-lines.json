@@ -1,0 +1,33 @@
+{
+  "randos": {
+    "day": [
+      "PLACEHOLDER — Dave writes this (rando, day 1)",
+      "PLACEHOLDER — Dave writes this (rando, day 2)",
+      "PLACEHOLDER — Dave writes this (rando, day 3)"
+    ],
+    "night": [
+      "PLACEHOLDER — Dave writes this (rando, night 1)",
+      "PLACEHOLDER — Dave writes this (rando, night 2)",
+      "PLACEHOLDER — Dave writes this (rando, night 3)"
+    ],
+    "any": [
+      "PLACEHOLDER — Dave writes this (rando, any time 1)",
+      "PLACEHOLDER — Dave writes this (rando, any time 2)"
+    ]
+  },
+  "specials": {
+    "thrill-hill-crowd": {
+      "name": "Thrill Hill crowd",
+      "where": "thrill-hill",
+      "night": [
+        "PLACEHOLDER — Dave writes this (Thrill Hill crowd, night 1)",
+        "PLACEHOLDER — Dave writes this (Thrill Hill crowd, night 2)",
+        "PLACEHOLDER — Dave writes this (Thrill Hill crowd, night 3)"
+      ],
+      "day": [
+        "PLACEHOLDER — Dave writes this (Thrill Hill, day 1)",
+        "PLACEHOLDER — Dave writes this (Thrill Hill, day 2)"
+      ]
+    }
+  }
+}

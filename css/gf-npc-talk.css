@@ -1,0 +1,106 @@
+/* CC-NPC1 (Glens Falls only, loaded by js/gf-npc-talk-ui.js): the talk prompt over the person in reach, the speech
+   bubble over whoever is talking, and the Talk touch button (styled by style.css's .touch-action) */
+
+.npc-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9; /* over the game, under the HUD panels (10) and the touch controls (12) */
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.npc-safe-probe {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* "T Talk" over the head of the person in reach (on touch screens style.css hides the kbd: "Talk") */
+.npc-prompt {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px 4px 5px;
+  border-radius: 999px;
+  background: var(--glass-strong, rgba(16, 17, 20, 0.88));
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 6px 18px -8px rgba(0, 0, 0, 0.7);
+  color: var(--text, #f6f5f2);
+  font: 600 12px/1 var(--font-sans, sans-serif);
+  white-space: nowrap;
+  will-change: transform;
+}
+body.touch-enabled .npc-prompt { padding: 5px 10px; font-size: 13px; }
+.npc-prompt kbd { color: var(--taxi-ink, #17140a); background: var(--taxi, #ffc21a); }
+.npc-prompt[hidden] { display: none; }
+
+/* The speech bubble: paper-light, readable over day and night alike, sized for a phone */
+.npc-bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  padding: 10px 14px 9px;
+  border-radius: 16px;
+  background: #fbfaf6;
+  color: #17140a;
+  box-shadow: 0 10px 28px -10px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  font: 500 15px/1.38 var(--font-sans, sans-serif);
+  overflow-wrap: anywhere;
+  will-change: transform;
+  animation: npc-pop 0.18s var(--ease-out, ease-out) both;
+}
+.npc-bubble[hidden] { display: none; }
+.npc-bubble::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--tail-x, 50%) - 8px);
+  bottom: -7px;
+  width: 16px;
+  height: 16px;
+  background: inherit;
+  transform: rotate(45deg);
+  border-radius: 0 0 4px 0;
+  box-shadow: 3px 3px 4px -2px rgba(0, 0, 0, 0.18);
+}
+.npc-bubble.no-tail::after { display: none; }
+.npc-bubble-name {
+  margin-bottom: 2px;
+  color: #6a5a1c;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.npc-bubble-name[hidden] { display: none; }
+.npc-bubble-text { position: relative; z-index: 1; }
+.npc-bubble-more {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  color: rgba(23, 20, 10, 0.55);
+  font-size: 11px;
+  font-weight: 600;
+}
+.npc-bubble-more kbd { color: #17140a; background: rgba(23, 20, 10, 0.08); box-shadow: inset 0 0 0 1px rgba(23, 20, 10, 0.18); }
+body.touch-enabled .npc-bubble-more { display: none; }
+body.touch-enabled .npc-bubble { font-size: 16px; }
+
+@keyframes npc-pop {
+  from { opacity: 0; scale: 0.92; }
+  to { opacity: 1; scale: 1; }
+}
+
+/* The Talk touch button (a .touch-action: style.css), shown only while someone is in reach */
+.npc-talk-action .npc-talk-icon { font-size: 22px; line-height: 0.7; }
+
+@media (prefers-reduced-motion: reduce) {
+  .npc-bubble { animation: none; }
+}
