@@ -72,7 +72,7 @@ function faceUp(g) {
 }
 
 // The ground plane over the bbox (padded), water, block tint (curb islands, flat: the sidewalk band between curb and
-// lot in concrete, the lots darker over it) and road ribbons of every class: service roads (drawn, not driven, see
+// lot, the lots over it) and road ribbons of every class: service roads (drawn, not driven, see
 // gf-roadgraph.js DRIVE_CLASSES) a shade lighter
 function buildGfGround(scene, geo, { blocks = true } = {}) {
   const group = new THREE.Group();
@@ -93,9 +93,10 @@ function buildGfGround(scene, geo, { blocks = true } = {}) {
   ground.translate((bbox.x0 + bbox.x1) / 2, -0.04, (bbox.z0 + bbox.z1) / 2);
   add(ground, flatMaterial(0x4f5a44, 0.95, LAYERS.ground), 'Ground');
   if (blocks && geo.blocks.length) {
-    add(flatShapes(geo.blocks.map((b) => shapeOf(b.curb, b.curbHoles)), -0.03), flatMaterial(0x8f8c83, 0.9, LAYERS.block), 'BlockTint');
+    // CC-005e's palette (gf-terrain-mesh.js): the band a lawn-and-walk grey-green, the lots a yard's green
+    add(flatShapes(geo.blocks.map((b) => shapeOf(b.curb, b.curbHoles)), -0.03), flatMaterial(0x6c7361, 0.9, LAYERS.block), 'BlockTint');
     const lots = geo.blocks.filter((b) => b.lot);
-    if (lots.length) add(flatShapes(lots.map((b) => shapeOf(b.lot, b.lotHoles)), -0.025), flatMaterial(0x6b6a61, 0.95, LAYERS.lot), 'LotTint');
+    if (lots.length) add(flatShapes(lots.map((b) => shapeOf(b.lot, b.lotHoles)), -0.025), flatMaterial(0x56663f, 0.95, LAYERS.lot), 'LotTint');
   }
   if (water.length) add(flatShapes(water.map((w) => shapeOf(w.outer, w.holes)), -0.02), flatMaterial(0x2b5a7c, 0.25, LAYERS.water), 'Water');
   const service = roadGraph.classes.indexOf('service');
@@ -261,13 +262,17 @@ function deckGeometry(surface) {
 // The game view's ground on the terrain: the terrain mesh (gf-terrain-mesh.js; its vertex colours are the old block
 // and lot tints), draped road ribbons (gf-drape.js, decks over the bridges), deck slabs and the water bodies
 // (gf-water.js). Returns { group, terrain (call terrain.update(camera position) every frame), deckColliders, stats }.
-function buildGfTerrainGround(scene, geo, surface, blocks, bridges) {
+// CC-005e: downtown(x, z) (gf-sidewalks.js) picks the palette: concrete bands and paved lots downtown, lawn-and-walk
+// bands and green yards elsewhere (gf-terrain-mesh.js COLORS)
+function buildGfTerrainGround(scene, geo, surface, blocks, bridges, downtown = () => false) {
   const group = new THREE.Group();
   group.name = 'GlensFallsGround';
   const classify = (x, z) => {
     const b = blocks.blockAt(x, z);
     if (!b) return 0;
-    return b.lot && polygonIn(b.lot, x, z) ? 2 : 1;
+    const dt = downtown(x, z);
+    if (b.lot && polygonIn(b.lot, x, z)) return dt ? 3 : 2;
+    return dt ? 1 : 4;
   };
   // the chunks' drawn errors (tools/gf/audit-gf-terrain-mesh.mjs) keep a chunk fine where a decimation would show
   const terrain = createGfTerrainMesh(surface.terrain, { classify, errors: decodeLodErrors(GF_TERRAIN_LOD_ERRORS) });

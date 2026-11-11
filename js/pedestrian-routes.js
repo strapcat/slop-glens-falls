@@ -1,6 +1,7 @@
 // Lazily connected sidewalk tracks; junctions stay on the same curb island. Crosswalk tracks are separate,
 // and pedestrian-system.js checks traffic permissions before entering them. insets: how far beyond the roadway's half
-// width the walking lines along each side run (New York's 4.6 m sidewalks: 1.7 and 2.8 m).
+// width the walking lines along each side run (New York's 4.6 m sidewalks: 1.7 and 2.8 m), or a function (edge, side)
+// giving them for one side of one edge (side -1 or 1).
 function createPedestrianRoutes({ walkable, onSidewalk }, blockAt, { insets = [1.7, 2.8] } = {}) {
   const sidewalks = new Map(), crossings = new Map(), junctions = new Map(), connections = new WeakMap();
   const point = (track, end) => ({ x: track.ax + track.ux * track.len * end, z: track.az + track.uz * track.len * end });
@@ -28,7 +29,7 @@ function createPedestrianRoutes({ walkable, onSidewalk }, blockAt, { insets = [1
     sidewalks.set(e, result);
     // Two walking lines on each side leave room for people to pass or stop together.
     for (const sign of [-1, 1]) {
-      for (const inset of insets) {
+      for (const inset of typeof insets === 'function' ? insets(e, sign) : insets) {
         const off = sign * (e.half + inset);
         const a = { x: e.sx + e.rx * off, z: e.sz + e.rz * off };
         const b = { x: a.x + e.dx * e.len, z: a.z + e.dz * e.len };

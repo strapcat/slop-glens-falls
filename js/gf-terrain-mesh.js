@@ -8,14 +8,16 @@ import { createTerrainLod, CELLS, N, VERTICES, SURFACE, REFINE, ROOT_LEVEL } fro
 // where a decimated chunk bows above it. (No skirts: a vertical skirt facing the camera takes almost none of a depth
 // offset's slope term, so it showed through the water in front of it.) The chunks a level selects are merged into one
 // mesh (rebuilt only when that level's selection or stitching changes): about one draw call per level. Chunk data are
-// built on first use and kept (up to CACHE chunks). Vertex colours carry the old flat layers: the blocks' sidewalk band
-// in concrete, their lots darker, open ground green.
+// built on first use and kept (up to CACHE chunks). Vertex colours carry the old flat layers, CC-005e's palette: open
+// ground green; a block's sidewalk band concrete downtown, a lawn-and-walk grey-green elsewhere (gf-sidewalk-meshes.js
+// draws the curbs, lawns and walks over it near the camera); its lot a yard's green, downtown paving.
 
 const CACHE = 450;
 const LEVEL_OFFSET = (l) => ({ factor: 5 + 2 * l, units: 20 + 16 * l }); // polygon offset by level
-const COLORS = [new THREE.Color(0x4f5a44), new THREE.Color(0x8f8c83), new THREE.Color(0x6b6a61)]; // ground, sidewalk, lot
+// ground, downtown band, residential lot, downtown lot, residential band
+const COLORS = [0x4f5a44, 0x8f8c83, 0x56663f, 0x6b665d, 0x6c7361].map((c) => new THREE.Color(c));
 
-// classify(x, z): 0 ground, 1 a block's sidewalk band, 2 a lot. errors: gf-terrain-lod-errors.js (per-chunk errors)
+// classify(x, z): an index into COLORS. errors: gf-terrain-lod-errors.js (per-chunk errors)
 function createGfTerrainMesh(terrain, { classify = () => 0, refine = REFINE, errors = null } = {}) {
   const lod = createTerrainLod(terrain, { refine, errors });
   const ANCHOR = terrain.ANCHOR;

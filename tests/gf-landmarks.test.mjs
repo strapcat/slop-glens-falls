@@ -254,7 +254,9 @@ test('cars and pedestrians: the same network and the same sidewalk tracks as CC-
     const all = net.edges.map((e) => routes.along(e));
     return [all.filter((l) => l.length).length, all.reduce((n, l) => n + l.length, 0)];
   };
-  assert.deepEqual(count(after), [2184, 9759]);
+  // CC-005e: the residential lots sit about 1 m further back (tools/gf/build-gf-geodata.mjs BLOCK_PARAMS), so CC-003's walking
+  // lines detour round fewer of them (CC-004: [2184, 9759])
+  assert.deepEqual(count(after), [2232, 8502]);
 });
 
 test('CC-003 untouched: its data, records and generator are byte-identical; no landmarks, no change', () => {

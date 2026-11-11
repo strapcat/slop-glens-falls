@@ -189,7 +189,9 @@ test('cars and pedestrians: the same obstacles, network and sidewalk tracks as C
   assert.equal(edgeHash(net), 'fee9033ad780f91a6cd0f5089eb655439f111031a678b928a355d17957472975');
   const routes = createPedestrianRoutes({ walkable: net.walkable, onSidewalk: blocks.onSidewalk }, blocks.blockAt, { insets: [0.6, 1.2] });
   const all = net.edges.map((e) => routes.along(e));
-  assert.deepEqual([all.filter((l) => l.length).length, all.reduce((n, l) => n + l.length, 0)], [2184, 9759]);
+  // CC-005e: the residential lots sit about 1 m further back (tools/gf/build-gf-geodata.mjs BLOCK_PARAMS), so CC-003's walking
+  // lines detour round fewer of them (CC-003b: [2184, 9759])
+  assert.deepEqual([all.filter((l) => l.length).length, all.reduce((n, l) => n + l.length, 0)], [2232, 8502]);
 });
 
 test('CC-003 and CC-004 untouched: their data, records, meshes and generators are byte-identical', () => {

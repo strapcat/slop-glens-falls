@@ -82,8 +82,8 @@ rounded to 0.1 m.
 - `blocks`: `{ area, curb, curbHoles, lot, lotHoles }`.
   - `curb` is the curb-island outline. `curbHoles` are the holes in it: ponds and other water inside the island, or a
     block-bounding roadway it encloses.
-  - `lot` is the property line, 1.8 m in from the curb, roads and water, with its own `lotHoles`. `lot` is `null` when
-    nothing is left.
+  - `lot` is the property line, in from the curb, roads and water by the sidewalk band (CC-005e: 1.8 m downtown, 2.8 m
+    elsewhere; see Sidewalks), with its own `lotHoles`. `lot` is `null` when nothing is left.
   - `area` (m²) is the curb outline minus its holes, so it matches the emitted geometry.
 - `water`: `{ osm, name, kind, outer, holes }` polygons, clipped to the bbox.
 - `frame`, `bbox` (degrees and metres), `osmBase`, `version`, `attribution`.
@@ -110,6 +110,10 @@ The method follows `tools/geo-blocks.mjs`, with parameters in `BLOCK_PARAMS`:
    ignored. If simplified rings touch or cross, all rings of that island fall back to raw corners. A hole that still
    touches another ring is dropped, and the build counts and logs it.
 5. Drop islands under 150 m² and any island touching the bbox edge.
+6. The property line (lot): the island's cells further than `BLOCK_PARAMS.sidewalk` from any roadway, water or outside
+   cell, traced the same way (the largest such region per island). CC-005e: `sidewalk` is `gf-sidewalks.js`
+   `sidewalkBandAt`, 1.8 m in the downtown envelope (`js/gf-downtown.js`) and 2.8 m elsewhere; a plain number still
+   gives one band all round.
 
 The tracer throws if a contour walk runs longer than a closed outline can be (4 × the island's cells), so a broken
 outline stops the build instead of reaching the output.
@@ -157,7 +161,9 @@ has no imports of its own:
 The Glens Falls view (`js/gf-main.js`) has:
 
 - **The ground** (`js/gf-ground.js` `buildGfTerrainGround`): the sourced terrain (see Topography), its vertex colours
-  the old flat layers (the blocks' sidewalk band in concrete, the lots a shade darker, open ground green), road ribbons
+  the old flat layers (CC-005e: the band concrete downtown and a lawn-and-walk grey-green elsewhere, the lots a yard's
+  green or downtown paving, open ground green; the curbs, lawns and walks themselves are drawn over it, see
+  Sidewalks), road ribbons
   at their curb widths for every class draped on it (decks over the bridges), and the water at its own levels. Service
   roads are drawn a shade lighter but not driven. (Before CC-005b everything was flat at y = 0; `buildGfGround`, the flat
   layout, is still what the debug view's helpers draw.)
@@ -223,16 +229,18 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
 
 ### Pedestrians
 
-- **Where they walk:** the sidewalk band of each block, between its curb and its lot (`GF_GEO.blocks`: the lot is 1.8 m
-  inside the curb). `js/gf-blocks.js` provides:
+- **Where they walk:** the sidewalk band of each block, between its curb and its lot (`GF_GEO.blocks`; CC-005e: on the
+  walk's concrete, see Sidewalks). `js/gf-blocks.js` provides:
   - `blockAt` (the curb outline minus its holes, under a 64 m grid index), which `gf-runtime.js` installs in the city
     runtime;
   - the lots, as obstacles to pedestrians only, so the car network is the same with them as without (tested);
   - `onSidewalk` (on a block, outside its lot).
 - **Settings:** 120 pedestrians on two walking lines 0.6 and 1.2 m from the roadway (New York's lie 1.7 and 2.8 m out,
   on its 4.6 m sidewalks), at `sidewalkY` 0.02 above the terrain (CC-005b; a deck where their track runs along a
-  bridge), and on the draped asphalt where they cross a road.
-- **Coverage:** 2187 of the network's 2498 edges have sidewalk tracks.
+  bridge), and on the draped asphalt where they cross a road. CC-005e: the lines are set per street side on the walk
+  (`gf-sidewalks.js` `insetsFor`: about 0.6/1.2 m downtown, 1.9/2.5 m behind a residential lawn), `onSidewalk` is
+  `onWalk`, and the walkers stand 0.02 m over the raised walk.
+- **Coverage:** 2187 of the network's 2498 edges have sidewalk tracks (CC-005e: 2126, all on the walk's concrete).
 - **Limits:** there are no crosswalks at Glens Falls junctions yet (`pedestrian-routes.js` `across()` only knows New
   York's grid corners), so pedestrians walk around their block but don't cross streets.
 
@@ -862,6 +870,97 @@ New York does not load it.
   defaults (the idle walker strolls on, the helicopter hovers at its old floor, no parked bodies).
 - **Not included:** touch and gamepad bindings, getting off the bicycle, door or seat animations, interiors, saving the
   parked state across reloads (a reload restores the vehicles where they were, unparked).
+
+### Sidewalks (CC-005e)
+
+The street edges as they looked: a raised granite curb, a grass tree lawn on residential streets, and concrete walks in
+5 ft flags. Lots no longer read as the same pale slab as the walk. Modules: `js/gf-sidewalks.js` (layout, no three.js),
+`js/gf-sidewalk-strips.js` (the strips as buffers), `js/gf-sidewalk-meshes.js` (materials, cells), `js/gf-downtown.js`
+(generated by `tools/gf/build-gf-downtown.mjs`).
+
+**Design basis.**
+
+| | what | source |
+| --- | --- | --- |
+| Dave (local knowledge, from memory, not a survey) | 1993 residential streets: a grass strip between a granite curb and the sidewalk; downtown: concrete to the granite curb, no grass strip; granite: grey speckled stone, a visible face | Dave, 2026-11-09 |
+| sourced | downtown = the Three Squares Historic District (NRIS 84003420, listed 1984-09-29; boundary increase NRIS 100008374, 2022-11-15), roughly bounded by South, Glen, Maple and Ridge Sts (1984) and Broad, Maple, Pine and Glen Sts (2022) | NRHP listings (nomination map not fetched: see below) |
+| sourced (modern practice, not 1993 proof) | a 5 ft walk with a 4 ft snow-storage strip between curb and walk (Goodwin Ave); driveway aprons in concrete | City of Glens Falls city-engineer agenda item, encroachment permit |
+| sourced (general practice) | 5 ft (1.524 m) preferred pedestrian route; a 2-6 ft utility/snow strip, 4 ft or more with street trees | NYSDOT HDM ch. 18; Region 1 RDI 17-03 |
+| assumption (Dave may override) | curb reveal 0.13 m; downtown walk ~2.05 m to the curb; residential walk 1.65 m behind a ~1.3 m lawn; downtown lots paved, residential lots yard green; paved corners | this build |
+
+**Downtown envelope** (`js/gf-downtown.js`, APPROXIMATE, Dave to confirm). The nomination map and NPS boundary GIS
+(npgallery.nps.gov, mapservices.nps.gov) could not be reached from the build environment, so the envelope is drawn only
+from the published bounding streets, along their OSM centrelines in the frozen extract (OSM base
+2026-10-30T14:35:11Z):
+
+- loop A (1984): Ridge St north from Centennial Circle to Maple St, Maple St west to Bay St, Bay St south to Glen St at
+  Monument Square (where South St begins), Glen St back to the circle: 38 OSM nodes, 7.9 acres inside;
+- loop B (2022 increase): Glen St north-west from Monument Square to Pine St, Pine St south to Broad St, Broad St east to
+  South St, South St north: 24 OSM nodes, 13.0 acres inside;
+- plus 20 m either side of every loop street (the far frontage of a bounding street is downtown too).
+
+With its frontage the envelope covers 29.5 acres. The 1984 listing is 23 acres, and the 2022 increase adds an area
+not fetched here, so the sizes are of the same order but the shape is not the surveyed one. Not included: lower Glen St
+south of Centennial Circle, Warren St east of the circle, Ridge St north of Maple St. Every vertex is an OSM node; no
+freehand shape.
+
+**Widths** (as built, measured on the regenerated `GF_GEO`; `tests/gf-sidewalk-appearance.test.mjs`):
+
+| | generator band | curb to lot line (median) | curb | lawn | walk |
+| --- | --- | --- | --- | --- | --- |
+| downtown | 1.8 m | 2.2 m | 0.15 m granite | none (under 0.6 m is paved) | ~2.05 m, to the curb |
+| residential | 2.8 m | 3.1 m | 0.15 m granite | ~1.3 m grass (about the city's 4 ft) | 1.65 m (5.4 ft) |
+
+The raster puts the property line about 0.4 m further in than the parameter, hence 2.8 m for a ~3.1 m band.
+
+**Heights.** The road is ROAD_LIFT (0.03 m) above the ground. The curb face rises 0.13 m from under the road to the
+top, 0.16 m above the ground. The walk, lawn and curb top stand at that height; a 0.5 m ramp inside the lot line takes it
+back down to the lot (grass; downtown paving). `raiseAt(x, z)` gives that height for walkers (`sidewalkY` 0.02 over it),
+the player's walker, cyclist and taxi (`gf-runtime.js` `onRaised`), and the CC-005d exit spots. The helicopter's floor is
+unchanged.
+
+**What is drawn** (`gf-sidewalk-strips.js`; only where a road runs beside the band, so not along water, the bbox edge
+or alleys):
+
+- **Curb:** granite face and top along the curb ring, joints every 1.83 m, darker on the face. A 0.45 m asphalt gutter
+  beyond it covers the curb ring's raster offset (±0.4 m, 90% of samples) from the road ribbon's edge.
+- **Walk:** concrete strip out from the lot line, tooled joints every 1.524 m along it, faded with distance.
+- **Lawn:** mown grass between walk and curb, residential only.
+- **Corners:** paved to the curb within 3.5 m (along the lot line) of a lot corner turning 36° or more, and within 12 m
+  of a junction of three or more roads (where the walking lines meet the crossings).
+- **Driveways:** sourced only. Where an OSM `highway=service` way crosses the band, the curb is depressed (0.06 m) and
+  the lawn becomes a concrete apron (downtown: the walk slopes down to the curb). About 4,300 curb samples, roughly
+  1,700 driveways. No parcel driveway is invented.
+
+**Meshes and cost.** 250 m cells, each built the first time the camera comes within 650 m of it and shown only then.
+That is about one draw call per material per visible cell (granite, concrete, lawn, gutter; ramps share the lawn
+material). Strips are draped at every 2 m sample. Beyond 650 m the terrain's colours show the bands.
+
+**Pedestrians** (`onWalk`, `insetsFor`):
+
+- **Placement:** each street side's two walking lines are set from the walk measured at the edge's middle: 0.45 m in
+  from its road edge and 0.7 m in from the lot line, or one line in the middle if it is too narrow.
+- **`onWalk`** (the game's `onSidewalk`): the walk, the paved corners and the junction zones; not the lawn, the lot or the
+  road. Measured on the game's network, 98.8% of track points are on it.
+- **`gf-blocks.js` `onSidewalk`** keeps its CC-002 meaning (block minus lot) for the older tests.
+- **`pedestrian-routes.js`:** its `insets` option may now be a function `(edge, side)`. An array (New York) is used as
+  before.
+- **CC-005c trails:** all six walkers' entrances still attach to a sidewalk, their connectors clear of water, buildings
+  and kept trunks (tested).
+
+**New York.** Nothing loads there: no NYC or shared module imports the CC-005e modules, and they are not in the NYC
+preload list (tested). The only shared edit is the opt-in function `insets`. `tsl-materials.js` is untouched: the GF
+materials carry their own copies of its small TSL helpers.
+
+**Limits.**
+
+- No crosswalks (CC-006).
+- No full driveway inventory: only OSM service ways.
+- OSM `sidewalk=*` tags are unused (about 50 of 2,078 ways, too sparse) and no per-edge sidewalk geometry is invented.
+- **Trees on the walk:** about 1,470 LiDAR-placed trees stand on the concrete walk (2,023 in the raised band), because
+  the trunk is put under the canopy top. They are not pedestrian obstacles (as in CC-005).
+- **No car-curb collision:** cars ride up a curb (their ground includes the raise).
+- **Curves:** a curb follows the 1 m raster outline, simplified to 0.5 m, so curb returns are faceted.
 
 ## Source and licence
 
