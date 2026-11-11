@@ -169,7 +169,8 @@ function buildGfStreetFurniture(scene, { crosswalks = [], signs = [], lamps = []
     const mesh = new THREE.InstancedMesh(lampGeometry(), mat, lamps.length);
     lamps.forEach((l, i) => place(mesh, i, l.x, ground(l.x, l.z), l.z, l.nx, l.nz));
     mesh.instanceMatrix.needsUpdate = true;
-    mesh.castShadow = true;
+    // no sun shadows: the shadow passes would draw every lamp in town again (about 400k triangles) for 9 cm poles
+    mesh.castShadow = false;
     mesh.computeBoundingSphere();
     mesh.name = 'StreetLights';
     group.add(mesh);
