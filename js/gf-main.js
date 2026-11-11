@@ -29,6 +29,7 @@ import { polygonContains } from './building-collision.js';
 import { createTreeField } from './trees.js';
 import { GF_TREES } from './gf-trees.js';
 import { placeGfTrees } from './gf-tree-placements.js';
+import { keepTreesOffWalk } from './gf-tree-walk.js';
 import { GF_TRAILS } from './gf-trails.js';
 import { createTrailNetwork, createTrailRoutes, trailGroundAt } from './gf-trail-network.js';
 import { createClearance, waterRegions, buildingRegions, trunkRegions } from './gf-trail-clearance.js';
@@ -236,14 +237,18 @@ async function initApp() {
   // 1 m off every wall, and real crowns do overhang roofs (slopGlensFalls.trees.diagnoseBuildingColliders() counts
   // how many trees they would drop).
   // CC-005c: no trunk in a trail's corridor (gf-trails.js treeExclusions: only the trees whose trunk reaches a path)
-  const treePlan = placeGfTrees(GF_TREES, { buildings: GF_BUILDINGS, geo: GF_GEO, ground: GF_SURFACE.ground,
-    exclude: new Set(GF_TRAILS.treeExclusions.trees.map((t) => t[0])) });
+  // CC-005f: no trunk in the concrete (gf-tree-walk.js): one standing on a walk moves to the tree lawn or into the lot,
+  // or is dropped; each moved site keeps its LiDAR position (site.lidar)
+  const treePlan = keepTreesOffWalk(placeGfTrees(GF_TREES, { buildings: GF_BUILDINGS, geo: GF_GEO, ground: GF_SURFACE.ground,
+    exclude: new Set(GF_TRAILS.treeExclusions.trees.map((t) => t[0])) }),
+  { trees: GF_TREES, sidewalks: GF_SIDEWALKS, buildings: GF_BUILDINGS, water: GF_GEO.water, trails: GF_TRAILS, ground: GF_SURFACE.ground });
   const treeField = createTreeField(scene, treePlan.sites, []);
   scene.add(treeField.group);
   {
-    const { water, road, building, trail } = treePlan.skipped;
+    const { water, road, building, trail, walk } = treePlan.skipped;
     const mix = treePlan.speciesCounts.map((n, s) => `${['plane', 'locust', 'elm'][s]}-shape ${n}`).join(', ');
-    console.info(`[gf] trees: ${treeField.stats.trees} of ${GF_TREES.counts.usable} LiDAR tops (skipped water ${water}, road ${road}, building ${building}, trail ${trail}), ${treeField.group.children.length} cells, species mix ${mix} (visual only)`);
+    const ow = treePlan.offWalk;
+    console.info(`[gf] trees: ${treeField.stats.trees} of ${GF_TREES.counts.usable} LiDAR tops (skipped water ${water}, road ${road}, building ${building}, trail ${trail}, walk ${walk}), ${treeField.group.children.length} cells, species mix ${mix} (visual only); off the walks: ${ow.lawn} to the lawn, ${ow.lot} into the lot, ${ow.dropped} dropped`);
   }
   // CC-005c: the FICTIONAL Thrill Hill keg party (gf-thrill-hill-plan.js), beside the trail crest, clear of the kept
   // trees (none is removed for it). ?party=off leaves it out (for the performance comparison)
@@ -374,6 +379,8 @@ async function initApp() {
     trees: {
       stats: { ...treeField.stats, placed: treePlan.sites.length, usable: GF_TREES.counts.usable, cells: treeField.group.children.length, speciesCounts: treePlan.speciesCounts },
       skipped: treePlan.skipped,
+      // CC-005f: the trunks moved off the walks ({ index, from: LiDAR [x, z], to, where }) and dropped
+      offWalk: treePlan.offWalk,
       // Diagnostic only: how many trees createTreeField would drop if it were given the building colliders. Builds a
       // second, throwaway field, so it runs only when called.
       diagnoseBuildingColliders: () => {

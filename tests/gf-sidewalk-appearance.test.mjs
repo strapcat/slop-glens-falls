@@ -104,7 +104,8 @@ test('property line: buildBlocks with a band function puts each half of a block\
   assert.ok(Math.abs(w - e) <= 0.2, `${w} / ${e}`);
 });
 
-test('bands as built (GF_GEO): downtown ~2.2 m, concrete to the curb; residential ~3.1 m, curb + tree lawn + walk', () => {
+// CC-005f: the residential band narrowed (lawn ~0.9 m, Dave's preview), the downtown one unchanged
+test('bands as built (GF_GEO): downtown ~2.2 m, concrete to the curb; residential ~2.85 m, curb + 0.9 m tree lawn + walk', () => {
   const by = { downtown: { band: [], lawn: 0, n: 0, walk: [] }, residential: { band: [], lawn: 0, n: 0, walk: [], lawnW: [] } };
   for (const entry of sidewalks.rings) {
     if (entry.kind !== 'lot') continue;
@@ -121,18 +122,22 @@ test('bands as built (GF_GEO): downtown ~2.2 m, concrete to the curb; residentia
   const dt = by.downtown, res = by.residential;
   assert.ok(dt.n > 300 && res.n > 50000, `${dt.n} downtown, ${res.n} residential samples`);
   assert.ok(Math.abs(median(dt.band) - 2.2) < 0.25, `downtown band ${median(dt.band)}`);
-  assert.ok(Math.abs(median(res.band) - 3.1) < 0.25, `residential band ${median(res.band)}`);
+  assert.ok(Math.abs(median(res.band) - 2.85) < 0.2, `residential band ${median(res.band)}`);
   // downtown: no grass strip, the walk runs to the curb (allowing the envelope's edge, where the bands meet)
   assert.ok(dt.lawn / dt.n < 0.1, `downtown lawn share ${dt.lawn / dt.n}`);
   assert.ok(Math.abs(median(dt.walk) - (median(dt.band) - S.curbW)) < 0.1, `downtown walk ${median(dt.walk)}`);
-  // residential: a tree lawn nearly everywhere, the walk WALK_W wide, the lawn about the city's 4 ft snow strip
-  assert.ok(res.lawn / res.n > 0.9, `residential lawn share ${res.lawn / res.n}`);
-  assert.equal(median(res.walk), S.walkW);
-  assert.ok(median(res.lawnW) > 1.0 && median(res.lawnW) < 1.6, `lawn ${median(res.lawnW)} m`);
-  // the layout rule itself
-  const narrow = sidewalks.layout(1.9, 0.3), wide = sidewalks.layout(2.0, 1.1);
+  // residential: a tree lawn nearly everywhere, LAWN_TARGET (0.9 m, Dave's preview) wide within 0.25 m (the drawn lawn
+  // reaches 3 cm under the curb's top), the walk at least WALK_W
+  assert.ok(res.lawn / res.n > 0.88, `residential lawn share ${res.lawn / res.n}`);
+  assert.equal(S.lawnTarget, 0.9);
+  assert.ok(Math.abs(median(res.lawnW) - S.lawnTarget) <= 0.25, `lawn ${median(res.lawnW)} m`);
+  assert.ok(median(res.walk) >= S.walkW && median(res.walk) < S.walkW + 0.4, `walk ${median(res.walk)} m`);
+  // the layout rule itself: lawn capped at LAWN_TARGET, the walk takes the rest; under LAWN_MIN of lawn is paved
+  const narrow = sidewalks.layout(1.9, 0.3), fit = sidewalks.layout(2.0, 0.7), wide = sidewalks.layout(2.0, 1.1);
   assert.ok(!narrow.lawn && Math.abs(narrow.walkOut - (2.2 - S.curbW)) < 1e-9, 'a 2.2 m band: walk to the curb');
-  assert.ok(wide.lawn && wide.walkOut === S.walkW, 'a 3.1 m band: curb, lawn, walk');
+  assert.ok(fit.lawn && Math.abs(fit.walkOut - S.walkW) < 1e-9, 'a 2.7 m band: curb, 0.9 m lawn, walk');
+  assert.ok(wide.lawn && Math.abs(wide.walkOut - (3.1 - S.curbW - S.lawnTarget)) < 1e-9, 'a 3.1 m band: the lawn stays 0.9 m, the walk widens');
+  assert.equal(S.residentialBand, +(S.curbW + S.lawnTarget + S.walkW - S.rasterShift).toFixed(2), 'the band follows LAWN_TARGET');
 });
 
 test('strips: the curb has a face (REVEAL over the road) downtown and residential; lawns only where residential', () => {
@@ -157,7 +162,8 @@ test('strips: the curb has a face (REVEAL over the road) downtown and residentia
     assert.ok(bufs.concrete.joint.some((j) => j === 1));
   }
   assert.ok(area(down.lawn) < 0.05 * area(down.concrete), `downtown lawn ${area(down.lawn)} m² vs walk ${area(down.concrete)} m²`);
-  assert.ok(area(res.lawn) > 0.4 * area(res.concrete), `residential lawn ${area(res.lawn)} m² vs walk ${area(res.concrete)} m²`);
+  // CC-005f: a 0.9 m lawn beside a walk of at least 1.65 m (CC-005e: 0.4, a 1.3 m lawn)
+  assert.ok(area(res.lawn) > 0.25 * area(res.concrete), `residential lawn ${area(res.lawn)} m² vs walk ${area(res.concrete)} m²`);
   assert.equal(S.flag, 1.524);
 });
 

@@ -74,6 +74,7 @@ const GF_PRELOADS = [
   'gf-sidewalks.js',
   'gf-sidewalk-strips.js',
   'gf-sidewalk-meshes.js',
+  'gf-tree-walk.js',
   'gf-main.js'
 ];
 
