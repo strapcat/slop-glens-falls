@@ -150,7 +150,8 @@ function buildThrillHillParty(scene, plan, ground, { textureFallback = false } =
       if (!near || !schedule.visible(p)) { rig.placed = false; return; }
       // in place: face the fire with a little sway of the head and shoulders
       const sway = p.phase === 'at' ? Math.sin(elapsed * (0.4 + k * 0.07) + k) * 0.25 : 0;
-      rig.update(dt, p.x, p.z, p.heading + sway, feet, p, 0, true);
+      // CC-NPC1: someone the player is talking to turns to them (gf-npc-talk.js sets talkFacing; NaN or unset: the fire)
+      rig.update(dt, p.x, p.z, Number.isFinite(p.talkFacing) ? p.talkFacing : p.heading + sway, feet, p, 0, true);
       crowd.add(rig, Math.hypot(p.x - (camera ? camera.x : p.x), p.z - (camera ? camera.z : p.z)));
     });
     crowd.end();
