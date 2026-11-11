@@ -8,20 +8,30 @@ import { polygonContains } from './building-collision.js';
 //
 // The width model (tools/gf/build-gf-geodata.mjs buildBlocks): each block's lot (property line) is drawn BAND metres in
 // from its curb, the downtown band where the envelope holds the cell and the residential band elsewhere. Measured on
-// the regenerated data the property line sits about 0.4 m further in than the parameter (the raster's half cell and
-// cell centres), so the bands as built are about 2.2 m downtown and 3.0 m residential. In each band, from the road:
+// the regenerated data the property line sits about RASTER_SHIFT further in than the parameter (the raster's half cell
+// and cell centres), so the bands as built are about 2.2 m downtown and (CC-005f) 2.85 m residential. In each band, from
+// the road:
 //   the curb      CURB_W of granite, its face REVEAL above the road (the road is ROAD_LIFT above the ground);
-//   a tree lawn   whatever is left, when that is at least LAWN_MIN (residential: about 1.2 m, cf. the city's 4 ft snow
-//                 strip on Goodwin Ave and NYSDOT's 4-6 ft with trees); less than that (downtown) and the walk runs on to
-//                 the curb instead;
-//   the walk      WALK_W of concrete (5.4 ft; NYSDOT's preferred 5 ft route) along the property line, in 5 ft flags.
+//   a tree lawn   whatever is left, when that is at least LAWN_MIN (residential: about LAWN_TARGET, 0.9 m, Dave's
+//                 preview; CC-005e's ~1.3 m followed the city's 4 ft snow strip on Goodwin Ave and NYSDOT's 4-6 ft with
+//                 trees); less than that (downtown) and the walk runs on to the curb instead;
+//   the walk      at least WALK_W of concrete (5.4 ft; NYSDOT's preferred 5 ft route) along the property line, in 5 ft
+//                 flags; CC-005f: the lawn is capped at LAWN_TARGET and the walk takes any band beyond it.
 // The walk, lawn and curb top stand TOP above the ground; a RAMP of grass (or the downtown lots' paving) inside the lot
 // line takes the step back down to the ground. Only where a road runs beside the curb: along water, the bbox's edge
 // or an alley (service roads do not get curbs) the band is left as it was, at ground level.
 
 const SIDEWALK = {
   downtownBand: 1.8, // m, the generator's property-line distance downtown (as CC-001: 1.8)
-  residentialBand: 2.8, // m, elsewhere: about 3.0 m as built (curb 0.15 + lawn ~1.2 + walk 1.65)
+  // CC-005f: the residential tree lawn's target width, 0.9 m (3 ft): Dave's preview of CC-005e (2026-11-11) found the
+  // ~1.3 m lawns too wide. A Dave-tuned default, narrower than the city's 4 ft snow strip and NYSDOT's 4-6 ft; change
+  // it here and rebuild the geodata (tools/gf/build-gf-geodata.mjs) to retune. residentialBand follows from it.
+  lawnTarget: 0.9,
+  // m: about how much further in than the generator's parameter the traced property line sits (the raster's half cell
+  // and cell centres). The line moves in steps: on the 1 m raster a residential parameter of 2.4 gives a band of about
+  // 2.6 m (a 0.8 m lawn), 2.5 or 2.6 one of about 2.85 m; the lawn is capped at LAWN_TARGET and the walk takes the
+  // rest (measured on the built data, tests/gf-sidewalk-appearance.test.mjs)
+  rasterShift: 0.2,
   curbW: 0.15, // m: the curb's top
   reveal: 0.13, // m: its face above the road surface
   roadLift: 0.03, // m: the draped road over the ground (gf-drape.js ROAD_LIFT)
@@ -47,6 +57,8 @@ const SIDEWALK = {
   step: 2 // m between samples along a ring (the terrain is a 1 m grid; strips are draped at every sample)
 };
 SIDEWALK.top = SIDEWALK.roadLift + SIDEWALK.reveal; // 0.16 m above the ground
+// m, the generator's property-line distance outside downtown: curb + lawn + walk as built (CC-005e: 2.8, a ~1.3 m lawn)
+SIDEWALK.residentialBand = +(SIDEWALK.curbW + SIDEWALK.lawnTarget + SIDEWALK.walkW - SIDEWALK.rasterShift).toFixed(2);
 SIDEWALK.depressed = SIDEWALK.roadLift + 0.03; // a driveway's curb (OSM service road crossing the band) above the ground
 
 const segDist = (px, pz, ax, az, bx, bz) => {
@@ -85,6 +97,21 @@ const ringsDist = (rings, x, z) => {
     }
   }
   return d;
+};
+
+// The nearest point to (x, z) on any flat ring in rings: { d, x, z }
+const ringsNearest = (rings, x, z) => {
+  let best = { d: Infinity, x, z };
+  for (const r of rings) {
+    for (let i = 0; i < r.length; i += 2) {
+      const j = (i + 2) % r.length;
+      const ax = r[i], az = r[i + 1], dx = r[j] - ax, dz = r[j + 1] - az, l2 = dx * dx + dz * dz;
+      const t = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2)) : 0;
+      const qx = ax + dx * t, qz = az + dz * t, d = Math.hypot(x - qx, z - qz);
+      if (d < best.d) best = { d, x: qx, z: qz };
+    }
+  }
+  return best;
 };
 
 // The downtown envelope: inside one of its loops, or within its frontage of their streets
@@ -175,10 +202,13 @@ function createGfSidewalks({ geo, blocks, ground }) {
 
   // The band's layout at a spot curbD from the curb and lotD from the lot line: the walk's far edge from the lot
   // line, and whether a lawn lies between it and the curb
+  // CC-005f: the lawn is at most LAWN_TARGET wide, the walk at least WALK_W, taking whatever the band has beyond them
+  // (the traced property line moves in raster steps, so the band is not exactly what the parameter asked for)
   function layout(curbD, lotD) {
-    const band = curbD + lotD;
-    const lawn = band - S.curbW - S.walkW;
-    return lawn >= S.lawnMin ? { walkOut: S.walkW, lawn: true } : { walkOut: Math.max(0, band - S.curbW), lawn: false };
+    const rest = curbD + lotD - S.curbW;
+    const lawn = rest - S.walkW;
+    if (lawn < S.lawnMin) return { walkOut: Math.max(0, rest), lawn: false };
+    return { walkOut: rest - Math.min(lawn, S.lawnTarget), lawn: true };
   }
 
   // A block's lot corners: the convex vertices of its lot rings (as seen from the road) turning by CORNER_TURN or more
@@ -205,6 +235,38 @@ function createGfSidewalks({ geo, blocks, ground }) {
     if (inLot(b, x, z)) return false;
     const lotD = ringsDist(lotRings(b), x, z), curbD = ringsDist(curbRings(b), x, z);
     return lotD <= layout(curbD, lotD).walkOut + 0.05 || nearCorner(b, x, z) || nearJunction(x, z);
+  }
+
+  // CC-005f: the drawn concrete (gf-sidewalk-strips.js): on a block with a lot, outside the lot, beside a road, and on
+  // the walk, a paved corner or a junction's apron; a lot-less island or a band beside water or an alley is not drawn
+  function walkAt(x, z) {
+    const b = blocks.blockAt(x, z);
+    if (!b || !b.lot || inLot(b, x, z)) return false;
+    const lotD = ringsDist(lotRings(b), x, z), curbD = ringsDist(curbRings(b), x, z);
+    if (!roadside(x, z, curbD + lotD)) return false;
+    return lotD <= layout(curbD, lotD).walkOut + 0.05 || nearCorner(b, x, z) || nearJunction(x, z);
+  }
+  // What is at (x, z) across its block's band (for moving a tree trunk off the walk): null off a block with a lot;
+  // else { block, inLot, lotD, curbD, q (the nearest point of the lot line), n (unit, from q towards the road),
+  // walkOut, lawn (a tree lawn here: not a paved corner or junction), lawnOut (where the lawn meets the curb's top) }
+  function bandAt(x, z) {
+    const b = blocks.blockAt(x, z);
+    if (!b || !b.lot) return null;
+    const q = ringsNearest(lotRings(b), x, z), curbD = ringsDist(curbRings(b), x, z);
+    const lot = inLot(b, x, z);
+    let nx = (x - q.x) * (lot ? -1 : 1), nz = (z - q.z) * (lot ? -1 : 1);
+    const l = Math.hypot(nx, nz);
+    if (l < 1e-6) {
+      // on the line itself: towards the curb, whichever side of the line that is
+      const c = ringsNearest(curbRings(b), x, z);
+      nx = c.x - x; nz = c.z - z;
+    }
+    const nl = Math.hypot(nx, nz) || 1;
+    const lotD = lot ? 0 : q.d;
+    const band = curbD + lotD;
+    const { walkOut, lawn } = layout(band, 0);
+    const paved = nearCorner(b, x, z) || nearJunction(x, z);
+    return { block: b, inLot: lot, lotD: q.d, curbD, q, n: { x: nx / nl, z: nz / nl }, walkOut, lawn: lawn && !paved, lawnOut: band - S.curbW };
   }
 
   // raiseAt, remembered on a 0.1 m lattice (walkers ask it for every foot they set down)
@@ -347,7 +409,7 @@ function createGfSidewalks({ geo, blocks, ground }) {
   }
 
   return {
-    onWalk, raiseAt, raiseExact, insetsFor, nearJunction, rings, ringSamples, curbAt, lotAt, layout,
+    onWalk, walkAt, bandAt, raiseAt, raiseExact, insetsFor, nearJunction, rings, ringSamples, curbAt, lotAt, layout,
     downtown: DOWNTOWN.contains, roadEdge, serviceEdge, constants: S, ground
   };
 }
