@@ -18,7 +18,7 @@ const LAMP = { pole: 7.2, poleR: 0.09, arm: 1.7, head: [0.62, 0.16, 0.3] };
 const POOL = 32; // point lights
 const POOL_RANGE = 160; // m: lamps further than this from the camera get none
 const REASSIGN = 0.3; // s
-const LIGHT = { color: 0xffc98a, intensity: 300, distance: 32, decay: 2 }; // candela: ~6 lux on the street below a 7 m head
+const LIGHT = { color: 0xffc98a, intensity: 120, distance: 32, decay: 2 }; // candela: ~2.5 lux on the street under a 7 m head (300 lit the brick like dusk)
 
 // A merged, draped mesh of ladder bars for crosswalks c (gf-crossings.js crossingAt), on surface(x, z)
 function crosswalkGeometry(crosswalks, surface) {
@@ -208,7 +208,8 @@ function buildGfStreetFurniture(scene, { crosswalks = [], signs = [], lamps = []
       pool.forEach((light, k) => {
         const h = near[k] && near[k][1];
         light.userData.on = !!h;
-        if (h) { light.position.set(h.x, h.y, h.z); lit++; }
+        // gf-main.js freezes the scene's world matrices once loaded: a light that moves updates its own
+        if (h) { light.position.set(h.x, h.y, h.z); light.updateMatrixWorld(); lit++; }
       });
     }
     for (const light of pool) light.intensity = light.userData.on ? LIGHT.intensity * g : 0;

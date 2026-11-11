@@ -1058,7 +1058,7 @@ three.js), `js/gf-street-furniture-meshes.js` (drawing), `js/gf-furniture.js` (g
 - **Drawn:** one instanced mesh, a post with an arm and a head over the road. The head glows by
   `smoothstep(0.65, 1.2, interiorGlow)` (`lighting.js` presets): 0 at midday (0.24) and golden hour (0.48), full at
   twilight (1.25) and midnight (1.55).
-- **Light:** a pool of 32 point lights (warm, 32 m reach) moves to the lamps nearest the camera within 160 m, every
+- **Light:** a pool of 32 point lights (warm, 120 cd, 32 m reach) moves to the lamps nearest the camera within 160 m, every
   0.3 s, while the glow is on. No lamp has a light of its own.
 
 **Limits.**
