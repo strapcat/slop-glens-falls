@@ -27,7 +27,7 @@ const STEP = { reach: 0.85, offset: 0.75, hold: 1.2, every: 0.1, minSpeed: 0.3 }
 // Flinching from the player's car or bicycle: within `clear` m of its footprint at `minSpeed` m/s or more
 const FLINCH = { clear: 1.2, minSpeed: 4, offset: 0.45, hold: 0.8, cooldown: 3 };
 const BODIES = { car: { halfW: 0.86, halfL: 2.18 }, cyclist: { halfW: 0.35, halfL: 0.85 } }; // traffic.js's player footprints
-const HEAD = 1.8; // m above the ground: where a speech bubble hangs when the body's own height is unknown
+const HEAD = 1.72; // m above the ground: the top of a head, where the bubble hangs when the body's own height is unknown
 
 // The person to talk to: the nearest of `candidates` ({ x, z }) within opts.range of the player ({ x, z, heading }) and
 // within the cone in front of them (cos of the half-angle); `current`, someone already talking, is kept with the wider
@@ -119,7 +119,7 @@ const PED = {
     p.conversation = null;
     p.socialTime = Math.max(p.socialTime || 0, clock + 20); // walks on rather than starting a new chat at once
   },
-  headY: (p, ground) => (p.rig && p.rig.placed && Number.isFinite(p.rig.pelvisY) ? p.rig.pelvisY + 0.9 * (p.rig.s || 1) : ground(p.x, p.z) + HEAD)
+  headY: (p, ground) => (p.rig && p.rig.placed && Number.isFinite(p.rig.pelvisY) ? p.rig.pelvisY + 0.78 * (p.rig.s || 1) : ground(p.x, p.z) + HEAD)
 };
 
 // The Thrill Hill party's people (gf-thrill-hill.js schedule.people): only someone standing at the fire. They stay where

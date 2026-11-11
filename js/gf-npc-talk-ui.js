@@ -132,14 +132,14 @@ function installGfNpcTalk({ controllerManager, camera, peds, party = null, groun
       bubbleW = bubble.offsetWidth;
       bubbleH = bubble.offsetHeight;
     }
-    const s = toScreen(t.x, t.y + 0.15, t.z);
+    const s = toScreen(t.x, t.y + 0.08, t.z);
     const W = window.innerWidth, H = window.innerHeight;
     const minX = safe.left + EDGE, maxX = W - safe.right - EDGE - bubbleW;
     const minY = safe.top + EDGE, maxY = H - safe.bottom - EDGE - bubbleH;
     let left, top, tail = true;
     if (s.on) {
       left = s.x - bubbleW / 2;
-      top = s.y - bubbleH - 12;
+      top = s.y - bubbleH - 9;
     } else {
       // behind the camera: over the middle of the screen's upper part, without the tail
       left = (W - bubbleW) / 2;
@@ -166,7 +166,7 @@ function installGfNpcTalk({ controllerManager, camera, peds, party = null, groun
     // the prompt over whoever is in reach, unless they are already talking (the bubble says "T next")
     const showPrompt = !!target && !(t && t.npc === target.npc);
     if (showPrompt) {
-      const s = toScreen(target.x, target.y + 0.2, target.z);
+      const s = toScreen(target.x, target.y + 0.12, target.z);
       if (s.on) {
         prompt.hidden = false;
         prompt.style.transform = `translate(${Math.round(s.x)}px, ${Math.round(s.y)}px) translate(-50%, -100%)`;

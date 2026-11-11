@@ -261,7 +261,7 @@ test('talk: the pedestrian stops, faces the player, says a line; again: the next
   assert.deepEqual(w.talk.press(), { ok: false, reason: 'nobody in reach' }, 'before the first update');
   w.step();
   assert.equal(w.talk.target().npc, p);
-  assert.equal(w.talk.target().y, 1.9, 'the prompt over the head');
+  assert.ok(Math.abs(w.talk.target().y - 1.78) < 1e-9, 'the prompt over the head (pelvis + 0.78 m)');
   const first = w.talk.press();
   assert.equal(first.ok, true);
   assert.equal(first.kind, 'ped');
