@@ -1018,6 +1018,25 @@ three.js), `js/gf-street-furniture-meshes.js` (drawing), `js/gf-furniture.js` (g
 | inferred (a rule, Dave may tighten it) | a stop on a minor road where it meets a higher-class road at an unsignalled junction | this build, from OSM `highway` classes and the network's right-of-way groups |
 | assumed (not 1993, not a survey) | street lamps every 30 m downtown and 42 m elsewhere, 0.55 m in from the curb face | this build |
 
+**The extract.** `data/osm_gf_street_furniture.json`: OSM base 2026-11-12T11:26:55Z, 415 nodes, sha256
+`52b4aa5b…e7f3`, fetched by Dave through the maps.mail.ru Overpass mirror (the overpass-api.de servers refused the build
+environment; `tools/overpass.sh` now falls back to that mirror). It holds what the CC-006 spec counts for the bbox:
+55 `highway=stop` (37 `stop=all`) and 4 more `traffic_sign=stop`-only nodes, 7 `highway=give_way`, 325 crossing nodes
+(162 of them marked by the rule below) and 24 `highway=street_lamp`.
+
+**Counts in the game.**
+
+| | count |
+| --- | --- |
+| junction crosswalks | 203 on 80 junctions: 140 on the arms of all 41 signalled junctions, 63 on 39 unsignalled junctions an OSM marked crossing lies at |
+| mid-block crosswalks | 31 (marked or signalled crossings on no junction arm) |
+| marked and signalled crossings not painted | 65 of 186: 62 on no road of the drive network (service ways, paths, roads cut at the bbox edge), 3 inside a junction's core on none of its arms (listed with their reason in `slopGlensFalls.streetFurniture.midBlock.lost`) |
+| crosswalk walking tracks | 156 at 35 signalled junctions, 80 at 31 unsignalled ones |
+| OSM stops placed | 48 of 59, giving 140 signs (127 of them all-way); 11 unmatched (10 with no junction within 25 m, mostly at the bbox edge; 1 not on an approach) |
+| inferred stops | 60 signs at 52 junctions (373 junctions skipped as two roads of one class, 42 for an OSM stop, 37 signalled, 4 for a give-way, 19 one road) |
+| stop signs drawn | 190 of 200 (10 have no curb within 10 m) |
+| street lamps | 5,814 assumed; 0 of OSM's 24 used (below) |
+
 **Crosswalks** (`gf-crossings.js`):
 
 - **Where:** every arm of a signalled junction, and every arm of an unsignalled junction that an OSM marked crossing
@@ -1055,6 +1074,9 @@ three.js), `js/gf-street-furniture-meshes.js` (drawing), `js/gf-furniture.js` (g
   curb downtown. A spot on a driveway, a curb corner, off the band, within 0.25 m of the carriageway, within 0.9 m of a
   trunk, 2 m of a signal or stop post, or inside a building moves on along the curb, up to 6 m. OSM's few
   `highway=street_lamp` nodes, where they stand on a curb band, replace the assumed lamps within 15 m.
+- **OSM's 24 lamps:** none stands on a curb band, so none is used. 11 are a row along Glen St downtown 5-9 m back
+  from the roadway, inside the lot line; 1 more of that row is in the carriageway; 10 stand beside roads that have no
+  curb blocks drawn; 2 are well inside lots. Dave may want the Glen St row kept where OSM puts it.
 - **Drawn:** one instanced mesh, a post with an arm and a head over the road. The head glows by
   `smoothstep(0.65, 1.2, interiorGlow)` (`lighting.js` presets): 0 at midday (0.24) and golden hour (0.48), full at
   twilight (1.25) and midnight (1.55).
@@ -1072,7 +1094,7 @@ night, 164-214 ms more start-up, and median frame time +3% to +12%.
 - Signals unchanged: 8 OSM signals still have no network node at the bbox edge (see Signals), and no signalled
   junction is invented.
 - No WALK/DON'T WALK heads; pedestrians follow the phase without them.
-- 26 junction crosswalks find no curb and are drawn across the road's width; some crosswalk lines are not walked
+- 36 junction crosswalks find no curb and are drawn across the road's width; some crosswalk lines are not walked
   because an end is off the walk or blocked.
 
 ## Source and licence
