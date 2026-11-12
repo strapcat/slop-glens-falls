@@ -7,9 +7,11 @@ import { lampGlow, GLOW_ON } from './gf-street-lights.js';
 // gf-stop-signs.js, gf-street-lights.js). Few draw calls whatever the counts:
 //   crosswalk bars  one merged mesh: white ladder bars across each crosswalk, draped on the road surface
 //   stop signs      two instanced meshes: posts with the octagon's grey back and rim, and the red STOP faces
-//   street lights   one instanced mesh (pole, arm and head merged; the head's underside glows), and a pool of POOL
-//                   point lights handed every REASSIGN seconds to the lamps nearest the camera, all lit by
-//                   lampGlow(interiorGlow): off at midday and golden hour, on through twilight and midnight
+//   street lights   one instanced mesh per style (CC-006b): the cobra (pole, arm and head merged; the head's underside
+//                   glows) and, downtown, the gaslight-style post (fluted base, shaft, a glass lantern that glows, a
+//                   cap); and a pool of POOL point lights handed every REASSIGN seconds to the lamps nearest the
+//                   camera, each with its lamp's style's light, all lit by lampGlow(interiorGlow): off at midday and
+//                   golden hour, on through twilight and midnight
 // (a New York-style clustered pool; one real light per lamp would be thousands)
 
 const BAR = { width: 0.45, gap: 0.55, length: 2.2, lift: 0.03 }; // m; lift above the road surface it is draped on
@@ -19,6 +21,18 @@ const POOL = 32; // point lights
 const POOL_RANGE = 160; // m: lamps further than this from the camera get none
 const REASSIGN = 0.3; // s
 const LIGHT = { color: 0xffc98a, intensity: 120, distance: 32, decay: 2 }; // candela: ~2.5 lux on the street under a 7 m head (300 lit the brick like dusk)
+// CC-006b: downtown's gaslight-style post. The style is Dave's (1993: old gaslight-style posts downtown, not cobra
+// heads); every proportion here is ASSUMED, kept in this one constant for Dave to tweak. Heights in m above the ground.
+const GASLIGHT = {
+  color: 0x1a1b1d, // near-black cast iron
+  base: { r: 0.17, flare: 1.18, h: 0.75, flutes: 8, depth: 0.14 }, // fluted base: top radius, bottom flare, height, flutes, flute depth (of r)
+  shaft: { r: 0.055, top: 3.05 }, // the post, from the base to the lantern's seat
+  collar: { r: 0.11, h: 0.08 }, // the lantern's seat
+  lantern: { w: 0.36, h: 0.5 }, // four-sided glass lantern: width, height (its glass glows)
+  cap: { r: 0.3, h: 0.22 }, // four-sided cap over the lantern
+  finial: 0.05, // a ball on top: about 4.0 m in all
+  light: { color: 0xffb46c, intensity: 70 } // assumed: warmer and dimmer than the cobra's LIGHT (same distance and decay)
+};
 
 // A merged, draped mesh of ladder bars for crosswalks c (gf-crossings.js crossingAt), on surface(x, z)
 function crosswalkGeometry(crosswalks, surface) {
@@ -82,35 +96,75 @@ function place(mesh, i, x, y, z, fx, fz) {
   mesh.setMatrixAt(i, m4.compose(v3.set(x, y, z), q, one));
 }
 
+// Geometries merged with a per-vertex glow attribute: parts [[geometry, glow(normalY) -> 0 | 1]]
+function mergeGlow(parts) {
+  const ready = parts.map(([g, glow]) => {
+    const ng = g.index ? g.toNonIndexed() : g;
+    const n = ng.attributes.position.count;
+    const gl = new Float32Array(n);
+    for (let v = 0; v < n; v++) gl[v] = glow(ng.attributes.normal.getY(v));
+    ng.setAttribute('glow', new THREE.BufferAttribute(gl, 1));
+    return ng;
+  });
+  const merged = new THREE.BufferGeometry();
+  for (const name of ['position', 'normal', 'glow']) {
+    const size = ready[0].attributes[name].itemSize;
+    const total = ready.reduce((t, p) => t + p.attributes[name].count, 0);
+    const arr = new Float32Array(total * size);
+    let o = 0;
+    for (const p of ready) { arr.set(p.attributes[name].array, o); o += p.attributes[name].array.length; }
+    merged.setAttribute(name, new THREE.BufferAttribute(arr, size));
+  }
+  return merged;
+}
+const none = () => 0;
+
 // A lamp standard: pole, arm reaching +x over the road and a cobra-ish head; attribute glow 1 on the head's underside
 function lampGeometry() {
-  const parts = [];
   const pole = new THREE.CylinderGeometry(LAMP.poleR * 0.75, LAMP.poleR, LAMP.pole, 6, 1, true);
   pole.translate(0, LAMP.pole / 2, 0);
   const arm = new THREE.BoxGeometry(LAMP.arm, 0.08, 0.08);
   arm.translate(LAMP.arm / 2, LAMP.pole - 0.15, 0);
   const head = new THREE.BoxGeometry(...LAMP.head);
   head.translate(LAMP.arm + LAMP.head[0] / 2 - 0.1, LAMP.pole - 0.2, 0);
-  for (const [g, glow] of [[pole, 0], [arm, 0], [head, 1]]) {
-    const ng = g.index ? g.toNonIndexed() : g;
-    const n = ng.attributes.position.count;
-    const gl = new Float32Array(n);
-    // the head's underside (its downward faces) glows
-    for (let v = 0; v < n; v++) gl[v] = glow && ng.attributes.normal.getY(v) < -0.5 ? 1 : 0;
-    ng.setAttribute('glow', new THREE.BufferAttribute(gl, 1));
-    parts.push(ng);
-  }
-  const merged = new THREE.BufferGeometry();
-  for (const name of ['position', 'normal', 'glow']) {
-    const size = parts[0].attributes[name].itemSize;
-    const total = parts.reduce((t, p) => t + p.attributes[name].count, 0);
-    const arr = new Float32Array(total * size);
-    let o = 0;
-    for (const p of parts) { arr.set(p.attributes[name].array, o); o += p.attributes[name].array.length; }
-    merged.setAttribute(name, new THREE.BufferAttribute(arr, size));
-  }
-  return merged;
+  // the head's underside (its downward faces) glows
+  return mergeGlow([[pole, none], [arm, none], [head, (ny) => (ny < -0.5 ? 1 : 0)]]);
 }
+
+// CC-006b: the gaslight-style post (GASLIGHT): a fluted base, a slim shaft, a collar, a four-sided glass lantern (its
+// sides and underside glow), a four-sided cap and a ball finial. No arm: it stands upright at the lamp's spot.
+function gaslightGeometry() {
+  const G = GASLIGHT;
+  const base = new THREE.CylinderGeometry(G.base.r, G.base.r * G.base.flare, G.base.h, 32, 1, false);
+  const p = base.attributes.position;
+  for (let v = 0; v < p.count; v++) {
+    const x = p.getX(v), z = p.getZ(v), r = Math.hypot(x, z);
+    if (r < 1e-6) continue;
+    // the flutes: the radius dips FLUTES times around
+    const k = 1 - G.base.depth * (0.5 + 0.5 * Math.cos(G.base.flutes * Math.atan2(z, x)));
+    p.setX(v, x * k); p.setZ(v, z * k);
+  }
+  base.computeVertexNormals();
+  base.translate(0, G.base.h / 2, 0);
+  const shaftH = G.shaft.top - G.base.h;
+  const shaft = new THREE.CylinderGeometry(G.shaft.r, G.shaft.r * 1.25, shaftH, 8, 1, true);
+  shaft.translate(0, G.base.h + shaftH / 2, 0);
+  const collar = new THREE.CylinderGeometry(G.collar.r * 1.2, G.collar.r, G.collar.h, 8, 1, false);
+  collar.translate(0, G.shaft.top + G.collar.h / 2, 0);
+  const glassY = G.shaft.top + G.collar.h;
+  const glass = new THREE.BoxGeometry(G.lantern.w, G.lantern.h, G.lantern.w);
+  glass.translate(0, glassY + G.lantern.h / 2, 0);
+  const capY = glassY + G.lantern.h;
+  const cap = new THREE.ConeGeometry(G.cap.r, G.cap.h, 4, 1, false);
+  cap.rotateY(Math.PI / 4);
+  cap.translate(0, capY + G.cap.h / 2, 0);
+  const finial = new THREE.SphereGeometry(G.finial, 6, 4);
+  finial.translate(0, capY + G.cap.h + G.finial * 0.8, 0);
+  // the glass glows on its sides and underside, not its top (under the cap)
+  return mergeGlow([[base, none], [shaft, none], [collar, none], [glass, (ny) => (ny > 0.5 ? 0 : 1)], [cap, none], [finial, none]]);
+}
+// the height of the gaslight's light (the lantern's middle)
+const gaslightLightY = () => GASLIGHT.shaft.top + GASLIGHT.collar.h + GASLIGHT.lantern.h / 2;
 
 // crosswalks: painted crosswalks; signs: gf-stop-signs.js drawn; lamps: gf-street-lights.js. surface(x, z): the road
 // surface (bars); ground(x, z): the ground (posts and poles). Returns { group, update(cameraPosition, dt), stats }
@@ -161,20 +215,34 @@ function buildGfStreetFurniture(scene, { crosswalks = [], signs = [], lamps = []
   }
 
   const pool = [];
-  if (lamps.length) {
-    const mat = new THREE.MeshStandardNodeMaterial({ roughness: 0.6, metalness: 0.35 });
+  // CC-006b: one instanced mesh per style, no sun shadows (the shadow passes would draw every lamp in town again,
+  // about 400k triangles, for 9 cm poles)
+  const STYLE_MESH = {
+    cobra: { name: 'StreetLights', geometry: lampGeometry, color: 0x55595c, glass: [0.9, 0.86, 0.78], glow: 0xffd29a, roughness: 0.6, metalness: 0.35 },
+    gaslight: { name: 'GaslightStreetLights', geometry: gaslightGeometry, color: GASLIGHT.color, glass: [0.95, 0.85, 0.66], glow: 0xffc070, roughness: 0.5, metalness: 0.5 }
+  };
+  stats.lampsByStyle = {};
+  stats.lampTriangles = {};
+  for (const [style, spec] of Object.entries(STYLE_MESH)) {
+    const list = lamps.filter((l) => (l.style || 'cobra') === style);
+    stats.lampsByStyle[style] = list.length;
+    if (!list.length) continue;
+    const mat = new THREE.MeshStandardNodeMaterial({ roughness: spec.roughness, metalness: spec.metalness });
     const glow = attribute('glow', 'float');
-    mat.colorNode = color(0x55595c).mul(float(1).sub(glow)).add(vec3(0.9, 0.86, 0.78).mul(glow));
-    mat.emissiveNode = color(0xffd29a).mul(glow).mul(smoothstep(GLOW_ON[0], GLOW_ON[1], cityUniforms.uInteriorGlow)).mul(6);
-    const mesh = new THREE.InstancedMesh(lampGeometry(), mat, lamps.length);
-    lamps.forEach((l, i) => place(mesh, i, l.x, ground(l.x, l.z), l.z, l.nx, l.nz));
+    mat.colorNode = color(spec.color).mul(float(1).sub(glow)).add(vec3(...spec.glass).mul(glow));
+    mat.emissiveNode = color(spec.glow).mul(glow).mul(smoothstep(GLOW_ON[0], GLOW_ON[1], cityUniforms.uInteriorGlow)).mul(6);
+    const geometry = spec.geometry();
+    const mesh = new THREE.InstancedMesh(geometry, mat, list.length);
+    list.forEach((l, i) => place(mesh, i, l.x, ground(l.x, l.z), l.z, l.nx, l.nz));
     mesh.instanceMatrix.needsUpdate = true;
-    // no sun shadows: the shadow passes would draw every lamp in town again (about 400k triangles) for 9 cm poles
     mesh.castShadow = false;
     mesh.computeBoundingSphere();
-    mesh.name = 'StreetLights';
+    mesh.name = spec.name;
     group.add(mesh);
     stats.drawCalls++;
+    stats.lampTriangles[style] = (geometry.attributes.position.count / 3) * list.length;
+  }
+  if (lamps.length) {
     for (let k = 0; k < POOL; k++) {
       const light = new THREE.PointLight(LIGHT.color, 0, LIGHT.distance, LIGHT.decay);
       light.castShadow = false;
@@ -183,8 +251,10 @@ function buildGfStreetFurniture(scene, { crosswalks = [], signs = [], lamps = []
     }
   }
 
-  // the lamps' light points: under each head
-  const heads = lamps.map((l) => ({ x: l.x + l.nx * (LAMP.arm + 0.2), y: ground(l.x, l.z) + LAMP.pole - 0.45, z: l.z + l.nz * (LAMP.arm + 0.2) }));
+  // the lamps' light points: under a cobra's head, in a gaslight's lantern; each with its style's colour and intensity
+  const heads = lamps.map((l) => (l.style === 'gaslight'
+    ? { x: l.x, y: ground(l.x, l.z) + gaslightLightY(), z: l.z, color: GASLIGHT.light.color, intensity: GASLIGHT.light.intensity }
+    : { x: l.x + l.nx * (LAMP.arm + 0.2), y: ground(l.x, l.z) + LAMP.pole - 0.45, z: l.z + l.nz * (LAMP.arm + 0.2), color: LIGHT.color, intensity: LIGHT.intensity }));
   let since = Infinity, lit = 0;
   function update(cam, dt = 0) {
     since += dt;
@@ -210,10 +280,16 @@ function buildGfStreetFurniture(scene, { crosswalks = [], signs = [], lamps = []
         const h = near[k] && near[k][1];
         light.userData.on = !!h;
         // gf-main.js freezes the scene's world matrices once loaded: a light that moves updates its own
-        if (h) { light.position.set(h.x, h.y, h.z); light.updateMatrixWorld(); lit++; }
+        if (h) {
+          light.position.set(h.x, h.y, h.z);
+          light.updateMatrixWorld();
+          if (light.userData.hex !== h.color) { light.color.setHex(h.color); light.userData.hex = h.color; }
+          light.userData.intensity = h.intensity;
+          lit++;
+        }
       });
     }
-    for (const light of pool) light.intensity = light.userData.on ? LIGHT.intensity * g : 0;
+    for (const light of pool) light.intensity = light.userData.on ? light.userData.intensity * g : 0;
     return lit;
   }
   stats.pool = () => ({ lit, glow: lampGlow(cityUniforms.uInteriorGlow.value) });
@@ -234,4 +310,4 @@ function mergePlain(list) {
   return out;
 }
 
-export { buildGfStreetFurniture, crosswalkGeometry, BAR, SIGN, LAMP, POOL, POOL_RANGE, LIGHT };
+export { buildGfStreetFurniture, crosswalkGeometry, BAR, SIGN, LAMP, GASLIGHT, POOL, POOL_RANGE, LIGHT };
