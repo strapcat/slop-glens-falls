@@ -6,7 +6,7 @@ Glens Falls and South Glens Falls, New York, built with [three.js](https://three
 
 Keep `?city=glensfalls` on the link. The bare page (`index.html` with no query) still opens the original New York City, which stays available at the same address.
 
-**Controls:** `1`–`4` Walk / Drive / Cycle / Fly, `WASD` to move, `V` to cycle cameras, `H` to hide the HUD. The street map (`M`) is New York only for now.
+**Controls:** `1`–`4` Walk / Drive / Cycle / Fly, `WASD` to move, `V` to cycle cameras, `T` (the **Talk** button on touch screens) to talk to someone in reach on foot, `H` to hide the HUD. The street map (`M`) is New York only for now.
 
 ## How accurate is it?
 

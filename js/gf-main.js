@@ -45,6 +45,7 @@ import { createGfCrossings } from './gf-crossings.js';
 import { placeStopSigns, edgeClasses } from './gf-stop-signs.js';
 import { placeStreetLights, CLEAR as LAMP_CLEAR } from './gf-street-lights.js';
 import { buildGfStreetFurniture } from './gf-street-furniture-meshes.js';
+import { installGfNpcTalk } from './gf-npc-talk-ui.js';
 
 // Glens Falls game view (index.html?city=glensfalls): the town from GF_GEO (roads, water, blocks) on its sourced terrain
 // (CC-005b: USGS 3DEP bare earth, gf-terrain.js, asked through gf-surface.js by everything that stands on it), its road graph
@@ -579,7 +580,7 @@ async function initApp() {
 
   // Keyboard guide for each mode: [keys, action]
   const controlHints = {
-    person: [[['W', 'S'], 'Walk / Run'], [['A', 'D'], 'Turn'], [['Space'], 'Jump'], [['Drag'], 'Orbit']],
+    person: [[['W', 'S'], 'Walk / Run'], [['A', 'D'], 'Turn'], [['Space'], 'Jump'], [['T'], 'Talk'], [['Drag'], 'Orbit']],
     car: [[['W', 'S'], 'Drive / Reverse'], [['A', 'D'], 'Steer'], [['Drag'], 'Orbit']],
     cyclist: [[['W', 'S'], 'Pedal / Brake'], [['A', 'D'], 'Lean & Turn'], [['Drag'], 'Orbit']],
     helicopter: [[['W', 'S'], 'Pitch'], [['A', 'D'], 'Yaw'], [['Space', 'E'], 'Ascend'], [['Q', 'C'], 'Descend']]
@@ -765,6 +766,9 @@ async function initApp() {
     else if (e.code === EXIT_KEY && !e.repeat) pressExit();
   });
   globalThis.slopGlensFalls.vehicleExit = { status: () => vehicleExit.status(), press: pressExit, get last() { return vehicleExit.last; }, hint: '' };
+  // CC-NPC1: talk to people on foot (T; the Talk button on touch). Every line is Dave's: data/gf/npc-lines.json
+  const npcTalk = installGfNpcTalk({ controllerManager, camera: cameraSystem.camera, peds: trafficSystem.peds, party, ground: GF_SURFACE.ground,
+    canStand: (x, z) => !!GF_BLOCKS.blockAt(x, z) && !controllerManager.bodyBlockedAt(x, z, GF_SURFACE.ground(x, z) + ROAD_LIFT, 0.3) });
 
   window.addEventListener('resize', () => {
     cameraSystem.onResize(window.innerWidth, window.innerHeight);
@@ -907,6 +911,7 @@ async function initApp() {
     }
     signalHeads.update(elapsed);
     if (party) party.update(dt, elapsed, cameraSystem.currentPos);
+    npcTalk.update(dt, elapsed);
     // the shadow distance grows with the camera's height above the ground (not above y = 0, which the terrain is not)
     const cam = cameraSystem.currentPos, below = GF_SURFACE.ground(cam.x, cam.z);
     shadowFocus.set(cam.x, cam.y - (Number.isFinite(below) ? below : 0), cam.z);

@@ -80,6 +80,9 @@ const GF_PRELOADS = [
   'gf-stop-signs.js',
   'gf-street-lights.js',
   'gf-street-furniture-meshes.js',
+  'gf-npc-lines.js',
+  'gf-npc-talk.js',
+  'gf-npc-talk-ui.js',
   'gf-main.js'
 ];
 
