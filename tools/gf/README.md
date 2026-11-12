@@ -1098,6 +1098,37 @@ start-up, and median frame time +5% to +8%, +21% at night on Glen St with the li
 - 36 junction crosswalks find no curb and are drawn across the road's width; some crosswalk lines are not walked
   because an end is off the walk or blocked.
 
+### Downtown gaslight-style lamps (CC-006b)
+
+Dave (2026-11-12): in 1993 downtown Glens Falls's street lamps were old gaslight-style posts, not cobra heads. CC-006b
+gives the lamps a style (`gf-street-lights.js`): every lamp in the Three Squares envelope (`gf-sidewalks.js`
+`downtown`) is a gaslight-style post, and every other lamp keeps CC-006's cobra head.
+
+| | what | source |
+| --- | --- | --- |
+| Dave (1993, from memory, not a survey) | downtown lamps were gaslight-style posts, not cobra heads | Dave, 2026-11-12 |
+| sourced (modern OSM, not 1993) | the Glen St row's positions: 12 `highway=street_lamp` nodes downtown | OSM, `data/osm_gf_street_furniture.json` (OSM base 2026-11-12T11:26:55Z) |
+| assumed (Dave may tweak) | the post's proportions (`GASLIGHT` in `gf-street-furniture-meshes.js`), downtown spacing `SPACING_DOWNTOWN` 30 m, the gaslight light (70 cd, warmer than the cobra's 120 cd) | this build |
+
+- **The post** (`GASLIGHT`, one constant): near-black, about 4.0 m tall. A fluted base 0.75 m high (8 flutes), a
+  slim shaft to 3.05 m, a collar, a four-sided glass lantern 0.36 m wide and 0.5 m high, a four-sided cap and a ball
+  finial; no arm. The lantern's sides and underside glow by the same `lampGlow` ramp as the cobra's head: off at
+  midday and golden hour, on at twilight and midnight.
+- **Placement:** downtown's assumed lamps stay as CC-006 placed them, 30 m apart on the walk by the curb.
+- **OSM's Glen St row:** the 12 OSM lamps downtown, in a row along Glen St 5-9 m back from the roadway.
+  - On a walk or open ground (not in a building footprint, at least `CARRIAGEWAY` 0.25 m from the roadway): placed
+    where OSM puts it, `kind: 'osm'`. **10** are.
+  - In the carriageway: snapped to the nearest curb-side walk spot within `SNAP` 10 m. **1** is (OSM 6842442869, in
+    Glen St's carriageway, moved 6.2 m onto the walk).
+  - Otherwise skipped, with its reason: **1** is (OSM 6842442842, inside a building's OSM footprint).
+  - Each placed one replaces the assumed lamps within `REPLACE` 15 m. No other lamp is moved or invented, and the OSM
+    lamps outside downtown keep CC-006's rule (none is used). `slopGlensFalls.streetFurniture.lamps.counts.osmDowntown`
+    lists the row's outcome.
+- **Counts (in the game):** 130 gaslights downtown (119 assumed, 11 OSM) and 5,668 cobra heads elsewhere.
+- **Light:** the 32-light pool is unchanged. A gaslight's light sits in its lantern (3.38 m up), warmer (0xffb46c) and
+  dimmer (70 cd) than a cobra's.
+- **Drawing:** one instanced mesh per style, neither casting sun shadows.
+
 ## Source and licence
 
 Data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the
