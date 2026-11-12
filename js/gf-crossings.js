@@ -138,14 +138,17 @@ function createGfCrossings({ marked = [], blockAt = () => null, onWalk = () => t
     const out = [], lost = [];
     for (const m of marked) {
       if (matched.has(m.osm)) continue;
-      let best = null, bo = Infinity;
+      let best = null, bo = Infinity, inJunction = false;
       for (const e of network.edges) {
         const t = (m.x - e.sx) * e.dx + (m.z - e.sz) * e.dz;
-        if (t < 0 || t > e.len) continue;
         const o = Math.abs((m.x - e.sx) * e.rx + (m.z - e.sz) * e.rz);
-        if (o <= e.half + ARM_WIDTH_SLACK && o < bo) { bo = o; best = { e, t }; }
+        if (o > e.half + ARM_WIDTH_SLACK) continue;
+        if (t < 0 || t > e.len) { if (t > -e.half - ARM_WIDTH_SLACK && t < e.len + e.half + ARM_WIDTH_SLACK) inJunction = true; continue; }
+        if (o < bo) { bo = o; best = { e, t }; }
       }
-      if (!best) { lost.push(m); continue; }
+      // not painted: the node is on a road the drive network leaves out (a service way, a path, a road cut at the bbox
+      // edge), or inside a junction's core and on none of its arms
+      if (!best) { lost.push({ ...m, reason: inJunction ? 'inside a junction, on none of its arms' : 'on no road of the drive network' }); continue; }
       const { e, t } = best;
       const cx = e.sx + e.dx * t, cz = e.sz + e.dz * t;
       const flip = e.rx < -1e-6 || (Math.abs(e.rx) <= 1e-6 && e.rz < 0);

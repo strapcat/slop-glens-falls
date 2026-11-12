@@ -19,7 +19,8 @@ fi
 TMP=$(mktemp "${OUT}.tmp.XXXXXX")
 trap 'rm -f -- "$TMP"' EXIT
 for ((i = 1; i <= TRIES; i++)); do
-  for ep in https://overpass-api.de/api/interpreter https://lz4.overpass-api.de/api/interpreter https://z.overpass-api.de/api/interpreter; do
+  # the last is a fallback mirror (maps.mail.ru): the overpass-api.de servers can refuse a build environment (CC-006)
+  for ep in https://overpass-api.de/api/interpreter https://lz4.overpass-api.de/api/interpreter https://z.overpass-api.de/api/interpreter https://maps.mail.ru/osm/tools/overpass/api/interpreter; do
     if code=$(curl -sS -m 240 -A "$UA" -o "$TMP" -w "%{http_code}" --data-urlencode "data@$Q" "$ep"); then
       if [ "$code" = "200" ] && node -e '
         const fs = require("node:fs");

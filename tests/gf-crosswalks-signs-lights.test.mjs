@@ -61,6 +61,9 @@ test('sources: the street furniture regenerates from the frozen OSM extract; the
     assert.ok(e && e.tags.crossing !== 'traffic_signals' && kind.length, `crossing ${osm}`);
     assert.ok(!['unmarked', 'no'].includes(e.tags.crossing) || (e.tags['crossing:markings'] && e.tags['crossing:markings'] !== 'no'), `crossing ${osm} is marked`);
   }
+  // the frozen extract (OSM base 2026-11-12T11:26:55Z) has the counts the CC-006 spec gives for the bbox
+  const c = GF_FURNITURE.counts;
+  assert.deepEqual([c.highwayStop, c.trafficSignStopOnly, c.stopAll, c.giveWay, c.crossingNodes, c.signalCrossings, c.lamps], [55, 4, 37, 7, 325, 24, 24]);
   // CC-002b: 51 OSM signal junctions, 41 signalled in the network, 24 signalled pedestrian crossings
   assert.equal(GF_SIGNALS.junctions.length, 51);
   assert.equal(GF_SIGNALS.crossings.length, 24);
@@ -98,6 +101,7 @@ test('crosswalks: on every arm of the signalled junctions, walkable at most of t
   for (const n of network.nodes) crossings.crossingAt(n);
   const mid = crossings.midBlock(network);
   assert.equal(crossings.matched.size + mid.painted.length + mid.lost.length, new Set(marked.map((m) => m.osm)).size);
+  for (const l of mid.lost) assert.ok(l.reason, `unpainted crossing ${l.osm} says why`);
   for (const [osm, at] of crossings.matched) assert.ok(crossings.crossingAt(at.n).some((c) => c.side === at.side && c.sources.includes(osm)), `crossing ${osm}`);
   // an unsignalled junction gets a crosswalk only on an arm a marked crossing lies on
   for (const n of network.nodes) {
@@ -139,6 +143,7 @@ test('stop signs: every OSM stop on an approach or reported; inferred ones only 
   const c = stopPlan.counts;
   assert.equal(c.osmMatched + c.osmUnmatched, stops.length);
   for (const u of stopPlan.unmatched) assert.ok(u.reason, `unmatched stop ${u.osm} says why`);
+  assert.ok(c.osmMatched >= 45 && c.osmSigns > 100, `${c.osmMatched} of ${stops.length} OSM stops placed, ${c.osmSigns} signs`);
   // each matched OSM stop put a sign (or its approach's stop) on a junction near it
   const osmEdges = [...stopPlan.stopEdges].filter(([, v]) => v.kind === 'osm');
   for (const s of stops) {
