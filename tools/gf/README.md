@@ -1083,10 +1083,11 @@ environment; `tools/overpass.sh` now falls back to that mirror). It holds what t
 - **Light:** a pool of 32 point lights (warm, 120 cd, 32 m reach) moves to the lamps nearest the camera within 160 m, every
   0.3 s, while the glow is on. No lamp has a light of its own.
 
-**Cost** (headless Chromium, software WebGL, so frame times are only relative; car on Glen St at Monument Square and
-on Maple St, golden hour and midnight): +2 to +8 draw calls (crosswalk bars, two sign meshes, lamps; the signs' shadow
-passes), +180k to +237k triangles (the 5,802 lamps are one instanced mesh with no sun shadows), 32 point lights at
-night, 164-214 ms more start-up, and median frame time +3% to +12%.
+**Cost** (headless Chromium, software WebGL, so frame times are only relative; main and this branch measured back to
+back, car on Glen St at Monument Square and on Maple St, golden hour and midnight): +204k to +261k triangles (the
+5,801 lamps are one instanced mesh with no sun shadows; the 234 crosswalks' 1,782 bars one merged mesh; 190 signs two
+instanced meshes), draw calls within the traffic's own swing (-4 to +8), 32 point lights at night, about 0.4 s more
+start-up, and median frame time +5% to +8%, +21% at night on Glen St with the light pool on.
 
 **Limits.**
 
