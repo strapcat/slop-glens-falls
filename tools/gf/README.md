@@ -1127,7 +1127,10 @@ gives the lamps a style (`gf-street-lights.js`): every lamp in the Three Squares
 - **Counts (in the game):** 130 gaslights downtown (119 assumed, 11 OSM) and 5,668 cobra heads elsewhere.
 - **Light:** the 32-light pool is unchanged. A gaslight's light sits in its lantern (3.38 m up), warmer (0xffb46c) and
   dimmer (70 cd) than a cobra's.
-- **Drawing:** one instanced mesh per style, neither casting sun shadows.
+- **Drawing:** one instanced mesh per style, neither casting sun shadows. A gaslight post is 232 triangles (the cobra
+  36): downtown's 130 lamps are 30,160 triangles. Measured on Glen St at Monument Square against CC-006 (headless
+  Chromium, software WebGL, back to back): +41.5k triangles drawn per frame (2.36M to 2.40M, +1.8%, the passes
+  included), and no frame-time change beyond the run-to-run noise.
 
 ## Source and licence
 
