@@ -1,6 +1,6 @@
 import { GF_BLOCKS, GF_SURFACE, GF_TERRAIN, GF_SIDEWALKS, onRaised } from './gf-runtime.js'; // first: installs Glens Falls in the city runtime before any shared module runs
 import * as THREE from 'three/webgpu';
-import { pass, mrt, output, normalView, positionView, metalness, roughness, vec2, smoothstep } from 'three/tsl';
+import { pass, mrt, output, normalView, positionView, metalness, roughness, vec2, vec3, smoothstep } from 'three/tsl';
 import { ssr } from 'three/addons/tsl/display/SSRNode.js';
 import { ClusteredLighting } from 'three/addons/lighting/ClusteredLighting.js';
 import { createPostProcessing } from './post-processing.js';
@@ -9,6 +9,8 @@ import { buildRoadPaint } from './road-paint.js';
 import { ThirdPersonControllerManager } from './controllers.js';
 import { TouchControls } from './touch-controls.js';
 import { GamepadControls } from './gamepad-controls.js';
+import { detectDeviceTier } from './device-tier.js';
+import { installGfTouchExit } from './gf-touch-exit.js';
 import { CameraSystem, CAMERA_PRESETS } from './cameras.js';
 import { LightingSystem } from './lighting.js';
 import { ROAD_SOURCE, PLAYER_WORLD, isTypingInField } from './city-runtime.js';
@@ -174,13 +176,19 @@ async function initApp() {
 
   await showLoadingStage('Initializing graphics...');
 
+  // CC-MOBILE: the device's quality tier, from its pointer and screen (js/device-tier.js), never the city: a phone or
+  // tablet gets the mobile defaults, a desktop today's
+  const DEVICE = detectDeviceTier(window);
+  const TIER = DEVICE.settings;
+  document.body.dataset.tier = DEVICE.tier;
+
   // 1. WebGPURenderer with 32-bit float reversedDepthBuffer
   const renderer = new THREE.WebGPURenderer({
-    antialias: true,
+    antialias: TIER.antialias,
     powerPreference: 'high-performance',
     reversedDepthBuffer: true
   });
-  renderer.setPixelRatio(1.0);
+  renderer.setPixelRatio(TIER.pixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.lighting = new ClusteredLighting(256, 32, 28, 48);
@@ -195,13 +203,19 @@ async function initApp() {
     initMark = now;
   };
 
-  await renderer.init();
+  try {
+    await renderer.init();
+  } catch (e) {
+    // CC-MOBILE: no WebGPU and no WebGL 2 (or the GPU refused): say so instead of a loading screen that never ends
+    throw Object.assign(new Error(`This browser could not start WebGPU or WebGL 2 graphics (${e && e.message ? e.message : e}).`), { graphics: true });
+  }
   markInit('renderer');
+  const backendName = renderer.backend && renderer.backend.isWebGPUBackend ? 'WebGPU' : 'WebGL 2';
 
   // 2. Scene, atmosphere and lighting
   await showLoadingStage('Creating sky and environment lighting...');
   const scene = new THREE.Scene();
-  const lightingSystem = new LightingSystem(scene, renderer);
+  const lightingSystem = new LightingSystem(scene, renderer, { shadowMapSize: TIER.shadowMapSize });
   markInit('lighting');
 
   // 3. The terrain, roads, water and bridge decks; road graph & traffic, road markings
@@ -216,7 +230,7 @@ async function initApp() {
   const trailMeshes = buildTrailMeshes(scene, GF_TRAILS, GF_SURFACE);
   // CC-005e: granite curbs, tree lawns and concrete walks along the roads (gf-sidewalk-meshes.js), built round the
   // camera as it goes
-  const sidewalkMeshes = createGfSidewalkMeshes(scene, GF_SIDEWALKS);
+  const sidewalkMeshes = createGfSidewalkMeshes(scene, GF_SIDEWALKS, { range: TIER.sidewalkRange });
   markInit('ground');
   await showLoadingStage('Raising buildings...');
   // OSM footprints, flat-roofed. Heights: OSM height or levels where tagged; else measured from USGS 3DEP LiDAR
@@ -260,7 +274,7 @@ async function initApp() {
   const treePlan = keepTreesOffWalk(placeGfTrees(GF_TREES, { buildings: GF_BUILDINGS, geo: GF_GEO, ground: GF_SURFACE.ground,
     exclude: new Set(GF_TRAILS.treeExclusions.trees.map((t) => t[0])) }),
   { trees: GF_TREES, sidewalks: GF_SIDEWALKS, buildings: GF_BUILDINGS, water: GF_GEO.water, trails: GF_TRAILS, ground: GF_SURFACE.ground });
-  const treeField = createTreeField(scene, treePlan.sites, []);
+  const treeField = createTreeField(scene, treePlan.sites, [], TIER.treeMaxDist ? { maxDist: TIER.treeMaxDist } : {});
   scene.add(treeField.group);
   {
     const { water, road, building, trail, walk } = treePlan.skipped;
@@ -345,7 +359,9 @@ async function initApp() {
     signs: stopPlan.drawn,
     lamps: lampPlan.lamps,
     surface: (x, z) => roadSurface(x, z, 0, 1),
-    ground: GF_SURFACE.ground
+    ground: GF_SURFACE.ground,
+    pool: TIER.lampPool,
+    poolRange: TIER.lampPoolRange
   });
   console.info(`[gf] street furniture: ${paintedCrosswalks.length} junction crosswalks (${trafficSystem.network.nodes.filter((n) => n.signal && GF_CROSSINGS.crossingAt(n).length).length} signalled junctions) + ${midBlock.painted.length} mid-block, ${GF_CROSSINGS.matched.size} sourced crossings on an arm; stop signs ${stopPlan.counts.osmSigns} OSM (${stopPlan.counts.osmMatched} of ${GF_FURNITURE.stops.length} nodes matched) + ${stopPlan.counts.inferredSigns} inferred at ${stopPlan.counts.inferredJunctions} junctions, ${stopPlan.counts.drawn} drawn; ${lampPlan.counts.assumed} assumed + ${lampPlan.counts.osm} OSM street lights (${lampPlan.counts.gaslight} gaslight-style downtown, ${lampPlan.counts.cobra} cobra; OSM downtown ${lampPlan.counts.osmDowntown.asIs} as-is, ${lampPlan.counts.osmDowntown.snapped} snapped, ${lampPlan.counts.osmDowntown.skipped.length} skipped); ${furniture.stats.drawCalls} draw calls, ${furniture.stats.poolLights} pooled lights`);
   markInit('streetFurniture');
@@ -423,6 +439,8 @@ async function initApp() {
   window.addEventListener('pagehide', savePlayerState);
   // For the console and automated checks (cars driving, where the player is)
   globalThis.slopGlensFalls = {
+    // CC-MOBILE: the device tier this page chose, why, its settings and the graphics backend
+    deviceTier: { tier: DEVICE.tier, reason: DEVICE.reason, settings: TIER, backend: backendName },
     trafficSystem, controllerManager, cameraSystem, spawn, buildings: buildings.stats,
     // CC-003b: the count of buildings per final height source (LiDAR, landmark, OSM, default rule)
     heights,
@@ -520,38 +538,44 @@ async function initApp() {
   await showLoadingStage('Setting up visual effects and interface...');
   const scenePass = pass(scene, cameraSystem.camera);
   scenePass.renderTarget.storeMultisampledColorBuffer = false;
-  const ssrFade = smoothstep(360.0, 180.0, positionView.z.negate());
-  const maxSSRRoughness = 0.75;
-  const sceneMRT = mrt({
-    output: output,
-    normal: normalView,
-    metalRough: vec2(roughness.lessThan(maxSSRRoughness).select(metalness.mul(ssrFade), 0), roughness)
-  });
-  sceneMRT.setBlendMode('normal', new THREE.BlendMode(THREE.MaterialBlending));
-  sceneMRT.setBlendMode('metalRough', new THREE.BlendMode(THREE.MaterialBlending));
-  scenePass.setMRT(sceneMRT);
-
   const scenePassColor = scenePass.getTextureNode('output');
-  const scenePassDepth = scenePass.getTextureNode('depth');
-  const scenePassNormal = scenePass.getTextureNode('normal');
-  const scenePassMetalRough = scenePass.getTextureNode('metalRough');
+  // CC-MOBILE: the mobile tier draws no reflections, so it needs neither the SSR pass nor its MRT normal / metal-rough
+  // render targets
+  let sceneMRT = null;
+  let reflections = vec3(0);
+  if (TIER.ssr) {
+    const ssrFade = smoothstep(360.0, 180.0, positionView.z.negate());
+    const maxSSRRoughness = 0.75;
+    sceneMRT = mrt({
+      output: output,
+      normal: normalView,
+      metalRough: vec2(roughness.lessThan(maxSSRRoughness).select(metalness.mul(ssrFade), 0), roughness)
+    });
+    sceneMRT.setBlendMode('normal', new THREE.BlendMode(THREE.MaterialBlending));
+    sceneMRT.setBlendMode('metalRough', new THREE.BlendMode(THREE.MaterialBlending));
+    scenePass.setMRT(sceneMRT);
 
-  const ssrPass = ssr(scenePassColor, scenePassDepth, scenePassNormal, {
-    metalnessNode: scenePassMetalRough.r,
-    roughnessNode: scenePassMetalRough.g,
-    camera: cameraSystem.camera
-  });
-  ssrPass.resolutionScale = 0.5;
-  ssrPass.blurQuality = 1;
-  ssrPass.maxDistance.value = 42;
-  ssrPass.thickness.value = 0.85;
-  ssrPass.quality.value = 0.25;
-  ssrPass.binaryRefine = true;
-  ssrPass.intensity.value = 0.50;
-  ssrPass.screenEdgeFadeBlack = true;
+    const scenePassDepth = scenePass.getTextureNode('depth');
+    const scenePassNormal = scenePass.getTextureNode('normal');
+    const scenePassMetalRough = scenePass.getTextureNode('metalRough');
 
-  const reflectionMask = scenePassMetalRough.r.greaterThan(0).select(smoothstep(maxSSRRoughness, 0.55, scenePassMetalRough.g), 0);
-  const reflections = ssrPass.mul(reflectionMask);
+    const ssrPass = ssr(scenePassColor, scenePassDepth, scenePassNormal, {
+      metalnessNode: scenePassMetalRough.r,
+      roughnessNode: scenePassMetalRough.g,
+      camera: cameraSystem.camera
+    });
+    ssrPass.resolutionScale = 0.5;
+    ssrPass.blurQuality = 1;
+    ssrPass.maxDistance.value = 42;
+    ssrPass.thickness.value = 0.85;
+    ssrPass.quality.value = 0.25;
+    ssrPass.binaryRefine = true;
+    ssrPass.intensity.value = 0.50;
+    ssrPass.screenEdgeFadeBlack = true;
+
+    const reflectionMask = scenePassMetalRough.r.greaterThan(0).select(smoothstep(maxSSRRoughness, 0.55, scenePassMetalRough.g), 0);
+    reflections = ssrPass.mul(reflectionMask);
+  }
   const colorGrade = createPostProcessing(renderer, scenePassColor, reflections);
   const renderPipeline = new THREE.RenderPipeline(renderer, colorGrade.outputNode);
 
@@ -620,10 +644,12 @@ async function initApp() {
   exitLabel.className = 'hint-label';
   exitHint.append(exitKbd, exitLabel);
   let exitHintText = '', exitHintAt = 0, exitFlash = null;
+  let touchExit = null; // CC-MOBILE: the Exit / Enter touch button (installed below), kept in step with the F chip
   function updateExitHint(force = false, now = performance.now()) {
     if (!force && now < exitHintAt) return;
     exitHintAt = now + 250;
     const st = exitFlash && now < exitFlash.until ? exitFlash : vehicleExit.status();
+    if (touchExit) touchExit.update(st);
     const text = st.ok ? st.action : `${st.action}: ${st.reason}`;
     if (text === exitHintText) return;
     exitHintText = text;
@@ -641,6 +667,9 @@ async function initApp() {
     updateExitHint(true);
     return r;
   }
+  // CC-MOBILE: F on touch screens: the same pressExit as the key
+  touchExit = installGfTouchExit({ press: pressExit });
+  updateExitHint(true);
 
   function placeModeIndicator() {
     const active = modeSwitch ? modeSwitch.querySelector('.mode-btn.active') : null;
@@ -785,7 +814,7 @@ async function initApp() {
   markInit('ui');
 
   // Compile shaders behind the loading screen (as nyc-main.js)
-  const COMPILE_POOL = 16;
+  const COMPILE_POOL = TIER.compilePool; // CC-MOBILE: fewer shader compiles in flight on the mobile tier (a lower memory peak)
   const nextTask = () => (globalThis.scheduler?.yield ? globalThis.scheduler.yield() : new Promise((resolve) => setTimeout(resolve, 0)));
   async function precompileShaders() {
     await showLoadingStage('Preparing reflections and bloom...');
@@ -945,7 +974,7 @@ async function initApp() {
       if (loadingStatus) loadingStatus.textContent = 'Waiting for graphics to finish the first frame...';
       Promise.resolve(device && device.queue.onSubmittedWorkDone()).catch(() => {}).then(() => {
         markInit('gpu');
-        console.log(`[init] ${initTimings.join(', ')}`);
+        console.log(`[init] ${initTimings.join(', ')}; backend ${backendName}; tier ${DEVICE.tier} (${DEVICE.reason})`);
         initTimings = null;
         if (loadingOverlay) loadingOverlay.classList.add('hidden');
         setLoadingProgress(1);
@@ -975,4 +1004,14 @@ async function initApp() {
   });
 }
 
-initApp();
+// CC-MOBILE: a failed start says so on the loading screen instead of leaving it spinning
+initApp().catch((e) => {
+  console.error('[init] failed', e);
+  const status = document.getElementById('loading-status');
+  const track = document.querySelector('#loading-overlay .loader-track');
+  if (track) track.hidden = true;
+  if (status) {
+    status.classList.add('loading-error');
+    status.textContent = e && e.graphics ? e.message : `Glens Falls could not start: ${e && e.message ? e.message : e}. Reloading the page may help.`;
+  }
+});

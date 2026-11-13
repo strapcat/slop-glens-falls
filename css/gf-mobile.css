@@ -1,0 +1,47 @@
+/* CC-MOBILE (Glens Falls only, loaded by js/gf-touch-exit.js): the Exit / Enter touch button (styled by style.css's
+   .touch-action) and the reason it can't act now, in a caption above it; and, on touch screens, the map / LiDAR credit
+   moved off the mode buttons. Desktop (no body.touch-enabled) is unchanged. */
+
+.exit-action { position: relative; }
+.exit-action .exit-action-icon { font-size: 21px; line-height: 0.9; }
+
+/* dimmed when F can't act now (it can still be tapped: the tap flashes why) */
+.exit-action.is-blocked { opacity: 0.55; }
+.exit-action.is-blocked.is-pressed { opacity: 1; }
+
+.exit-action-reason {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  max-width: min(220px, calc(100vw - 2 * var(--edge, 12px)));
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--glass-strong, rgba(16, 17, 20, 0.88));
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
+  color: var(--text-2, #c9c9c9);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+.exit-action-reason:empty { display: none; }
+
+/* The credit (gf-main.js #gf-attribution, inline-styled at the bottom left) covers the Walk / Drive / Cycle / Fly
+   buttons on a phone: on touch screens it sits small at the top left, under the GitHub badge. Still on screen, still a
+   link (ODbL attribution). */
+body.touch-enabled #gf-attribution {
+  top: calc(max(var(--edge, 12px), env(safe-area-inset-top)) + 112px) !important;
+  bottom: auto !important;
+  left: max(var(--edge, 12px), env(safe-area-inset-left)) !important;
+  max-width: calc(50vw - var(--edge, 12px));
+  font-size: 9px !important;
+  line-height: 1.25 !important;
+  z-index: 11 !important; /* under the touch controls (12) */
+}
+@media (max-height: 500px) {
+  /* landscape: beside the GitHub badge instead of under it */
+  body.touch-enabled #gf-attribution { top: max(var(--edge, 12px), env(safe-area-inset-top)) !important; left: calc(max(var(--edge, 12px), env(safe-area-inset-left)) + 96px) !important; max-width: 34vw; }
+}

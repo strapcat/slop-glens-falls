@@ -93,7 +93,8 @@ function lawnMaterial() {
   return mat;
 }
 
-function createGfSidewalkMeshes(scene, sidewalks) {
+// options.range: the distance cells are built and shown within (default RANGE; a lower-spec device tier passes less)
+function createGfSidewalkMeshes(scene, sidewalks, { range = RANGE } = {}) {
   const ground = sidewalks.ground;
   const group = new THREE.Group();
   group.name = 'GlensFallsSidewalks';
@@ -154,7 +155,7 @@ function createGfSidewalkMeshes(scene, sidewalks) {
       const nx = Math.max(cell.i * CELL, Math.min(camera.x, (cell.i + 1) * CELL));
       const nz = Math.max(cell.j * CELL, Math.min(camera.z, (cell.j + 1) * CELL));
       const g = ground(nx, nz);
-      const near = Math.hypot(camera.x - nx, camera.z - nz, Math.max(0, camera.y - (Number.isFinite(g) ? g : 0))) < RANGE;
+      const near = Math.hypot(camera.x - nx, camera.z - nz, Math.max(0, camera.y - (Number.isFinite(g) ? g : 0))) < range;
       if (near && !cell.meshes) cell.meshes = buildCell(cell);
       if (cell.meshes) for (const m of cell.meshes) m.visible = near;
       if (near) { visible++; draws += cell.meshes.length; }
@@ -164,7 +165,7 @@ function createGfSidewalkMeshes(scene, sidewalks) {
     return visible;
   }
 
-  return { group, update, materials, stats, strips, CELL, RANGE };
+  return { group, update, materials, stats, strips, CELL, RANGE: range };
 }
 
 export { createGfSidewalkMeshes, CELL, RANGE };

@@ -83,6 +83,8 @@ const GF_PRELOADS = [
   'gf-npc-lines.js',
   'gf-npc-talk.js',
   'gf-npc-talk-ui.js',
+  'device-tier.js',
+  'gf-touch-exit.js',
   'gf-main.js'
 ];
 

@@ -168,11 +168,12 @@ const gaslightLightY = () => GASLIGHT.shaft.top + GASLIGHT.collar.h + GASLIGHT.l
 
 // crosswalks: painted crosswalks; signs: gf-stop-signs.js drawn; lamps: gf-street-lights.js. surface(x, z): the road
 // surface (bars); ground(x, z): the ground (posts and poles). Returns { group, update(cameraPosition, dt), stats }
-function buildGfStreetFurniture(scene, { crosswalks = [], signs = [], lamps = [], surface, ground }) {
+// pool / poolRange: the light pool's size and reach (default POOL / POOL_RANGE; a lower-spec device tier passes less)
+function buildGfStreetFurniture(scene, { crosswalks = [], signs = [], lamps = [], surface, ground, pool: poolSize = POOL, poolRange = POOL_RANGE }) {
   const group = new THREE.Group();
   group.name = 'GlensFallsStreetFurniture';
   scene.add(group);
-  const stats = { crosswalks: crosswalks.length, bars: 0, signs: signs.length, lamps: lamps.length, drawCalls: 0, poolLights: POOL };
+  const stats = { crosswalks: crosswalks.length, bars: 0, signs: signs.length, lamps: lamps.length, drawCalls: 0, poolLights: poolSize };
 
   if (crosswalks.length) {
     const g = crosswalkGeometry(crosswalks, surface);
@@ -243,7 +244,7 @@ function buildGfStreetFurniture(scene, { crosswalks = [], signs = [], lamps = []
     stats.lampTriangles[style] = (geometry.attributes.position.count / 3) * list.length;
   }
   if (lamps.length) {
-    for (let k = 0; k < POOL; k++) {
+    for (let k = 0; k < poolSize; k++) {
       const light = new THREE.PointLight(LIGHT.color, 0, LIGHT.distance, LIGHT.decay);
       light.castShadow = false;
       group.add(light);
@@ -272,7 +273,7 @@ function buildGfStreetFurniture(scene, { crosswalks = [], signs = [], lamps = []
       const near = [];
       for (const h of heads) {
         const d = (h.x - cam.x) ** 2 + (h.z - cam.z) ** 2;
-        if (d < POOL_RANGE * POOL_RANGE) near.push([d, h]);
+        if (d < poolRange * poolRange) near.push([d, h]);
       }
       near.sort((a, b) => a[0] - b[0]);
       lit = 0;

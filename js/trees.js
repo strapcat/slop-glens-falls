@@ -861,8 +861,9 @@ function createTreeClearance(colliders) {
  * Builds the instanced tree field for `sites` ({ x, y, z, scale, species, yaw?, sx?, sz?, tier? }). Call
  * `update(cameraPosition)` from the frame loop to keep each tree's level of detail up to date. Returns
  * { group, material, atlas, sites (accepted placements), update(cameraPosition) }.
+ * Options: maxDist, the draw distance per tier (default MAX_DIST; a caller's lower-spec device tier may pass shorter).
  */
-function createTreeField(_scene, sites, colliders = []) {
+function createTreeField(_scene, sites, colliders = [], { maxDist = MAX_DIST } = {}) {
   const group = new THREE.Group();
   group.name = 'Trees';
   const atlas = createLeafAtlas();
@@ -983,7 +984,7 @@ function createTreeField(_scene, sites, colliders = []) {
       if (y > maxY) maxY = y;
       if (z < minZ) minZ = z;
       if (z > maxZ) maxZ = z;
-      const td = MAX_DIST[tier[i]];
+      const td = maxDist[tier[i]];
       if (td > maxCutoffAloft) maxCutoffAloft = td;
       if (td < minCutoffAloft) minCutoffAloft = td;
     }
@@ -1104,10 +1105,10 @@ function createTreeField(_scene, sites, colliders = []) {
   const MID_SQ = LOD_MID * LOD_MID;
   const MID_LO_SQ = (LOD_MID - LOD_HYSTERESIS) * (LOD_MID - LOD_HYSTERESIS);
   const MID_HI_SQ = (LOD_MID + LOD_HYSTERESIS) * (LOD_MID + LOD_HYSTERESIS);
-  const MAX_DIST_LOW = MAX_DIST.map((d) => Math.min(d, LOW_CUTOFF));
-  const MAX_SQ_ALOFT = MAX_DIST.map((d) => d * d);
-  const MAX_LO_SQ_ALOFT = MAX_DIST.map((d) => (d - LOD_HYSTERESIS) * (d - LOD_HYSTERESIS));
-  const MAX_HI_SQ_ALOFT = MAX_DIST.map((d) => (d + LOD_HYSTERESIS) * (d + LOD_HYSTERESIS));
+  const MAX_DIST_LOW = maxDist.map((d) => Math.min(d, LOW_CUTOFF));
+  const MAX_SQ_ALOFT = maxDist.map((d) => d * d);
+  const MAX_LO_SQ_ALOFT = maxDist.map((d) => (d - LOD_HYSTERESIS) * (d - LOD_HYSTERESIS));
+  const MAX_HI_SQ_ALOFT = maxDist.map((d) => (d + LOD_HYSTERESIS) * (d + LOD_HYSTERESIS));
   const MAX_SQ_LOW = MAX_DIST_LOW.map((d) => d * d);
   const MAX_LO_SQ_LOW = MAX_DIST_LOW.map((d) => (d - LOD_HYSTERESIS) * (d - LOD_HYSTERESIS));
   const MAX_HI_SQ_LOW = MAX_DIST_LOW.map((d) => (d + LOD_HYSTERESIS) * (d + LOD_HYSTERESIS));
@@ -1236,4 +1237,4 @@ function createTreeField(_scene, sites, colliders = []) {
   return { group, material, atlas, update, meshes: instanced, stats, sites: plantedSites };
 }
 
-export { createTreeField, createLeafAtlas, buildTreeGeometries, SPECIES as TREE_SPECIES };
+export { createTreeField, createLeafAtlas, buildTreeGeometries, SPECIES as TREE_SPECIES, MAX_DIST as TREE_MAX_DIST };
