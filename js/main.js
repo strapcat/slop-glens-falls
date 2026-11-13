@@ -85,17 +85,20 @@ const GF_PRELOADS = [
   'gf-npc-talk-ui.js',
   'device-tier.js',
   'gf-touch-exit.js',
+  'gf-touch-guards.js',
+  'gf-loading-progress.js',
   'gf-main.js'
 ];
 
 // <link>s in the head for files next to this module (rel and the like in `attributes`)
 function preload(files, attributes) {
-  for (const file of files) {
+  return files.map((file) => {
     const link = document.createElement('link');
     Object.assign(link, attributes);
     link.href = new URL(file, import.meta.url).href;
     document.head.appendChild(link);
-  }
+    return link;
+  });
 }
 
 const params = new URLSearchParams(location.search);
@@ -104,9 +107,14 @@ if (params.get('city') === 'glensfalls') {
   document.title = 'Slop Glens Falls';
   if (params.get('view') === 'debug') location.replace(`./gf.html${location.search}`);
   else {
-    preload(GF_PRELOADS, { rel: 'modulepreload' });
+    const links = preload(GF_PRELOADS, { rel: 'modulepreload' });
     // CC-005b: the terrain starts downloading with the modules
     preload(['gf-terrain.bin.gz'], { rel: 'preload', as: 'fetch', crossOrigin: 'anonymous' });
+    // CC-MOBILE-fix: the loading bar's first part: the Glens Falls modules as they arrive
+    let landed = 0;
+    const bump = () => { landed++; globalThis.__gfLoadingProgress?.set('code', landed / links.length, `Loading code ${landed} / ${links.length}`); };
+    for (const link of links) { link.addEventListener('load', bump, { once: true }); link.addEventListener('error', bump, { once: true }); }
+    import('./gf-loading-progress.js').then(({ loadingProgress }) => loadingProgress(document).set('code', landed / links.length, `Loading code ${landed} / ${links.length}`)).catch(() => {});
     import('./gf-main.js');
   }
 } else {

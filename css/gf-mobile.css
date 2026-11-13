@@ -1,6 +1,7 @@
 /* CC-MOBILE (Glens Falls only, loaded by js/gf-touch-exit.js): the Exit / Enter touch button (styled by style.css's
-   .touch-action) and the reason it can't act now, in a caption above it; and, on touch screens, the map / LiDAR credit
-   moved off the mode buttons. Desktop (no body.touch-enabled) is unchanged. */
+   .touch-action) and the reason it can't act now, in a caption above it; and, on touch screens only: no iOS text
+   selection, callout, magnifier or double-tap zoom while steering, no GitHub badge, and the map / LiDAR credit in the
+   top-left corner. Desktop (no body.touch-enabled) is unchanged. */
 
 .exit-action { position: relative; }
 .exit-action .exit-action-icon { font-size: 21px; line-height: 0.9; }
@@ -31,19 +32,54 @@
 }
 .exit-action > .exit-action-reason:empty { display: none; }
 
-/* The credit (gf-main.js #gf-attribution, inline-styled at the bottom left) covers the Walk / Drive / Cycle / Fly
-   buttons on a phone: on touch screens it sits small at the top left, under the GitHub badge. Still on screen, still a
-   link (ODbL attribution). */
+/* CC-MOBILE-fix: holding the joystick on iPhone Safari brought up the copy / paste callout, the text magnifier and
+   double-tap zoom. Nothing a thumb holds selects text or calls out; the controls and the canvas take every touch
+   (style.css already gives the stick, the actions and the canvas touch-action: none); the page itself only pans and
+   pinches (manipulation: no double-tap zoom). */
+body.touch-enabled { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+body.touch-enabled #canvas-container,
+body.touch-enabled #canvas-container canvas,
+body.touch-enabled #touch-controls,
+body.touch-enabled #touch-controls *,
+body.touch-enabled #touch-stick,
+body.touch-enabled #touch-stick-knob,
+body.touch-enabled .touch-caption,
+body.touch-enabled .touch-look-hint,
+body.touch-enabled .touch-action,
+body.touch-enabled .hud,
+body.touch-enabled .hud *,
+body.touch-enabled .mode-btn {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+body.touch-enabled #canvas-container,
+body.touch-enabled #canvas-container canvas,
+body.touch-enabled #touch-stick,
+body.touch-enabled #touch-stick-knob,
+body.touch-enabled .touch-caption,
+body.touch-enabled .touch-action,
+body.touch-enabled .mode-btn {
+  touch-action: none;
+}
+
+/* CC-MOBILE-fix: the GitHub badge (the brand card, and the fps) took the upper view on a phone: hidden on touch
+   screens. */
+body.touch-enabled .hud-top-left { display: none !important; }
+
+/* The credit (gf-main.js #gf-attribution, inline-styled at the bottom left) covered the Walk / Drive / Cycle / Fly
+   buttons on a phone: on touch screens it sits small in the top-left corner (where the badge was), clear of the
+   time-of-day toolbar. Still on screen, still a link (ODbL and the USGS LiDAR credit). */
 body.touch-enabled #gf-attribution {
-  top: calc(max(var(--edge, 12px), env(safe-area-inset-top)) + 112px) !important;
+  top: max(var(--edge, 12px), env(safe-area-inset-top)) !important;
   bottom: auto !important;
   left: max(var(--edge, 12px), env(safe-area-inset-left)) !important;
-  max-width: calc(50vw - var(--edge, 12px));
+  max-width: 30vw;
   font-size: 9px !important;
   line-height: 1.25 !important;
   z-index: 11 !important; /* under the touch controls (12) */
 }
 @media (max-height: 500px) {
-  /* landscape: the brand card is wide and short; just under it, above the joystick */
-  body.touch-enabled #gf-attribution { top: calc(max(var(--edge, 12px), env(safe-area-inset-top)) + 58px) !important; max-width: 36vw; }
+  /* landscape: a wide top-left corner, above the joystick */
+  body.touch-enabled #gf-attribution { max-width: 36vw; }
 }

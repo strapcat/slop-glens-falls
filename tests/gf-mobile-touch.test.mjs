@@ -3,7 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { detectDeviceTier, TIERS, SMALL_SCREEN, HANDHELD_QUERY } from '../js/device-tier.js';
+import { detectDeviceTier, fovHookFor, applyChaseScale, TIERS, SMALL_SCREEN, HANDHELD_QUERY, CAMDIST_RANGE } from '../js/device-tier.js';
+import { installGfTouchGuards } from '../js/gf-touch-guards.js';
+import { createLoadingProgress, STAGES } from '../js/gf-loading-progress.js';
 import { installGfTouchExit, shortLabel } from '../js/gf-touch-exit.js';
 
 // CC-MOBILE: the device tier (capability, not the city), the Exit / Enter touch button (the F key's path), and New York
@@ -52,7 +54,7 @@ test('the device tier: mobile for a phone or a small screen, desktop for a mouse
 test('the tiers: desktop keeps today\'s settings; mobile is capped as documented', () => {
   const d = TIERS.desktop, m = TIERS.mobile;
   // desktop pins: the modules' own defaults
-  assert.deepEqual(d, { pixelRatio: 1, antialias: true, ssr: true, shadowMapSize: null, treeMaxDist: null, sidewalkRange: 650, lampPool: 32, lampPoolRange: 160, compilePool: 16 });
+  assert.deepEqual(d, { pixelRatio: 1, antialias: true, ssr: true, shadowMapSize: null, treeMaxDist: null, sidewalkRange: 650, lampPool: 32, lampPoolRange: 160, compilePool: 16, chaseDistanceScale: 1, chaseHeightScale: 1, portraitFov: null });
   assert.match(read('js/trees.js'), /^const MAX_DIST = \[3000, 1600, 950\];/m);
   assert.match(read('js/trees.js'), /function createTreeField\(_scene, sites, colliders = \[\], \{ maxDist = MAX_DIST \} = \{\}\)/);
   assert.match(read('js/gf-sidewalk-meshes.js'), /^const RANGE = 650;/m);
@@ -172,4 +174,143 @@ test('New York and the shared modules: no Exit button, no city branches, no devi
   for (const rule of css.split('}').map((r) => r.split('{')[0].trim()).filter((r) => r && !r.startsWith('@media'))) {
     assert.match(rule, /exit-action|body\.touch-enabled/, rule);
   }
+});
+
+// ---- CC-MOBILE-fix (Dave's iPhone test) ----
+
+const cssRules = () => {
+  const css = read('css/gf-mobile.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = [];
+  const re = /([^{}]+)\{([^{}]*)\}/g;
+  let m;
+  while ((m = re.exec(css))) rules.push({ selectors: m[1].trim().split(',').map((x) => x.trim()), body: m[2] });
+  return rules;
+};
+const ruleFor = (selector, prop) => cssRules().find((r) => r.selectors.includes(selector) && new RegExp(`(^|[;\\s])${prop.replace(/[-]/g, '\\-')}\\s*:`).test(r.body));
+
+test('steering on iPhone Safari: no selection, callout, magnifier or double-tap zoom on what a thumb holds', () => {
+  for (const sel of ['#touch-stick', '#touch-stick-knob', '#canvas-container', '#canvas-container canvas', '.touch-action', '.touch-caption', '#touch-controls', '.mode-btn']) {
+    const full = `body.touch-enabled ${sel}`;
+    for (const prop of ['-webkit-user-select', 'user-select', '-webkit-touch-callout']) assert.ok(ruleFor(full, prop), `${full} { ${prop} }`);
+  }
+  for (const sel of ['#touch-stick', '#touch-stick-knob', '#canvas-container', '#canvas-container canvas', '.touch-action', '.touch-caption']) {
+    const r = ruleFor(`body.touch-enabled ${sel}`, 'touch-action');
+    assert.ok(r && /touch-action:\s*none/.test(r.body), `body.touch-enabled ${sel} { touch-action: none }`);
+  }
+  const body = ruleFor('body.touch-enabled', 'touch-action');
+  assert.ok(body && /touch-action:\s*manipulation/.test(body.body), 'the page: no double-tap zoom');
+  // the shared viewport meta is untouched (New York and desktop keep pinch zoom)
+  assert.match(read('index.html'), /<meta name="viewport" content="width=device-width, initial-scale=1\.0, viewport-fit=cover" \/>/);
+  // every rule still only restyles touch screens or the button
+  for (const r of cssRules()) for (const sel of r.selectors) assert.match(sel, /exit-action|body\.touch-enabled/, sel);
+});
+
+test('the touch guards cancel a held touch on the controls, only on touch screens, never on a link', () => {
+  const listeners = {};
+  const classes = new Set(['touch-enabled']);
+  const doc = { body: { classList: { contains: (c) => classes.has(c) } }, addEventListener: (t, f, o) => { listeners[t] = { f, o }; }, removeEventListener: (t) => { delete listeners[t]; } };
+  const guards = installGfTouchGuards(doc);
+  assert.equal(listeners.touchstart.o.passive, false, 'touchstart can be cancelled');
+  const ev = (sel) => { const e = { prevented: false, preventDefault() { this.prevented = true; }, target: { closest: (q) => (q.split(',').map((x) => x.trim()).includes(sel) ? {} : null) } }; return e; };
+  const fire = (type, sel) => { const e = ev(sel); listeners[type].f(e); return e.prevented; };
+  assert.equal(fire('touchstart', '#touch-stick'), true);
+  assert.equal(fire('touchstart', '#touch-controls .touch-action'), true);
+  assert.equal(fire('touchstart', 'canvas'), false, 'the canvas keeps its own pointer gestures');
+  assert.equal(fire('selectstart', 'div'), true);
+  assert.equal(fire('contextmenu', 'div'), true);
+  assert.equal(fire('selectstart', 'a'), false, 'the credit\'s OSM link stays a link');
+  // desktop (no touch-enabled): nothing is cancelled
+  classes.delete('touch-enabled');
+  for (const [t, sel] of [['touchstart', '#touch-stick'], ['selectstart', 'div'], ['contextmenu', 'div'], ['dblclick', 'div']]) assert.equal(fire(t, sel), false, t);
+  guards.remove();
+  assert.deepEqual(Object.keys(listeners), []);
+  assert.match(read('js/gf-main.js'), /installGfTouchGuards\(document\);/);
+  assert.doesNotMatch(read('js/nyc-main.js'), /gf-touch-guards/);
+});
+
+test('the GitHub badge is hidden on touch screens; the OSM / USGS credit stays, in the corner, as a link', () => {
+  const hide = ruleFor('body.touch-enabled .hud-top-left', 'display');
+  assert.ok(hide && /display:\s*none/.test(hide.body), 'the badge is hidden on touch screens');
+  const credit = cssRules().find((r) => r.selectors.includes('body.touch-enabled #gf-attribution') && /top:/.test(r.body));
+  assert.ok(credit, 'the credit is placed');
+  assert.doesNotMatch(credit.body, /display:\s*none|visibility:\s*hidden|opacity:\s*0[;\s]/);
+  assert.doesNotMatch(read('css/gf-mobile.css'), /\+ (112|58)px/, 'no offsets left over from clearing the badge');
+  assert.match(credit.body, /top:\s*max\(var\(--edge, 12px\), env\(safe-area-inset-top\)\)/);
+  // gf-main.js still makes the credit: the OSM copyright link (ODbL) and the USGS LiDAR line
+  const main = read('js/gf-main.js');
+  assert.match(main, /credit\.id = 'gf-attribution';/);
+  assert.match(main, /link\.href = 'https:\/\/www\.openstreetmap\.org\/copyright';/);
+  assert.match(main, /credit\.append\('Map data © ', link, ' \(ODbL\)', document\.createElement\('br'\), GF_LIDAR_HEIGHTS\.credit/);
+});
+
+test('the follow camera: unchanged on desktop and New York; backed off and wider in portrait on the mobile tier; ?camdist= overrides', () => {
+  // shared defaults untouched: preset FOVs and entity distances
+  assert.match(read('js/cameras.js'), /\{ id: 'chase',\s+name: '3rd-Person Chase',\s+category: 'follow', fov: 56 \}/);
+  assert.match(read('js/cameras.js'), /\{ id: 'action',\s+name: 'Low-Angle Action',\s+category: 'follow', fov: 60 \}/);
+  assert.match(read('js/cameras.js'), /\{ id: 'pov',\s+name: 'First-Person \/ Cockpit',\s+category: 'follow', fov: 68 \}/);
+  const ctl = read('js/controllers.js');
+  for (const [d, h] of [['4.3', '1.95'], ['6.9', '2.12'], ['4.8', '2.05'], ['11.4', '3.3']]) assert.match(ctl, new RegExp(`chaseDistance: ${d.replace('.', '\\.')},\\s*chaseHeight: ${h.replace('.', '\\.')}`));
+  assert.doesNotMatch(ctl, /device-tier|glensfalls/);
+  // desktop: no scale, no FOV hook
+  const ents = () => ({ person: { chaseDistance: 4.3, chaseHeight: 1.95 }, car: { chaseDistance: 6.9, chaseHeight: 2.12 }, cyclist: { chaseDistance: 4.8, chaseHeight: 2.05 }, helicopter: { chaseDistance: 11.4, chaseHeight: 3.3 } });
+  const desk = ents();
+  applyChaseScale(desk, TIERS.desktop);
+  assert.deepEqual(desk, ents());
+  assert.equal(fovHookFor(TIERS.desktop), null);
+  // mobile: 1.35 x distance, 1.2 x height (person 5.8, car 9.3, cyclist 6.5, helicopter 15.4 m)
+  assert.equal(TIERS.mobile.chaseDistanceScale, 1.35);
+  assert.equal(TIERS.mobile.chaseHeightScale, 1.2);
+  const mob = ents();
+  applyChaseScale(mob, TIERS.mobile);
+  assert.deepEqual(Object.values(mob).map((e) => +e.chaseDistance.toFixed(2)), [5.8, 9.32, 6.48, 15.39]);
+  assert.deepEqual(Object.values(mob).map((e) => +e.chaseHeight.toFixed(2)), [2.34, 2.54, 2.46, 3.96]);
+  // portrait FOVs: chase 70, action 74, pov 80 below aspect 1; the presets' in landscape
+  const hook = fovHookFor(TIERS.mobile);
+  assert.deepEqual(['chase', 'action', 'pov'].map((id) => hook({ id }, 390 / 844)), [70, 74, 80]);
+  assert.deepEqual(['chase', 'action', 'pov'].map((id) => hook({ id }, 844 / 390)), [null, null, null]);
+  // ?camdist= overrides the distance scale (either tier); missing or invalid leaves the tier's
+  const phone = { coarse: true, hover: false, screen: [390, 844] };
+  assert.equal(detectDeviceTier(device({ ...phone, search: '?city=glensfalls&camdist=1.5' })).settings.chaseDistanceScale, 1.5);
+  assert.equal(detectDeviceTier(device({ ...phone, search: '?camdist=1.2&tier=mobile' })).settings.chaseDistanceScale, 1.2);
+  for (const bad of ['', 'x', '0', '-1', '9', 'NaN']) assert.equal(detectDeviceTier(device({ ...phone, search: `?camdist=${bad}` })).settings.chaseDistanceScale, 1.35, `camdist=${bad}`);
+  assert.equal(detectDeviceTier(device({ ...phone })).settings, TIERS.mobile, 'no camdist: the tier itself');
+  assert.equal(detectDeviceTier(device({ screen: [2560, 1440] })).settings, TIERS.desktop);
+  assert.deepEqual(CAMDIST_RANGE, [0.5, 3]);
+  // gf-main.js applies them before the camera exists, and only through the tier
+  assert.match(read('js/gf-main.js'), /applyChaseScale\(controllerManager\.entities, TIER\);\n\s*const fovFor = fovHookFor\(TIER\);\n\s*const cameraSystem = new CameraSystem\(renderer\.domElement, controllerManager, fovFor \? \{ fovFor \} : \{\}\);/);
+});
+
+test('loading: a stage and an overall percent across the whole load, weighted, never backwards', () => {
+  const p = createLoadingProgress();
+  assert.equal(p.percent(), 0);
+  assert.match(p.set('code', 0.5, 'Loading code 20 / 40'), /^Loading code 20 \/ 40… \d+%$/);
+  const afterCode = p.percent();
+  assert.ok(afterCode > 0 && afterCode < 15);
+  // the terrain download is the long wait: a third of the bar
+  const t0 = p.set('terrain', 0) && p.percent();
+  p.set('terrain', 1);
+  assert.ok(p.percent() - t0 >= 28, `${p.percent() - t0}% for the terrain`);
+  // a late code report after the terrain began changes nothing
+  const before = p.text();
+  assert.equal(p.set('code', 1, 'Loading code 40 / 40'), before);
+  // stages in order; each says its name and the overall percent
+  let last = p.percent();
+  for (const [id] of STAGES.slice(2)) {
+    const text = p.set(id, 0.5);
+    assert.match(text, /… \d+%$/);
+    assert.ok(p.percent() >= last, id);
+    last = p.percent();
+  }
+  assert.ok(last < 100);
+  p.done();
+  assert.equal(p.percent(), 100);
+  // every gf-main.js stage message names its stage; compilation and the terrain report their fraction
+  const main = read('js/gf-main.js');
+  const ids = new Set(STAGES.map(([id]) => id));
+  const calls = [...main.matchAll(/await showLoadingStage\((?:'[^']*'|`[^`]*`), '(\w+)'/g)].map((m) => m[1]);
+  assert.ok(calls.length >= 12);
+  for (const id of calls) assert.ok(ids.has(id), id);
+  assert.match(main, /progress\.set\('compile', done \/ jobs\.length/);
+  assert.match(read('js/gf-terrain-data.js'), /progress\.set\('terrain', 0\.9 \* Math\.min\(1, got \/ total\)/);
+  assert.match(read('js/main.js'), /set\('code', landed \/ links\.length/);
 });

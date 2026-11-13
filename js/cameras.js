@@ -18,9 +18,12 @@ const CAMERA_PRESETS = [
 ];
 
 class CameraSystem {
-  constructor(domElement, controllerManager) {
+  // options.fovFor(preset, aspect): a caller's own vertical FOV for a preset at this aspect (e.g. wider in portrait on a
+  // phone), or null for the preset's. Without it, every preset keeps its fov (today's behaviour).
+  constructor(domElement, controllerManager, { fovFor = null } = {}) {
     this.domElement = domElement;
     this.controllerManager = controllerManager;
+    this.fovFor = typeof fovFor === 'function' ? fovFor : null;
 
     this.camera = new THREE.PerspectiveCamera(
       56,
@@ -118,7 +121,7 @@ class CameraSystem {
     const preset = CAMERA_PRESETS.find((p) => p.id === presetId);
     if (!preset) return;
     this.activePresetId = preset.id;
-    this.camera.fov = preset.fov;
+    this.camera.fov = this.presetFov(preset);
     this.camera.updateProjectionMatrix();
     if (snapImmediately) {
       this.initialized = false;
@@ -168,8 +171,16 @@ class CameraSystem {
     return CAMERA_PRESETS.find((p) => p.id === this.activePresetId) || CAMERA_PRESETS[0];
   }
 
+  // The preset's FOV, or the caller's fovFor at the camera's aspect (default: the preset's)
+  presetFov(preset) {
+    const own = this.fovFor ? this.fovFor(preset, this.camera.aspect) : null;
+    return Number.isFinite(own) && own > 0 ? own : preset.fov;
+  }
+
   onResize(width, height) {
     this.camera.aspect = width / height;
+    // a caller's fovFor may pick another FOV at the new aspect (a phone turned to portrait)
+    if (this.fovFor) this.camera.fov = this.presetFov(this.getActivePreset());
     this.camera.updateProjectionMatrix();
   }
 
