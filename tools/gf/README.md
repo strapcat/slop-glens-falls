@@ -1170,6 +1170,25 @@ deleted and no data is regenerated: the mobile tier only draws less of it at onc
 - **Start-up failure:** if `renderer.init()` cannot start WebGPU or WebGL 2 (or anything else throws while loading),
   the loading screen says so instead of spinning.
 
+**After Dave's iPhone test (CC-MOBILE-fix, 2026-11-13).**
+
+- **Steering:** holding the joystick on iPhone Safari brought up the copy / paste callout and the magnifier. On touch
+  screens nothing a thumb holds (the stick, the action buttons, the mode buttons, the canvas, the HUD) selects text or
+  calls out (`-webkit-user-select`, `user-select`, `-webkit-touch-callout`: none; `touch-action: none` on the stick,
+  buttons and canvas); the page itself is `touch-action: manipulation` (no double-tap zoom). `js/gf-touch-guards.js`
+  also cancels `touchstart` on the stick and buttons and `selectstart` / `contextmenu` / `dblclick` elsewhere, but
+  never on a link (the credit) and never on a desktop. The shared viewport meta is unchanged.
+- **Camera:** on the mobile tier the follow camera sits further back and a little higher (`chaseDistanceScale` 1.35,
+  `chaseHeightScale` 1.2: person 4.3 -> 5.8 m, car 6.9 -> 9.3, cyclist 4.8 -> 6.5, helicopter 11.4 -> 15.4) and, in
+  portrait, wider (chase 70, action 74, pov 80 degrees vertical; landscape keeps 56 / 60 / 68). Assumed starting
+  values for Dave to tune; `?camdist=1.5` (0.5-3) sets the distance scale on any device. `js/cameras.js` takes an
+  opt-in `fovFor(preset, aspect)` (none: the presets' FOVs) and re-picks the FOV on rotation; desktop and New York keep
+  56 / 60 / 68 and 4.3 / 6.9 / 4.8 / 11.4.
+- **GitHub badge:** hidden on touch screens (the brand card, with the fps). The OSM / USGS credit takes its corner.
+- **Loading:** `js/gf-loading-progress.js` shows the stage and an overall percent, weighted by rough cost: the code
+  (module preloads landing, `js/main.js`, 12%), the terrain (streamed, bytes received of Content-Length, 30%), then
+  each start-up stage by its `[init]` share, shader compilation by batch. The bar never moves back.
+
 **Limits.** Not a native app; no frame-rate promise. The measurements here are headless Chromium with software WebGL 2
 at iPhone viewport sizes, not an iPhone: Safari's WebGPU path, its GPU-process memory (the ~300 MB jetsam limit) and
 real frame rates need Dave's phone. The first load is still heavy on cellular (the terrain alone is 6.85 MB). Older
