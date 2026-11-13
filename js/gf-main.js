@@ -336,7 +336,9 @@ async function initApp() {
       if (postsNear(x, z).some((p) => Math.hypot(p.x - x, p.z - z) < LAMP_CLEAR.post)) return 'post';
       if (buildingsNear(x, z).some((c) => x >= c.minX - LAMP_CLEAR.building && x <= c.maxX + LAMP_CLEAR.building && z >= c.minZ - LAMP_CLEAR.building && z <= c.maxZ + LAMP_CLEAR.building && polygonContains(c.polygon, x, z))) return 'building';
       return null;
-    }
+    },
+    // CC-006b: an OSM downtown lamp only has to be outside every building's footprint
+    inBuilding: (x, z) => buildingsNear(x, z).some((c) => x >= c.minX && x <= c.maxX && z >= c.minZ && z <= c.maxZ && polygonContains(c.polygon, x, z))
   });
   const furniture = buildGfStreetFurniture(scene, {
     crosswalks: [...paintedCrosswalks, ...midBlock.painted.map((m) => m.crossing)],
@@ -345,7 +347,7 @@ async function initApp() {
     surface: (x, z) => roadSurface(x, z, 0, 1),
     ground: GF_SURFACE.ground
   });
-  console.info(`[gf] street furniture: ${paintedCrosswalks.length} junction crosswalks (${trafficSystem.network.nodes.filter((n) => n.signal && GF_CROSSINGS.crossingAt(n).length).length} signalled junctions) + ${midBlock.painted.length} mid-block, ${GF_CROSSINGS.matched.size} sourced crossings on an arm; stop signs ${stopPlan.counts.osmSigns} OSM (${stopPlan.counts.osmMatched} of ${GF_FURNITURE.stops.length} nodes matched) + ${stopPlan.counts.inferredSigns} inferred at ${stopPlan.counts.inferredJunctions} junctions, ${stopPlan.counts.drawn} drawn; ${lampPlan.counts.assumed} assumed + ${lampPlan.counts.osm} OSM street lights; ${furniture.stats.drawCalls} draw calls, ${furniture.stats.poolLights} pooled lights`);
+  console.info(`[gf] street furniture: ${paintedCrosswalks.length} junction crosswalks (${trafficSystem.network.nodes.filter((n) => n.signal && GF_CROSSINGS.crossingAt(n).length).length} signalled junctions) + ${midBlock.painted.length} mid-block, ${GF_CROSSINGS.matched.size} sourced crossings on an arm; stop signs ${stopPlan.counts.osmSigns} OSM (${stopPlan.counts.osmMatched} of ${GF_FURNITURE.stops.length} nodes matched) + ${stopPlan.counts.inferredSigns} inferred at ${stopPlan.counts.inferredJunctions} junctions, ${stopPlan.counts.drawn} drawn; ${lampPlan.counts.assumed} assumed + ${lampPlan.counts.osm} OSM street lights (${lampPlan.counts.gaslight} gaslight-style downtown, ${lampPlan.counts.cobra} cobra; OSM downtown ${lampPlan.counts.osmDowntown.asIs} as-is, ${lampPlan.counts.osmDowntown.snapped} snapped, ${lampPlan.counts.osmDowntown.skipped.length} skipped); ${furniture.stats.drawCalls} draw calls, ${furniture.stats.poolLights} pooled lights`);
   markInit('streetFurniture');
 
   // 4. Player (Person, Car, Cyclist, Helicopter) & cameras
