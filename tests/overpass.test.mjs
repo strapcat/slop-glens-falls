@@ -62,7 +62,7 @@ for (const [name, response] of [
     const result = download([response]);
     assert.equal(result.status, 1, result.stderr);
     assert.equal(result.data, original);
-    assert.equal(result.calls, 3, 'all three endpoints are tried');
+    assert.equal(result.calls, 4, 'all four endpoints are tried (overpass-api.de, its two mirrors, the maps.mail.ru fallback)');
   });
 }
 
@@ -71,4 +71,13 @@ test('Overpass retries a failed endpoint before replacing data', () => {
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.data, replacement);
   assert.equal(result.calls, 2);
+});
+
+test('Overpass falls back to the maps.mail.ru mirror when the overpass-api.de servers fail', () => {
+  const fail = { status: 0, body: '', exitCode: 35 };
+  const result = download([fail, fail, fail, { status: 200, body: replacement }]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.data, replacement);
+  assert.equal(result.calls, 4);
+  assert.match(result.stdout, /ok https:\/\/maps\.mail\.ru\/osm\/tools\/overpass\/api\/interpreter try 1/);
 });

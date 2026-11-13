@@ -905,8 +905,15 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
   const timeTo = (v, dist) => dist / Math.max(v.speed, Math.sqrt((v.driver.a * dist) / 2), 0.1);
 
   // Do people on crosswalk `side` have the WALK? Across the avenue with the cross street's traffic, across the street
-  // with the avenue's.
-  function walkOn(side) {
+  // with the avenue's. At a centreline junction (node n given): across a road of right-of-way group 0 with the street
+  // phase, across the others with the avenue phase, as its traffic runs (phaseOf); with no signal, always (they cross
+  // when the traffic can stop, mayCross).
+  function walkOn(side, n = null) {
+    if (n && n.general) {
+      if (!n.signal) return true;
+      const arm = n.arms && n.arms.find((a) => a.side === side);
+      return arm && arm.group === 0 ? stWalk : aveWalk;
+    }
     return side >= 2 ? stWalk : aveWalk;
   }
 
@@ -914,7 +921,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
   // traffic arriving over it), once no vehicle is crossing it or committed to, and none is too close to stop
   function mayCross(p) {
     const n = p.node;
-    if (!walkOn(p.side) || n.crossing[p.side] > 0) return false;
+    if (!walkOn(p.side, n) || n.crossing[p.side] > 0) return false;
     const e = n.approach[p.side];
     if (!e) return true;
     for (const list of e.occ) {
@@ -1033,6 +1040,12 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
     const stoppable = canStopBefore(v, d) || (phase !== 'green' && v.speed * v.speed < 2 * v.driver.b * d);
     if (stoppable) v.commit = null; // could stop after all: decide afresh
     if (v.commit === n) return true;
+    // A stop sign (opt-in: edge.stopSign, set by the city's own placement; New York sets none):
+    // come to a full stop at the line first, then go by the junction's usual right of way
+    if (e.stopSign && !v.isPolice && v.stoppedAt !== e) {
+      if (v.speed > 0.3 || d > 2) return false;
+      v.stoppedAt = e;
+    }
     if (v.move.out[v.lane] < 0) {
       // missed the lane for the planned move: go wherever this lane goes instead
       if (d > 12) return false;
@@ -1338,6 +1351,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, signalIntersections, o
 
   function leave(v) {
     v.s = v.cs - v.conn.len;
+    if (v.stoppedAt) v.stoppedAt = null; // a stop sign's: through the junction (never set without stop signs)
     v.edge = v.move.to;
     v.lane = v.out;
     v.trail = v.conn; // the rear axle is still on it

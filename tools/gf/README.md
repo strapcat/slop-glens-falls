@@ -8,9 +8,10 @@ pipeline (`tools/build-geodata.mjs`), which it does not change. It shares only t
 ## Build
 
 ```sh
-bash tools/gf/fetch.sh                  # Overpass -> tools/gf/data/osm_gf_{roads,water,signals,buildings}.json (committed)
+bash tools/gf/fetch.sh                  # Overpass -> tools/gf/data/osm_gf_{roads,water,signals,buildings,street_furniture}.json (committed)
 node tools/gf/build-gf-geodata.mjs      # tools/gf/data/ -> js/gf-geodata.js, prints summary stats
 node tools/gf/build-gf-signals.mjs      # tools/gf/data/osm_gf_signals.json -> js/gf-signals.js
+node tools/gf/build-gf-furniture.mjs    # tools/gf/data/osm_gf_street_furniture.json -> js/gf-furniture.js, prints counts
 node tools/gf/build-gf-buildings.mjs    # tools/gf/data/osm_gf_buildings.json -> js/gf-buildings.js, prints counts
 node tools/gf/build-gf-landmarks.mjs    # tools/gf/data/gf_landmarks.json -> js/gf-landmarks.js, prints applied/pending
 node tools/gf/build-gf-lidar-heights.mjs # tools/gf/data/gf_lidar_heights.json -> js/gf-lidar-heights.js, prints counts
@@ -51,6 +52,7 @@ tests/` fails on Node 22 and later, which read the directory as a module.)
 | `data/osm_gf_roads.json` | `q_gf_roads.overpassql` | `highway` = motorway, trunk, primary, secondary, tertiary, unclassified, residential, service, living_street and their `_link` variants, with their nodes. Footways, paths, cycleways and steps are not fetched yet. |
 | `data/osm_gf_water.json` | `q_gf_water.overpassql` | `natural=water` and `waterway=riverbank\|river\|canal` ways and relations, with their member ways and nodes |
 | `data/osm_gf_signals.json` | `q_gf_signals.overpassql` | `highway=traffic_signals` and `crossing=traffic_signals` nodes (see Signals) |
+| `data/osm_gf_street_furniture.json` | `q_gf_street_furniture.overpassql` | `highway=stop`, `traffic_sign=stop`, `highway=give_way`, `highway=crossing`, `crossing=*` and `highway=street_lamp` nodes (see Crosswalks, stop signs, street lights) |
 | `data/osm_gf_buildings.json` | `q_gf_buildings.overpassql` | `building=*` ways and relations, with their member ways and nodes (see Buildings) |
 | `data/gf_landmarks.json` | none: compiled by Dave from web sources and OSM | sourced landmark heights, storeys, facades, roof features and the Civil War Monument (see Landmarks) |
 | `data/gf_lidar_heights.json` | none: measured by Dave from USGS 3DEP LiDAR | a height and a quality flag per GF building (see LiDAR heights) |
@@ -225,7 +227,8 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
   the avenue phase, and every other road the street phase.
 - **Signal heads:** `js/gf-signal-heads.js` draws one post with a three-lamp head per arriving road, on its right-hand
   curb 1.5 m before the stop line.
-- **Not used yet:** the 24 signalled crossings.
+- **Signalled crossings (CC-006):** the 24 `crossing=traffic_signals` nodes mark crosswalks (see Crosswalks, stop
+  signs, street lights). Their own WALK heads are not drawn.
 
 ### Pedestrians
 
@@ -241,8 +244,9 @@ leading on, everything inside the bbox, and every edge along a drive link. Twelv
   (`gf-sidewalks.js` `insetsFor`: about 0.6/1.2 m downtown, 1.9/2.5 m behind a residential lawn), `onSidewalk` is
   `onWalk`, and the walkers stand 0.02 m over the raised walk.
 - **Coverage:** 2187 of the network's 2498 edges have sidewalk tracks (CC-005e: 2126; CC-005f: 2187 again, on the walk's concrete).
-- **Limits:** there are no crosswalks at Glens Falls junctions yet (`pedestrian-routes.js` `across()` only knows New
-  York's grid corners), so pedestrians walk around their block but don't cross streets.
+- **Crossing (CC-006):** pedestrians cross on painted crosswalks at the signalled junctions (on the WALK of the
+  junction's own phase) and at OSM marked crossings (see Crosswalks, stop signs, street lights). Elsewhere they still
+  walk around their block.
 
 ### Buildings
 
@@ -754,7 +758,7 @@ logs and red cups by day.
   - Measured attachments run from 0.5 m to 9.7 m; each connector's nearest obstacle is at least 8 m away.
   - Angel Lane has no sidewalks in the game's network, so it is an entrance for the player only.
   - Walking from the park to the hill uses the existing sidewalks and the signalled Glen Street / Fire Road junction.
-    No CC-006 crosswalks are added.
+    CC-005c added no crosswalks; CC-006 paints one on each arm of that junction.
 - **Footbridges** (5, 97 m): `gf-surface.js` has an opt-in `footDecks` list using the road decks' rule: straight between
   the ground at the two abutments, never under it, as wide as the bridge. `support()` stands on these decks; `road()`
   and `deckAt()` (vehicles) never see them. Each is drawn as a plank deck with post-and-rail sides, and the rails are
@@ -961,7 +965,7 @@ materials carry their own copies of its small TSL helpers.
 
 **Limits.**
 
-- No crosswalks (CC-006).
+- Crosswalks came later, in CC-006 (see Crosswalks, stop signs, street lights).
 - No full driveway inventory: only OSM service ways.
 - OSM `sidewalk=*` tags are unused (about 50 of 2,078 ways, too sparse) and no per-edge sidewalk geometry is invented.
 - **Trees and the walk:** see **Trees off the walk (CC-005f)** below. Trees are still not pedestrian obstacles (as in
@@ -994,6 +998,105 @@ placement plan in `gf-main.js`.
   drawn) stay where they are.
 - **Limits:** the moved trees are 2022-23 LiDAR trees nudged to a plausible spot, not a 1993 tree survey; there are no
   tree pits.
+
+### Crosswalks, stop signs, street lights (CC-006)
+
+Dave (2026-11-11) asked for street lights, stop signs and traffic lights. The traffic lights were already in (Signals:
+41 signalled junctions, AI cars stop on red, three-lamp heads) and are unchanged. CC-006 adds painted crosswalks, stop
+signs and street lamps. Modules: `js/gf-crossings.js`, `js/gf-stop-signs.js`, `js/gf-street-lights.js` (placement, no
+three.js), `js/gf-street-furniture-meshes.js` (drawing), `js/gf-furniture.js` (generated by
+`tools/gf/build-gf-furniture.mjs` from `data/osm_gf_street_furniture.json`). OSM is modern, not 1993.
+
+**What each thing rests on.**
+
+| | what | source |
+| --- | --- | --- |
+| Dave | the ask: street lights, stop signs, traffic lights | Dave, 2026-11-11 |
+| sourced | signalled junctions (41) and the 24 signalled crossings | OSM `highway=traffic_signals`, `crossing=traffic_signals` (CC-002b extract, unchanged) |
+| sourced | marked crossings: `crossing=marked\|zebra`, or `crossing:markings` / `crossing_ref` other than no/none | OSM, `data/osm_gf_street_furniture.json` |
+| sourced | stop signs: `highway=stop` and `traffic_sign=stop` nodes, with `stop=all` | OSM, same extract |
+| inferred (a rule, Dave may tighten it) | a stop on a minor road where it meets a higher-class road at an unsignalled junction | this build, from OSM `highway` classes and the network's right-of-way groups |
+| assumed (not 1993, not a survey) | street lamps every 30 m downtown and 42 m elsewhere, 0.55 m in from the curb face | this build |
+
+**The extract.** `data/osm_gf_street_furniture.json`: OSM base 2026-11-12T11:26:55Z, 415 nodes, sha256
+`52b4aa5b…e7f3`, fetched by Dave through the maps.mail.ru Overpass mirror (the overpass-api.de servers refused the build
+environment; `tools/overpass.sh` now falls back to that mirror). It holds what the CC-006 spec counts for the bbox:
+55 `highway=stop` (37 `stop=all`) and 4 more `traffic_sign=stop`-only nodes, 7 `highway=give_way`, 325 crossing nodes
+(162 of them marked by the rule below) and 24 `highway=street_lamp`.
+
+**Counts in the game.**
+
+| | count |
+| --- | --- |
+| junction crosswalks | 203 on 80 junctions: 140 on the arms of all 41 signalled junctions, 63 on 39 unsignalled junctions an OSM marked crossing lies at |
+| mid-block crosswalks | 31 (marked or signalled crossings on no junction arm) |
+| marked and signalled crossings not painted | 65 of 186: 62 on no road of the drive network (service ways, paths, roads cut at the bbox edge), 3 inside a junction's core on none of its arms (listed with their reason in `slopGlensFalls.streetFurniture.midBlock.lost`) |
+| crosswalk walking tracks | 156 at 35 signalled junctions, 80 at 31 unsignalled ones |
+| OSM stops placed | 48 of 59, giving 140 signs (127 of them all-way); 11 unmatched (10 with no junction within 25 m, mostly at the bbox edge; 1 not on an approach) |
+| inferred stops | 60 signs at 52 junctions (373 junctions skipped as two roads of one class, 42 for an OSM stop, 37 signalled, 4 for a give-way, 19 one road) |
+| stop signs drawn | 190 of 200 (10 have no curb within 10 m) |
+| street lamps | 5,814 assumed; 0 of OSM's 24 used (below) |
+
+**Crosswalks** (`gf-crossings.js`):
+
+- **Where:** every arm of a signalled junction, and every arm of an unsignalled junction that an OSM marked crossing
+  lies on (within 30 m of the junction, across its road). A marked or signalled crossing that is on no junction arm is
+  painted across the nearest road, where it is (`midBlock`). None is invented.
+- **Shape:** a ladder of 0.45 m bars, 0.55 m apart and 2.2 m long, across the whole road at the arm's stop line (its
+  centre `CROSSWALK` 2.5 m / 2 beyond it), from curb to curb as `blockAt` finds them. The bars are one merged mesh draped
+  on the asphalt.
+- **Walking:** `pedestrian-routes.js` takes an opt-in `crossings` function (New York passes none and keeps its grid
+  corners, tested). Each crosswalk gives two walking lines 0.75 m either side of its middle, ending 1.8-2 m onto the
+  walk beyond the curb. At a signal, people wait for the WALK of the junction's own phase (`traffic.js` `walkOn` by the
+  arm's right-of-way group); elsewhere they cross as cars allow (`mayCross`, as before).
+
+**Stop signs** (`gf-stop-signs.js`):
+
+- **Sourced:** each OSM stop goes to the nearest junction within 25 m. On the junction itself (within 6 m) or tagged
+  `stop=all`, it stops every arriving road (all-way) or, for a plain two-way stop, the minor roads (right-of-way group
+  not 0). On an arm, it stops the traffic arriving over that arm. A stop with no junction near, or not on an approach,
+  is listed in `slopGlensFalls.streetFurniture.stops.unmatched` with its reason.
+- **Inferred:** at every other junction of 3+ arms with no signal, no OSM stop and no OSM give-way within 25 m, the
+  approaches of roads of a lower OSM `highway` class than the junction's highest get a stop, unless they are that
+  top-class road itself going on (group 0, or its class tag changing at the junction). Two roads of the same class: no
+  stop (nothing says which one would have it).
+- **Drawn:** a post and an octagonal face reading STOP, on the right-hand curb 0.6 m before the stop line, facing the
+  arriving traffic (two instanced meshes). Where no curb is found within 10 m (a bridge, an open lot edge) the approach
+  still stops but no post is drawn in the road.
+- **AI:** `traffic.js` gains an opt-in `edge.stopSign`. A car on such an approach comes to a full stop at the line
+  (below 0.3 m/s, within 2 m), then goes by the junction's usual right of way. Police cars do not stop. New York sets
+  no `stopSign`, so its traffic is unchanged (tested).
+
+**Street lights** (`gf-street-lights.js`):
+
+- **Placement:** along every curb with a road beside it (`gf-sidewalks.js` curb rings), 30 m apart in the downtown
+  envelope and 42 m elsewhere, 0.55 m in from the curb face: on the tree lawn on residential streets, on the walk by the
+  curb downtown. A spot on a driveway, a curb corner, off the band, within 0.25 m of the carriageway, within 0.9 m of a
+  trunk, 2 m of a signal or stop post, or inside a building moves on along the curb, up to 6 m. OSM's few
+  `highway=street_lamp` nodes, where they stand on a curb band, replace the assumed lamps within 15 m.
+- **OSM's 24 lamps:** none stands on a curb band, so none is used. 11 are a row along Glen St downtown 5-9 m back
+  from the roadway, inside the lot line; 1 more of that row is in the carriageway; 10 stand beside roads that have no
+  curb blocks drawn; 2 are well inside lots. Dave may want the Glen St row kept where OSM puts it.
+- **Drawn:** one instanced mesh, a post with an arm and a head over the road. The head glows by
+  `smoothstep(0.65, 1.2, interiorGlow)` (`lighting.js` presets): 0 at midday (0.24) and golden hour (0.48), full at
+  twilight (1.25) and midnight (1.55).
+- **Light:** a pool of 32 point lights (warm, 120 cd, 32 m reach) moves to the lamps nearest the camera within 160 m, every
+  0.3 s, while the glow is on. No lamp has a light of its own.
+
+**Cost** (headless Chromium, software WebGL, so frame times are only relative; main and this branch measured back to
+back, car on Glen St at Monument Square and on Maple St, golden hour and midnight): +204k to +261k triangles (the
+5,801 lamps are one instanced mesh with no sun shadows; the 234 crosswalks' 1,782 bars one merged mesh; 190 signs two
+instanced meshes), draw calls within the traffic's own swing (-4 to +8), 32 point lights at night, about 0.4 s more
+start-up, and median frame time +5% to +8%, +21% at night on Glen St with the light pool on.
+
+**Limits.**
+
+- No 1993 lamp, sign or crossing inventory: OSM is modern and the lamps are assumed.
+- Signals unchanged: 8 OSM signals still have no network node at the bbox edge (see Signals), and no signalled
+  junction is invented.
+- No WALK/DON'T WALK heads; pedestrians follow the phase without them.
+- 36 junction crosswalks find no curb and are drawn across the road's width; some crosswalk lines are not walked
+  because an end is off the walk or blocked.
 
 ## Source and licence
 

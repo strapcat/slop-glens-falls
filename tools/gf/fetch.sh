@@ -1,6 +1,7 @@
 #!/bin/bash
 # usage: bash tools/gf/fetch.sh
-# Downloads the Glens Falls OpenStreetMap extract (roads, water, traffic signals, buildings) through
+# Downloads the Glens Falls OpenStreetMap extract (roads, water, traffic signals, buildings, CC-006's street
+# furniture: stops, give-ways, crossings, lamps) through
 # tools/overpass.sh into tools/gf/data/.
 # The raw responses are committed so the generators (tools/gf/build-gf-*.mjs) run offline.
 set -euo pipefail
@@ -11,3 +12,4 @@ bash "$GF/../overpass.sh" "$GF/data/osm_gf_roads.json" "$GF/q_gf_roads.overpassq
 bash "$GF/../overpass.sh" "$GF/data/osm_gf_water.json" "$GF/q_gf_water.overpassql"
 bash "$GF/../overpass.sh" "$GF/data/osm_gf_signals.json" "$GF/q_gf_signals.overpassql"
 bash "$GF/../overpass.sh" "$GF/data/osm_gf_buildings.json" "$GF/q_gf_buildings.overpassql"
+bash "$GF/../overpass.sh" "$GF/data/osm_gf_street_furniture.json" "$GF/q_gf_street_furniture.overpassql"
