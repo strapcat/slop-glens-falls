@@ -43,7 +43,7 @@ function eventTarget() {
 function cameraHarness(entity = {
   position: new Vector3(0, 0, 100), heading: 0, speed: 0, type: 'car',
   chaseDistance: 6.9, chaseHeight: 2.12, cameraTargetOffset: new Vector3(0, 1, 0)
-}) {
+}, options = undefined) {
   const window = eventTarget();
   const document = { ...eventTarget(), hidden: false };
   const canvas = { ...eventTarget(), style: {} };
@@ -61,7 +61,7 @@ function cameraHarness(entity = {
     globals: { window, document },
     imports: { 'three/webgpu': { Vector3, PerspectiveCamera }, './city-runtime.js': {} }
   });
-  const camera = new CameraSystem(canvas, { getActiveEntity: () => entity });
+  const camera = new CameraSystem(canvas, { getActiveEntity: () => entity }, options);
   return {
     camera, canvas, controls, window, document, captured, entity,
     pointer(target, type, id, x, y = 0, pointerType = 'touch', button = 0) {
@@ -239,4 +239,28 @@ test('teleport releases every camera pointer and ignores old gestures before acc
   h.pointer(h.canvas, 'pointermove', 3, 610);
   close(h.camera.orbitYawOffset, -0.065);
   assert.equal(h.camera.isDragging, true);
+});
+
+test('follow FOVs: 56 / 60 / 68 by default at any aspect; an opt-in fovFor (a phone in portrait) picks its own, also on rotation', () => {
+  // default: the presets' FOVs, whatever the aspect (desktop, New York)
+  const h = cameraHarness();
+  const fovs = (cam) => ['chase', 'action', 'pov'].map((id) => { cam.setCameraPreset(id); return cam.camera.fov; });
+  assert.deepEqual(fovs(h.camera), [56, 60, 68]);
+  h.camera.setCameraPreset('chase');
+  h.camera.onResize(390, 844);
+  assert.equal(h.camera.camera.fov, 56);
+  assert.deepEqual(fovs(h.camera), [56, 60, 68]);
+  // opt-in: wider in portrait, the preset's in landscape; onResize re-picks for the new aspect
+  const portrait = { chase: 70, action: 74, pov: 80 };
+  const p = cameraHarness(undefined, { fovFor: (preset, aspect) => (aspect < 1 ? portrait[preset.id] ?? null : null) });
+  p.camera.onResize(390, 844);
+  assert.deepEqual(fovs(p.camera), [70, 74, 80]);
+  p.camera.setCameraPreset('chase');
+  p.camera.onResize(844, 390);
+  assert.equal(p.camera.camera.fov, 56);
+  p.camera.onResize(390, 844);
+  assert.equal(p.camera.camera.fov, 70);
+  // a hook that answers nothing usable keeps the preset's
+  const n = cameraHarness(undefined, { fovFor: () => NaN });
+  assert.deepEqual(fovs(n.camera), [56, 60, 68]);
 });

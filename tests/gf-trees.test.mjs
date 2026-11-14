@@ -219,6 +219,16 @@ test('Glens Falls loads the shared renderer and its own tree data, never New Yor
   assert.ok(!fs.readFileSync(path.join(root, 'js/gf-main.js'), 'utf8').includes('tree-geodata.bin'));
   // the shared renderer and its materials are unchanged (CC-005b: tsl-materials.js gains only the opt-in footprintBase
   // option, 319df9cd... -> 534b8cff...; tests/gf-terrain.test.mjs checks undoing it gives back 319df9cd...)
-  assert.equal(sha('js/trees.js'), '7303a1d5ccca950bf78a5fa69bef5c9d295a597f9806d2ff54d19ea38d5514f8');
+  // CC-MOBILE: trees.js gains only the opt-in maxDist option (default MAX_DIST) and exports MAX_DIST, 7303a1d5... ->
+  // the pin below; undoing exactly that gives back 7303a1d5...
+  const trees = fs.readFileSync(path.join(root, 'js/trees.js'), 'utf8');
+  assert.equal(sha('js/trees.js'), '1318d3385edad4474f648cbda83c0e8fb52b62493c6d47119eb3e496b462593d');
+  const undone = trees
+    .replace(" * Options: maxDist, the draw distance per tier (default MAX_DIST; a caller's lower-spec device tier may pass shorter).\n", '')
+    .replace('function createTreeField(_scene, sites, colliders = [], { maxDist = MAX_DIST } = {}) {', 'function createTreeField(_scene, sites, colliders = []) {')
+    .replace('const td = maxDist[tier[i]];', 'const td = MAX_DIST[tier[i]];')
+    .replaceAll('= maxDist.map(', '= MAX_DIST.map(')
+    .replace(', MAX_DIST as TREE_MAX_DIST };', ' };');
+  assert.equal(createHash('sha256').update(undone).digest('hex'), '7303a1d5ccca950bf78a5fa69bef5c9d295a597f9806d2ff54d19ea38d5514f8');
   assert.equal(sha('js/tsl-materials.js'), '534b8cff86d76c7cb4fac1c5992190f4053c77d3563e8050143e3067304b1cf8');
 });

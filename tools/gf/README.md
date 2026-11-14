@@ -1132,6 +1132,68 @@ gives the lamps a style (`gf-street-lights.js`): every lamp in the Three Squares
   Chromium, software WebGL, back to back): +41.5k triangles drawn per frame (2.36M to 2.40M, +1.8%, the passes
   included), and no frame-time change beyond the run-to-run noise.
 
+### Phones and tablets (CC-MOBILE)
+
+Dave (2026-11-11) asked for a playable pass on the iPhone that leaves the desktop as it is. Upstream's touch controls
+(joystick, Jump / Ascend, Descend; drag to look, pinch to zoom) were already in and are unchanged. CC-MOBILE adds the
+Glens Falls action that was keyboard-only, a lower-cost default for phones and tablets, and a message when the graphics
+can't start.
+
+- **Exit / Enter on touch** (`js/gf-touch-exit.js`, `css/gf-mobile.css`; Glens Falls only): a button beside Jump in the
+  touch action cluster calls the same `pressExit()` as the F key (`js/vehicle-exit.js` unchanged). It shows in every
+  mode what F would do now (Exit, Enter, Land) and, when F can't, is dimmed with the F chip's reason in a caption above
+  it (the chip itself is hidden on touch screens). It lives in the touch controls, which only touch screens show.
+- **The map credit** (`#gf-attribution`) sat on the Walk / Drive / Cycle / Fly buttons on a phone. On touch screens it
+  now sits small at the top left (portrait: under the GitHub badge; landscape: under the brand card). Desktop keeps it
+  where it was.
+- **Device tier** (`js/device-tier.js`): **mobile** when the primary pointer is coarse and cannot hover
+  (`(pointer: coarse) and (hover: none)`: a phone or tablet) or the screen's short side is at most 500 CSS px;
+  otherwise **desktop**. It reads the screen, not the window (a narrow desktop window stays desktop), and never the
+  city. `?tier=mobile` or `?tier=desktop` overrides it. The tier, why, its settings and the graphics backend are logged
+  at the end of the `[init]` line and kept in `slopGlensFalls.deviceTier`.
+
+| knob | desktop (today, unchanged) | mobile |
+| --- | --- | --- |
+| pixel ratio | 1 | 1 |
+| antialias (MSAA) | on | off |
+| screen-space reflections (and their MRT targets) | on | off |
+| sun shadow cascade tiles | 3072 px (2048 where the GPU caps textures at 4096) | 1024 px |
+| tree draw distance (trees.js tiers 0 / 1 / 2; every GF tree is tier 2) | 3000 / 1600 / 950 m | 1000 / 700 / 420 m |
+| sidewalk cells (gf-sidewalk-meshes.js) | 650 m | 320 m |
+| street-lamp light pool | 32 lights within 160 m | 12 within 100 m |
+| shader batches compiled at once while loading | 16 | 4 |
+
+The shared modules take these as options whose defaults are today's values (`createTreeField(..., { maxDist })`,
+`new LightingSystem(scene, renderer, { shadowMapSize })`); New York passes none of them and is unchanged. No tree is
+deleted and no data is regenerated: the mobile tier only draws less of it at once.
+
+- **Start-up failure:** if `renderer.init()` cannot start WebGPU or WebGL 2 (or anything else throws while loading),
+  the loading screen says so instead of spinning.
+
+**After Dave's iPhone test (CC-MOBILE-fix, 2026-11-13).**
+
+- **Steering:** holding the joystick on iPhone Safari brought up the copy / paste callout and the magnifier. On touch
+  screens nothing a thumb holds (the stick, the action buttons, the mode buttons, the canvas, the HUD) selects text or
+  calls out (`-webkit-user-select`, `user-select`, `-webkit-touch-callout`: none; `touch-action: none` on the stick,
+  buttons and canvas); the page itself is `touch-action: manipulation` (no double-tap zoom). `js/gf-touch-guards.js`
+  also cancels `touchstart` on the stick and buttons and `selectstart` / `contextmenu` / `dblclick` elsewhere, but
+  never on a link (the credit) and never on a desktop. The shared viewport meta is unchanged.
+- **Camera:** on the mobile tier the follow camera sits further back and a little higher (`chaseDistanceScale` 1.35,
+  `chaseHeightScale` 1.2: person 4.3 -> 5.8 m, car 6.9 -> 9.3, cyclist 4.8 -> 6.5, helicopter 11.4 -> 15.4) and, in
+  portrait, wider (chase 70, action 74, pov 80 degrees vertical; landscape keeps 56 / 60 / 68). Assumed starting
+  values for Dave to tune; `?camdist=1.5` (0.5-3) sets the distance scale on any device. `js/cameras.js` takes an
+  opt-in `fovFor(preset, aspect)` (none: the presets' FOVs) and re-picks the FOV on rotation; desktop and New York keep
+  56 / 60 / 68 and 4.3 / 6.9 / 4.8 / 11.4.
+- **GitHub badge:** hidden on touch screens (the brand card, with the fps). The OSM / USGS credit takes its corner.
+- **Loading:** `js/gf-loading-progress.js` shows the stage and an overall percent, weighted by rough cost: the code
+  (module preloads landing, `js/main.js`, 12%), the terrain (streamed, bytes received of Content-Length, 30%), then
+  each start-up stage by its `[init]` share, shader compilation by batch. The bar never moves back.
+
+**Limits.** Not a native app; no frame-rate promise. The measurements here are headless Chromium with software WebGL 2
+at iPhone viewport sizes, not an iPhone: Safari's WebGPU path, its GPU-process memory (the ~300 MB jetsam limit) and
+real frame rates need Dave's phone. The first load is still heavy on cellular (the terrain alone is 6.85 MB). Older
+iPhones may still reload the tab under memory pressure.
+
 ## Source and licence
 
 Data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the
