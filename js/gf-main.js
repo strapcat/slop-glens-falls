@@ -50,6 +50,7 @@ import { placeStopSigns, edgeClasses } from './gf-stop-signs.js';
 import { placeStreetLights, CLEAR as LAMP_CLEAR } from './gf-street-lights.js';
 import { buildGfStreetFurniture } from './gf-street-furniture-meshes.js';
 import { installGfNpcTalk } from './gf-npc-talk-ui.js';
+import { installGfMinimap, buildRadarLayers, placeCreditAbove } from './gf-minimap.js';
 
 // Glens Falls game view (index.html?city=glensfalls): the town from GF_GEO (roads, water, blocks) on its sourced terrain
 // (CC-005b: USGS 3DEP bare earth, gf-terrain.js, asked through gf-surface.js by everything that stands on it), its road graph
@@ -103,11 +104,12 @@ const STATE_KEY = 'gf-player-state';
 // Follow cameras only: New York's scenic cameras look at Manhattan landmarks
 const FOLLOW_CAMERAS = CAMERA_PRESETS.filter((p) => p.category === 'follow');
 
-// HUD parts nyc-main.js wires that have nothing to do here: teleports, the map, sound, the street-name signs and
-// New York's scenic cameras
+// HUD parts nyc-main.js wires that have nothing to do here: teleports, New York's map and its toolbar button, sound,
+// the street-name signs and New York's scenic cameras. The radar card stays: CC-MINIMAP's street radar draws into it
+// (js/gf-minimap.js).
 function trimHud() {
   const hide = (el) => { if (el) el.style.display = 'none'; };
-  for (const id of ['btn-teleport', 'btn-open-map', 'btn-sound', 'minimap-card', 'hud-location', 'teleport-popover', 'fullmap-modal']) {
+  for (const id of ['btn-teleport', 'btn-open-map', 'btn-sound', 'hud-location', 'teleport-popover', 'fullmap-modal']) {
     hide(document.getElementById(id));
   }
   document.querySelectorAll('[data-camera]').forEach((btn) => {
@@ -131,7 +133,7 @@ function trimHud() {
     'aria-label': 'Slop Glens Falls on GitHub, a fork of mrdoob/slop-newyork (opens in a new tab)',
     title: 'strapcat/slop-glens-falls, forked from mrdoob/slop-newyork' });
   set('#btn-open-map', { title: 'Street map (not available in Glens Falls)', 'aria-label': 'Street map (not available in Glens Falls)' });
-  set('#minimap-card', { 'aria-label': 'Street radar minimap (not available in Glens Falls)', title: 'Street map (not available in Glens Falls)' });
+  set('#minimap-card', { 'aria-label': 'Street radar [M]', title: 'Street radar [M]' });
   set('#fullmap-modal', { 'aria-label': 'Street map (not available in Glens Falls)' });
   // © OpenStreetMap contributors: every road, block and pond on screen comes from OSM (ODbL)
   const credit = document.createElement('div');
@@ -804,17 +806,30 @@ async function initApp() {
   // CC-NPC1: talk to people on foot (T; the Talk button on touch). Every line is Dave's: data/gf/npc-lines.json
   const npcTalk = installGfNpcTalk({ controllerManager, camera: cameraSystem.camera, peds: trafficSystem.peds, party, ground: GF_SURFACE.ground,
     canStand: (x, z) => !!GF_BLOCKS.blockAt(x, z) && !controllerManager.bodyBlockedAt(x, z, GF_SURFACE.ground(x, z) + ROAD_LIFT, 0.3) });
+  // CC-MINIMAP: the heading-up street radar in the lower left (M, or a tap / click on it, opens the larger view):
+  // canvas 2D from GF_GEO's roads and water, the trails and two sourced dots; DPR 1, 30 Hz and no traffic on the
+  // mobile tier
+  const radar = installGfMinimap({
+    doc: document, controllerManager, tier: DEVICE.tier, cars: trafficSystem.cars,
+    layers: buildRadarLayers({ links: driveLinks(GF_GEO), geo: GF_GEO, trails: GF_TRAILS, landmarks: GF_LANDMARKS }),
+    heightAbove: (x, z, y) => y - GF_SURFACE.ground(x, z)
+  });
+  globalThis.slopGlensFalls.radar = radar;
+  // the desktop map credit sits just above the radar card, not on it
+  const placeCredit = () => placeCreditAbove(document.getElementById('gf-attribution'), document.getElementById('minimap-card'), window);
+  placeCredit();
 
   window.addEventListener('resize', () => {
     cameraSystem.onResize(window.innerWidth, window.innerHeight);
     renderer.setSize(window.innerWidth, window.innerHeight);
     placeModeIndicator();
+    placeCredit();
   });
 
   selectMode(controllerManager.activeMode);
   selectCamera('chase', true);
   selectTime('golden');
-  if (document.fonts) document.fonts.ready.then(placeModeIndicator);
+  if (document.fonts) document.fonts.ready.then(() => { placeModeIndicator(); placeCredit(); });
   markInit('ui');
 
   // Compile shaders behind the loading screen (as nyc-main.js)
@@ -943,6 +958,7 @@ async function initApp() {
     signalHeads.update(elapsed);
     if (party) party.update(dt, elapsed, cameraSystem.currentPos);
     npcTalk.update(dt, elapsed);
+    if (radar) radar.update(dt);
     // the shadow distance grows with the camera's height above the ground (not above y = 0, which the terrain is not)
     const cam = cameraSystem.currentPos, below = GF_SURFACE.ground(cam.x, cam.z);
     shadowFocus.set(cam.x, cam.y - (Number.isFinite(below) ? below : 0), cam.z);

@@ -83,3 +83,45 @@ body.touch-enabled #gf-attribution {
   /* landscape: a wide top-left corner, above the joystick */
   body.touch-enabled #gf-attribution { max-width: 36vw; }
 }
+
+/* CC-MINIMAP: the street radar on touch screens. style.css hides the radar on every touch screen and the whole
+   lower-left HUD in landscape (New York relies on both, so they stay); here, for Glens Falls only, a compact square
+   radar sits in the lower left above the joystick (style.css already lifts .hud-bottom-left 254 px on touch screens),
+   tapped to open the larger view, which takes the upper part of the screen and leaves the stick, the action buttons
+   and the mode bar free. */
+body.touch-enabled #minimap-card {
+  display: block;
+  width: 128px;
+  height: 128px;
+  border-radius: 22px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+body.touch-enabled #gf-radar-expanded {
+  left: max(var(--edge, 12px), env(safe-area-inset-left));
+  right: max(var(--edge, 12px), env(safe-area-inset-right));
+  top: calc(max(var(--edge, 12px), env(safe-area-inset-top)) + 122px);
+  bottom: calc(max(var(--edge, 12px), env(safe-area-inset-bottom)) + 254px);
+  width: auto;
+  height: auto;
+  transform: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-height: 500px) {
+  /* landscape: the radar stays, smaller, above the stick (the stick sits lower here); the larger view between the
+     stick and the action buttons, under the toolbar and above the mode bar */
+  body.touch-enabled .hud-bottom-left {
+    display: flex;
+    bottom: calc(max(var(--edge, 12px), env(safe-area-inset-bottom)) + 176px);
+  }
+  body.touch-enabled #minimap-card { width: 108px; height: 108px; border-radius: 20px; }
+  body.touch-enabled #gf-radar-expanded {
+    left: 50%;
+    right: auto;
+    width: min(50vw, 440px);
+    top: calc(max(var(--edge, 12px), env(safe-area-inset-top)) + 54px);
+    bottom: calc(max(var(--edge, 12px), env(safe-area-inset-bottom)) + 64px);
+    transform: translateX(-50%);
+  }
+}

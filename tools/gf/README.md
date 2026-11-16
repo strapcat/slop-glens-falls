@@ -1194,6 +1194,43 @@ at iPhone viewport sizes, not an iPhone: Safari's WebGPU path, its GPU-process m
 real frame rates need Dave's phone. The first load is still heavy on cellular (the terrain alone is 6.85 MB). Older
 iPhones may still reload the tab under memory pressure.
 
+### Street radar (CC-MINIMAP)
+
+Dave (2026-11-16): a GTA-style minimap, on the desktop and the iPhone. `js/gf-minimap.js` (Glens Falls only) draws a
+**heading-up** street radar into index.html's radar card (`#minimap-card`, which `trimHud()` no longer hides; New
+York's map, atlas, search and teleports stay hidden here, and `js/nyc-map.js` is not loaded).
+
+- **Turning:** the world turns with the player: the arrow stays in the middle pointing up, and an **N** pip travels
+  round the rim. In the GF frame (x east, z south, north = -z) a heading `h` faces `(sin h, cos h)`, so heading 0
+  faces south; the canvas is rotated by `PI + h`, which takes that forward to straight up (tested for several
+  headings: ahead is up, right is right; heading 0 puts north at the bottom, heading PI at the top).
+- **What it draws (all already in the repo):** the drivable roads, `driveLinks(GF_GEO)` (the graph the cars drive,
+  OSM, modern), by class; the water, `GF_GEO.water` (river, canal, pond, reservoir, water; the 11 `wastewater`
+  basins are left out); the blocks' lots as land (`GF_GEO.blocks`); the park trails as dashed lines (`GF_TRAILS`);
+  two dots: the Thrill Hill crest (`GF_TRAILS.hill`, -2534.55, -1272.39) and the Civil War Monument
+  (`GF_LANDMARKS`, -192.2, -167.4). No park fills (GF_GEO has no park polygons), no road names, no other pins.
+  `slopGlensFalls.radar.setMarker(id, { x, z, color, glyph })` is the hook for a later mission icon (clamped to the
+  rim when off the radar); nothing is placed by default.
+- **Zoom:** about 110 m from the centre to the nearer edge on foot, widening with speed (~260 m at the car's top
+  speed) and with the helicopter's height above the ground; eased, never snapped.
+- **Cost:** canvas 2D only (no second renderer, scene or render target). The layers are traced once into Path2D
+  objects bucketed in 400 m tiles; a north-up cache canvas round the player (1.5 x the radar's diagonal) is redrawn
+  only when the player nears its edge or the zoom drifts 15 %; each frame blits it rotated and draws the arrow, the
+  pip, the dots and (desktop) the traffic. The mobile tier backs the canvas at DPR 1, draws at most 30 times a second
+  and skips the traffic; desktop backs it at up to DPR 2. No knob in `js/device-tier.js` changed.
+- **Controls:** `M` (not while typing in a field), a click or a tap on the radar, or Enter on the focused card opens a
+  larger view of the same radar (a GF-owned overlay, `#gf-radar-expanded`); `M`, `Esc`, the close button, or a tap on
+  it closes it. `H` hides the radar with the rest of the HUD (and closes the larger view); the touch stick stays.
+- **Where:** the lower left. Desktop: New York's card size (288 x 184; 220 x 148 under 820 px), with the map credit
+  moved just above it. Touch screens (`css/gf-mobile.css`): a 128 px square above the joystick in portrait (style.css's
+  existing +254 px lift), 108 px in landscape (+176 px, where style.css hides the lower-left HUD for New York); the
+  larger view fills the upper part of the screen in portrait (under the camera switch, down to the radar's lift) and
+  the middle in landscape (between the stick and the action buttons, above the mode bar), so the stick and the
+  Jump / Talk / Exit buttons keep working while it is open. The shared touch rules in `css/style.css` are unchanged.
+
+**Limits.** Not a searchable atlas (no street search or teleport); the roads are today's OSM, not 1993; no park
+outlines (none in GF_GEO); the larger view is the same heading-up radar, zoomed out, not a north-up city map.
+
 ## Source and licence
 
 Data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the

@@ -87,6 +87,7 @@ const GF_PRELOADS = [
   'gf-touch-exit.js',
   'gf-touch-guards.js',
   'gf-loading-progress.js',
+  'gf-minimap.js',
   'gf-main.js'
 ];
 
