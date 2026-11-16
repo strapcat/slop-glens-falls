@@ -559,7 +559,8 @@ function placeCreditAbove(credit, card, win = globalThis, below = null) {
     credit.style.left = `${Math.round(rect.left)}px`;
     return;
   }
-  const bar = below && below.offsetParent ? below.getBoundingClientRect() : null;
+  // (the bottom-centre HUD is position: fixed, so it has no offsetParent: its box tells whether it is shown)
+  const bar = below && typeof below.getBoundingClientRect === 'function' ? below.getBoundingClientRect() : null;
   credit.style.bottom = bar && bar.height ? `${Math.round(win.innerHeight - bar.top + 6)}px` : '6px';
   credit.style.left = '8px';
 }

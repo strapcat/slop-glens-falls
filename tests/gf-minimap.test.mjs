@@ -278,7 +278,8 @@ test('gf-main.js: the card is no longer hidden, its label is true, the radar run
   placeCreditAbove(credit, { offsetParent: null, getBoundingClientRect: () => ({}) }, { innerHeight: 800 });
   assert.equal(credit.style.bottom, '6px', 'back to the corner when the card is hidden');
   // a narrow desktop window hides the radar: the label (and its open credit) stays above the Walk / Drive bar
-  const bar = { offsetParent: {}, getBoundingClientRect: () => ({ top: 720, height: 60 }) };
+  // (a fixed element: offsetParent is null, as in a browser)
+  const bar = { offsetParent: null, getBoundingClientRect: () => ({ top: 720, height: 60 }) };
   placeCreditAbove(credit, { offsetParent: null, getBoundingClientRect: () => ({}) }, { innerHeight: 800 }, bar);
   assert.equal(credit.style.bottom, '86px');
   assert.equal(credit.style.left, '8px');
