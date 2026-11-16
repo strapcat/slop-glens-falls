@@ -388,10 +388,12 @@ function drawView(view, compiled, layers, state) {
     if (!inView(sx, sy, 9)) [sx, sy] = rimPoint(sx, sy, w, h, 9);
     drawPip(ctx, sx, sy, 6.5, m.glyph || '', m.color || '#f5b62a');
   }
-  drawArrow(ctx, Math.max(7, Math.min(11, Math.min(w, h) * 0.06)));
+  drawArrow(ctx, Math.max(6, Math.min(11, Math.min(w, h) * 0.075)));
+  // the N pip, a little smaller on a small card (the phone's 72-80 px radar)
+  const pipR = Math.max(6, Math.min(8.5, Math.min(w, h) * 0.09));
   const [nx, ny] = northOnScreen(heading);
-  const [rx, ry] = rimPoint(nx, ny, w, h, 11);
-  drawPip(ctx, rx, ry, 8.5, 'N', 'rgba(10, 12, 15, 0.82)');
+  const [rx, ry] = rimPoint(nx, ny, w, h, pipR + 2.5);
+  drawPip(ctx, rx, ry, pipR, 'N', 'rgba(10, 12, 15, 0.82)');
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   return scale;
 }
@@ -538,10 +540,17 @@ function installGfMinimap({ doc = globalThis.document, controllerManager, layers
   return api;
 }
 
-// Lift the desktop map credit (gf-main.js #gf-attribution, fixed at the bottom left) above the radar card, so it does
-// not sit on the map. css/gf-mobile.css still parks it in the top-left corner on touch screens (!important there).
+// Lift the desktop map credit (js/gf-credit.js #gf-attribution, fixed at the bottom left) above the radar card, so it
+// does not sit on the map. Desktop only: on touch screens css/gf-mobile.css places it (and this clears the inline offsets).
 function placeCreditAbove(credit, card, win = globalThis) {
   if (!credit || !card) return;
+  // touch screens: css/gf-mobile.css places the credit beside the joystick (the radar is in the top-left there)
+  const body = win.document && win.document.body;
+  if (body && body.classList && body.classList.contains('touch-enabled')) {
+    credit.style.bottom = '';
+    credit.style.left = '';
+    return;
+  }
   const rect = card.offsetParent ? card.getBoundingClientRect() : null;
   credit.style.bottom = rect && rect.height ? `${Math.round(win.innerHeight - rect.top + 6)}px` : '6px';
   credit.style.left = rect && rect.height ? `${Math.round(rect.left)}px` : '8px';

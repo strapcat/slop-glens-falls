@@ -51,6 +51,7 @@ import { placeStreetLights, CLEAR as LAMP_CLEAR } from './gf-street-lights.js';
 import { buildGfStreetFurniture } from './gf-street-furniture-meshes.js';
 import { installGfNpcTalk } from './gf-npc-talk-ui.js';
 import { installGfMinimap, buildRadarLayers, placeCreditAbove } from './gf-minimap.js';
+import { createGfCredit } from './gf-credit.js';
 
 // Glens Falls game view (index.html?city=glensfalls): the town from GF_GEO (roads, water, blocks) on its sourced terrain
 // (CC-005b: USGS 3DEP bare earth, gf-terrain.js, asked through gf-surface.js by everything that stands on it), its road graph
@@ -135,19 +136,11 @@ function trimHud() {
   set('#btn-open-map', { title: 'Street map (not available in Glens Falls)', 'aria-label': 'Street map (not available in Glens Falls)' });
   set('#minimap-card', { 'aria-label': 'Street radar [M]', title: 'Street radar [M]' });
   set('#fullmap-modal', { 'aria-label': 'Street map (not available in Glens Falls)' });
-  // © OpenStreetMap contributors: every road, block and pond on screen comes from OSM (ODbL)
-  const credit = document.createElement('div');
-  credit.id = 'gf-attribution';
-  credit.style.cssText = 'position:fixed;left:8px;bottom:6px;z-index:40;font:11px/1.3 Inter,system-ui,sans-serif;' +
-    'color:rgba(255,255,255,0.85);background:rgba(10,12,16,0.55);padding:3px 7px;border-radius:4px;pointer-events:auto';
-  const link = document.createElement('a');
-  link.href = 'https://www.openstreetmap.org/copyright';
-  link.target = '_blank';
-  link.rel = 'noopener';
-  link.style.color = 'inherit';
-  link.textContent = 'OpenStreetMap contributors';
-  credit.append('Map data © ', link, ' (ODbL)', document.createElement('br'), GF_LIDAR_HEIGHTS.credit.replace(/^Building heights:/, 'Building heights and trees:'));
-  document.body.appendChild(credit);
+  // © OpenStreetMap contributors: every road, block and pond on screen comes from OSM (ODbL); building heights and
+  // trees from USGS LiDAR. CC-MINIMAP-fix: a one-line "© OSM · USGS" label that opens to the full credit
+  // (js/gf-credit.js; desktop above the radar card, touch screens beside the joystick)
+  const credit = createGfCredit(document, { lidar: GF_LIDAR_HEIGHTS.credit.replace(/^Building heights:/, 'Building heights and trees:') });
+  document.body.appendChild(credit.element);
 }
 
 async function initApp() {
@@ -815,7 +808,7 @@ async function initApp() {
     heightAbove: (x, z, y) => y - GF_SURFACE.ground(x, z)
   });
   globalThis.slopGlensFalls.radar = radar;
-  // the desktop map credit sits just above the radar card, not on it
+  // the desktop map credit sits just above the radar card, not on it (touch screens: css/gf-mobile.css places it)
   const placeCredit = () => placeCreditAbove(document.getElementById('gf-attribution'), document.getElementById('minimap-card'), window);
   placeCredit();
 

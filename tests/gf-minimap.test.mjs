@@ -8,6 +8,7 @@ import { driveLinks } from '../js/gf-roadgraph.js';
 import { GF_TRAILS } from '../js/gf-trails.js';
 import { GF_LANDMARKS } from '../js/gf-landmarks.js';
 import { TIERS } from '../js/device-tier.js';
+import { createGfCredit, OSM_COPYRIGHT, SHORT_LABEL } from '../js/gf-credit.js';
 import {
   installGfMinimap, buildRadarLayers, radarAngle, worldToRadar, northOnScreen, rimPoint, radarRange, cacheCovers,
   radarKey, isTyping, tracePolyline, traceRings, tileItems, tilesIn, compileLayers, placeCreditAbove, WATER_KINDS, TILE
@@ -267,16 +268,20 @@ test('gf-main.js: the card is no longer hidden, its label is true, the radar run
   assert.match(gfMain, /if \(radar\) radar\.update\(dt\);/);
   assert.match(gfMain, /tier: DEVICE\.tier/);
   assert.match(gfMain, /placeCreditAbove\(document\.getElementById\('gf-attribution'\)/);
-  // the credit keeps the ODbL link and the LiDAR line
-  assert.match(gfMain, /https:\/\/www\.openstreetmap\.org\/copyright/);
-  assert.match(gfMain, /GF_LIDAR_HEIGHTS\.credit/);
-  // placed just above the card
+  // the credit (js/gf-credit.js) keeps the LiDAR line
+  assert.match(gfMain, /createGfCredit\(document, \{ lidar: GF_LIDAR_HEIGHTS\.credit/);
+  // placed just above the card (desktop)
   const credit = { style: {} };
   placeCreditAbove(credit, { offsetParent: {}, getBoundingClientRect: () => ({ top: 600, left: 20, height: 184 }) }, { innerHeight: 800 });
   assert.equal(credit.style.bottom, '206px');
   assert.equal(credit.style.left, '20px');
   placeCreditAbove(credit, { offsetParent: null, getBoundingClientRect: () => ({}) }, { innerHeight: 800 });
   assert.equal(credit.style.bottom, '6px', 'back to the corner when the card is hidden');
+  // touch screens: desktop-only; the inline offsets are cleared and css/gf-mobile.css places the label
+  const touchWin = { innerHeight: 800, document: { body: { classList: { contains: (c) => c === 'touch-enabled' } } } };
+  placeCreditAbove(credit, { offsetParent: {}, getBoundingClientRect: () => ({ top: 600, left: 20, height: 184 }) }, touchWin);
+  assert.equal(credit.style.bottom, '');
+  assert.equal(credit.style.left, '');
 });
 
 // ---- touch screens ----
@@ -297,36 +302,73 @@ const cssRules = (file) => {
   return rules;
 };
 
-test('touch screens: the GF radar is shown (style.css hides it for New York), compact, above the stick, also in landscape', () => {
+const calcPlus = (body, prop) => {
+  const m = body.match(new RegExp(`(^|[;\\s])${prop}:\\s*calc\\([^;]*\\+\\s*(\\d+)px\\)`));
+  return m ? Number(m[2]) : null;
+};
+
+test('touch screens: the GF radar is shown (style.css hides it for New York), small, in the top-left corner, also in landscape', () => {
   const rules = cssRules('css/gf-mobile.css');
   const card = rules.find((r) => !r.media && r.selectors.includes('body.touch-enabled #minimap-card'));
   assert.ok(card, 'a touch rule for the card');
   assert.match(card.body, /display:\s*block/);
-  const size = Number(card.body.match(/width:\s*(\d+)px/)[1]);
-  assert.ok(size >= 120 && size <= 140, `compact: ${size} px`);
+  assert.match(card.body, /width:\s*80px/);
+  assert.match(card.body, /height:\s*80px/);
   assert.match(card.body, /touch-action:\s*manipulation/);
+  // its box (the lower-left HUD, holding only the card in GF) moves to the top-left corner: not the old +254 px slot
+  const hud = rules.find((r) => !r.media && r.selectors.includes('body.touch-enabled .hud-bottom-left'));
+  assert.match(hud.body, /top:\s*max\(var\(--edge, 12px\), env\(safe-area-inset-top\)\)/);
+  assert.match(hud.body, /bottom:\s*auto/);
+  assert.match(hud.body, /left:\s*max\(var\(--edge, 12px\), env\(safe-area-inset-left\)\)/);
+  assert.match(read('js/gf-main.js'), /'hud-location'/, 'the box holds only the card: the street sign stays hidden');
   // the shared rules New York relies on are still there, untouched
   const style = read('css/style.css');
   assert.match(style, /body\.touch-enabled \.radar,/);
   assert.match(style, /@media \(max-height: 500px\) \{\s*body\.touch-enabled \.hud-bottom-left \{ display: none; \}/);
   assert.match(style, /body\.touch-enabled \.hud-bottom-left \{[^}]*bottom: calc\(max\(var\(--edge\), env\(safe-area-inset-bottom\)\) \+ 254px\)/);
-  // #minimap-card (an id) out-ranks style.css's body.touch-enabled .radar { display: none }
-  // landscape: the lower-left HUD shown again, lifted over the stick (stick 136 px + caption from the bottom edge)
+  // landscape: style.css hides the lower-left box; GF shows it again, still in the top-left, and a 72 px card
   const land = rules.filter((r) => r.media && /max-height:\s*500px/.test(r.media));
-  const hud = land.find((r) => r.selectors.includes('body.touch-enabled .hud-bottom-left'));
-  assert.ok(hud && /display:\s*flex/.test(hud.body), 'landscape keeps the radar');
-  const lift = Number(hud.body.match(/\+\s*(\d+)px/)[1]);
-  assert.ok(lift >= 136 + 22, `landscape lift ${lift} px clears the 136 px stick and its caption`);
+  const landHud = land.find((r) => r.selectors.includes('body.touch-enabled .hud-bottom-left'));
+  assert.ok(landHud && /display:\s*flex/.test(landHud.body), 'landscape keeps the radar');
+  assert.match(landHud.body, /top:\s*max\(var\(--edge, 12px\), env\(safe-area-inset-top\)\)/);
+  assert.match(landHud.body, /bottom:\s*auto/);
   const landCard = land.find((r) => r.selectors.includes('body.touch-enabled #minimap-card'));
-  assert.ok(landCard && Number(landCard.body.match(/width:\s*(\d+)px/)[1]) >= 100);
-  // the larger view stays clear of the stick: it ends above the radar's own lift (portrait) or over the mode bar
+  assert.match(landCard.body, /width:\s*72px/);
+  assert.match(landCard.body, /height:\s*72px/);
+  // the larger view: portrait below the camera switch (top + 62 + 54 px) and the 80 px radar, above the stick
   const big = rules.find((r) => !r.media && r.selectors.includes('body.touch-enabled #gf-radar-expanded'));
-  assert.match(big.body, /bottom:\s*calc\([^;]*\+ 254px\)/);
+  assert.equal(calcPlus(big.body, 'top'), 122);
+  assert.ok(calcPlus(big.body, 'top') > 80 + 8 && calcPlus(big.body, 'top') >= 62 + 54 + 6);
+  assert.equal(calcPlus(big.body, 'bottom'), 254);
+  const narrow = rules.find((r) => r.media && /max-width:\s*360px/.test(r.media) && r.selectors.includes('body.touch-enabled #gf-radar-expanded'));
+  assert.equal(calcPlus(narrow.body, 'top'), 176, 'a wrapped toolbar drops the camera switch to + 114 px');
+  // landscape: right of the stick (and the 72 px radar), left of the right-hand column, above the credit and mode bar
+  const landBig = land.find((r) => r.selectors.includes('body.touch-enabled #gf-radar-expanded'));
+  assert.equal(calcPlus(landBig.body, 'left'), 148);
+  assert.equal(calcPlus(landBig.body, 'top'), 54);
+  assert.equal(calcPlus(landBig.body, 'bottom'), 92);
   // every gf-mobile.css selector is still under body.touch-enabled or the Exit button
   for (const r of rules) for (const sel of r.selectors) assert.match(sel, /exit-action|body\.touch-enabled/, sel);
   // the radar's own stylesheet is GF-only and loaded by gf-minimap.js
   assert.ok(fs.existsSync(path.join(root, 'css/gf-minimap.css')));
-  assert.doesNotMatch(read('index.html'), /gf-minimap|gf-mobile/);
+  assert.doesNotMatch(read('index.html'), /gf-minimap|gf-mobile|gf-credit/);
+});
+
+test('touch screens: the credit is a one-line label beside the stick, above the mode bar; its full text opens above the stick', () => {
+  const rules = cssRules('css/gf-mobile.css');
+  const label = rules.find((r) => !r.media && r.selectors.includes('body.touch-enabled #gf-attribution'));
+  assert.ok(label, 'a touch rule for the credit');
+  assert.doesNotMatch(label.body, /display:\s*none|visibility:\s*hidden|opacity:\s*0[;\s]/, 'never hidden');
+  assert.match(label.body, /top:\s*auto/);
+  assert.equal(calcPlus(label.body, 'left'), 144, '8 px right of the 136 px stick');
+  assert.equal(calcPlus(label.body, 'bottom'), 66, 'just above the 60 px mode bar');
+  assert.match(label.body, /z-index:\s*11/, 'under the touch controls (12)');
+  const full = rules.find((r) => !r.media && r.selectors.includes('body.touch-enabled #gf-credit-full'));
+  assert.match(full.body, /position:\s*fixed/);
+  assert.equal(calcPlus(full.body, 'bottom'), 254, 'portrait: in the free space above the stick');
+  const landFull = rules.find((r) => r.media && /max-height:\s*500px/.test(r.media) && r.selectors.includes('body.touch-enabled #gf-credit-full'));
+  assert.equal(calcPlus(landFull.body, 'left'), 144);
+  assert.equal(calcPlus(landFull.body, 'bottom'), 92, 'landscape: right of the stick, above the mode bar');
 });
 
 test('touch: the radar never takes the stick\'s or the action buttons\' touches', () => {
@@ -337,4 +379,82 @@ test('touch: the radar never takes the stick\'s or the action buttons\' touches'
   // and the iOS callout guard covers the card (a .hud child) on touch screens
   const guard = cssRules('css/gf-mobile.css').find((r) => r.selectors.includes('body.touch-enabled .hud *'));
   assert.ok(guard && /-webkit-touch-callout:\s*none/.test(guard.body));
+});
+
+// ---- the map credit (CC-MINIMAP-fix) ----
+
+function creditDom() {
+  const on = (t) => {
+    t.listeners = {};
+    t.addEventListener = (type, fn, opts) => { (t.listeners[type] = t.listeners[type] || []).push({ fn, opts }); };
+    t.fire = (type, e = {}) => { for (const { fn } of t.listeners[type] || []) fn({ preventDefault() { e.prevented = true; }, ...e }); return e; };
+    return t;
+  };
+  const el = (tag) => on({
+    tagName: tag.toUpperCase(), children: [], attrs: {}, hidden: false, style: {},
+    classList: { set: new Set(), toggle(c, v) { if (v) this.set.add(c); else this.set.delete(c); }, contains(c) { return this.set.has(c); } },
+    setAttribute(k, v) { this.attrs[k] = String(v); }, getAttribute(k) { return this.attrs[k]; },
+    append(...c) { this.children.push(...c); }, appendChild(c) { this.children.push(c); },
+    contains(n) { return n === this || this.children.some((c) => c && typeof c.contains === 'function' && c.contains(n)); },
+    get text() { return this.children.length ? this.children.map((c) => (typeof c === 'string' ? c : c.text)).join('') : (this.textContent || ''); }
+  });
+  const win = on({});
+  const doc = on({ head: el('head'), body: el('body'), defaultView: win, createElement: el, querySelector: () => null });
+  return { doc, win };
+}
+
+test('the credit: "© OSM · USGS" on screen; a tap opens the OSM copyright link and the USGS line; tap, outside or Esc closes', () => {
+  const { doc, win } = creditDom();
+  const lidar = 'Building heights and trees: USGS 3D Elevation Program (3DEP), NY_Hudson_D22 LiDAR, 2022-23';
+  const c = createGfCredit(doc, { lidar });
+  const [full, toggle] = c.element.children;
+  assert.equal(c.element.attrs.id ?? c.element.id, 'gf-attribution');
+  assert.equal(SHORT_LABEL, '© OSM · USGS');
+  assert.equal(toggle.textContent, '© OSM · USGS');
+  assert.equal(toggle.tagName, 'BUTTON', 'Enter / Space open it from the keyboard');
+  assert.equal(toggle.type, 'button');
+  assert.equal(full.hidden, true, 'collapsed by default');
+  assert.ok(doc.head.children.some((l) => l.href === 'css/gf-credit.css'));
+  // the full credit: the OSM copyright page (ODbL) and the LiDAR line
+  const link = full.children.find((n) => n.tagName === 'A');
+  assert.equal(link.href, OSM_COPYRIGHT);
+  assert.equal(OSM_COPYRIGHT, 'https://www.openstreetmap.org/copyright');
+  assert.equal(link.target, '_blank');
+  assert.equal(link.rel, 'noopener');
+  assert.match(full.text, /Map data © OpenStreetMap contributors \(ODbL\)/);
+  assert.ok(full.children.includes(lidar));
+  // tap opens, tap closes
+  toggle.fire('click');
+  assert.equal(c.isOpen, true);
+  assert.equal(full.hidden, false);
+  assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+  toggle.fire('click');
+  assert.equal(c.isOpen, false);
+  // a tap elsewhere closes it, without cancelling that touch; a tap inside does not
+  c.open();
+  const inside = doc.fire('pointerdown', { target: link });
+  assert.equal(c.isOpen, true);
+  const outside = doc.fire('pointerdown', { target: { tagName: 'CANVAS' } });
+  assert.equal(c.isOpen, false);
+  assert.ok(!inside.prevented && !outside.prevented, 'the touch still goes to the stick / buttons');
+  assert.deepEqual(doc.listeners.pointerdown[0].opts, { capture: true, passive: true });
+  // Esc closes it
+  c.open();
+  win.fire('keydown', { code: 'Escape' });
+  assert.equal(c.isOpen, false);
+  win.fire('keydown', { code: 'KeyM' });
+  assert.equal(c.isOpen, false, 'M is the radar\'s, not the credit\'s');
+});
+
+test('the credit module: Glens Falls only, preloaded, made by gf-main.js; desktop label above the radar', () => {
+  const main = read('js/main.js');
+  const gfPre = main.slice(main.indexOf('GF_PRELOADS'), main.indexOf('];', main.indexOf('GF_PRELOADS')));
+  assert.match(gfPre, /'gf-credit\.js'/);
+  const nycPre = main.slice(main.indexOf('NYC_PRELOADS'), main.indexOf('];', main.indexOf('NYC_PRELOADS')));
+  assert.doesNotMatch(nycPre, /gf-credit/);
+  assert.doesNotMatch(read('js/nyc-main.js'), /gf-credit/);
+  assert.match(read('js/gf-main.js'), /document\.body\.appendChild\(credit\.element\)/);
+  const css = read('css/gf-credit.css');
+  assert.match(css, /\.gf-credit-full\[hidden\] \{ display: none; \}/);
+  assert.doesNotMatch(read('js/gf-credit.js'), /city\s*===|glensfalls'/);
 });
