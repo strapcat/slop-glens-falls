@@ -266,8 +266,9 @@ test('gf-main.js: the card is no longer hidden, its label is true, the radar run
   assert.match(gfMain, /GF_LIDAR_HEIGHTS\.credit/);
   // placed just above the card
   const credit = { style: {} };
-  placeCreditAbove(credit, { offsetParent: {}, getBoundingClientRect: () => ({ top: 600, height: 184 }) }, { innerHeight: 800 });
+  placeCreditAbove(credit, { offsetParent: {}, getBoundingClientRect: () => ({ top: 600, left: 20, height: 184 }) }, { innerHeight: 800 });
   assert.equal(credit.style.bottom, '206px');
+  assert.equal(credit.style.left, '20px');
   placeCreditAbove(credit, { offsetParent: null, getBoundingClientRect: () => ({}) }, { innerHeight: 800 });
   assert.equal(credit.style.bottom, '6px', 'back to the corner when the card is hidden');
 });

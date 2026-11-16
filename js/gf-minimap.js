@@ -529,6 +529,7 @@ function placeCreditAbove(credit, card, win = globalThis) {
   if (!credit || !card) return;
   const rect = card.offsetParent ? card.getBoundingClientRect() : null;
   credit.style.bottom = rect && rect.height ? `${Math.round(win.innerHeight - rect.top + 6)}px` : '6px';
+  credit.style.left = rect && rect.height ? `${Math.round(rect.left)}px` : '8px';
 }
 
 export {
