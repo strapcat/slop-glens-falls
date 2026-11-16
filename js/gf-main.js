@@ -809,7 +809,8 @@ async function initApp() {
   });
   globalThis.slopGlensFalls.radar = radar;
   // the desktop map credit sits just above the radar card, not on it (touch screens: css/gf-mobile.css places it)
-  const placeCredit = () => placeCreditAbove(document.getElementById('gf-attribution'), document.getElementById('minimap-card'), window);
+  const placeCredit = () => placeCreditAbove(document.getElementById('gf-attribution'), document.getElementById('minimap-card'), window,
+    document.querySelector('.hud-bottom-center'));
   placeCredit();
 
   window.addEventListener('resize', () => {

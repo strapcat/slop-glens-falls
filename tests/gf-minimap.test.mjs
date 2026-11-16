@@ -277,6 +277,12 @@ test('gf-main.js: the card is no longer hidden, its label is true, the radar run
   assert.equal(credit.style.left, '20px');
   placeCreditAbove(credit, { offsetParent: null, getBoundingClientRect: () => ({}) }, { innerHeight: 800 });
   assert.equal(credit.style.bottom, '6px', 'back to the corner when the card is hidden');
+  // a narrow desktop window hides the radar: the label (and its open credit) stays above the Walk / Drive bar
+  const bar = { offsetParent: {}, getBoundingClientRect: () => ({ top: 720, height: 60 }) };
+  placeCreditAbove(credit, { offsetParent: null, getBoundingClientRect: () => ({}) }, { innerHeight: 800 }, bar);
+  assert.equal(credit.style.bottom, '86px');
+  assert.equal(credit.style.left, '8px');
+  assert.match(gfMain, /document\.querySelector\('\.hud-bottom-center'\)\);/);
   // touch screens: desktop-only; the inline offsets are cleared and css/gf-mobile.css places the label
   const touchWin = { innerHeight: 800, document: { body: { classList: { contains: (c) => c === 'touch-enabled' } } } };
   placeCreditAbove(credit, { offsetParent: {}, getBoundingClientRect: () => ({ top: 600, left: 20, height: 184 }) }, touchWin);
@@ -456,5 +462,9 @@ test('the credit module: Glens Falls only, preloaded, made by gf-main.js; deskto
   assert.match(read('js/gf-main.js'), /document\.body\.appendChild\(credit\.element\)/);
   const css = read('css/gf-credit.css');
   assert.match(css, /\.gf-credit-full\[hidden\] \{ display: none; \}/);
+  // collapsed by default everywhere (the full block only after a click / tap); when open it sits above the label
+  // (the label is the box's last child in a bottom-anchored column), so on desktop it grows up, away from the radar
+  assert.match(css, /\.gf-credit \{[^}]*position: fixed;[^}]*flex-direction: column;/);
+  assert.match(read('js/gf-credit.js'), /full\.hidden = true;[\s\S]*credit\.append\(full, toggle\);/);
   assert.doesNotMatch(read('js/gf-credit.js'), /city\s*===|glensfalls'/);
 });

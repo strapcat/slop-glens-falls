@@ -542,7 +542,9 @@ function installGfMinimap({ doc = globalThis.document, controllerManager, layers
 
 // Lift the desktop map credit (js/gf-credit.js #gf-attribution, fixed at the bottom left) above the radar card, so it
 // does not sit on the map. Desktop only: on touch screens css/gf-mobile.css places it (and this clears the inline offsets).
-function placeCreditAbove(credit, card, win = globalThis) {
+// below: what to stay above when the card is hidden (a narrow desktop window: style.css hides the radar under 620 px),
+// the bottom-centre HUD with the Walk / Drive / Cycle / Fly bar, so the label and its open credit never sit on it.
+function placeCreditAbove(credit, card, win = globalThis, below = null) {
   if (!credit || !card) return;
   // touch screens: css/gf-mobile.css places the credit beside the joystick (the radar is in the top-left there)
   const body = win.document && win.document.body;
@@ -552,8 +554,14 @@ function placeCreditAbove(credit, card, win = globalThis) {
     return;
   }
   const rect = card.offsetParent ? card.getBoundingClientRect() : null;
-  credit.style.bottom = rect && rect.height ? `${Math.round(win.innerHeight - rect.top + 6)}px` : '6px';
-  credit.style.left = rect && rect.height ? `${Math.round(rect.left)}px` : '8px';
+  if (rect && rect.height) {
+    credit.style.bottom = `${Math.round(win.innerHeight - rect.top + 6)}px`;
+    credit.style.left = `${Math.round(rect.left)}px`;
+    return;
+  }
+  const bar = below && below.offsetParent ? below.getBoundingClientRect() : null;
+  credit.style.bottom = bar && bar.height ? `${Math.round(win.innerHeight - bar.top + 6)}px` : '6px';
+  credit.style.left = '8px';
 }
 
 export {
