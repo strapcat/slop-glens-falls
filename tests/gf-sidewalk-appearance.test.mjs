@@ -105,7 +105,7 @@ test('property line: buildBlocks with a band function puts each half of a block\
 });
 
 // CC-005f: the residential band narrowed (lawn ~0.9 m, Dave's preview), the downtown one unchanged
-test('bands as built (GF_GEO): downtown ~2.2 m, concrete to the curb; residential ~2.85 m, curb + 0.9 m tree lawn + walk', () => {
+test('bands as built (GF_GEO): downtown 1.8 m, concrete to the curb; residential 2.7 m, curb + 0.9 m tree lawn + walk', () => {
   const by = { downtown: { band: [], lawn: 0, n: 0, walk: [] }, residential: { band: [], lawn: 0, n: 0, walk: [], lawnW: [] } };
   for (const entry of sidewalks.rings) {
     if (entry.kind !== 'lot') continue;
@@ -121,8 +121,16 @@ test('bands as built (GF_GEO): downtown ~2.2 m, concrete to the curb; residentia
   }
   const dt = by.downtown, res = by.residential;
   assert.ok(dt.n > 300 && res.n > 50000, `${dt.n} downtown, ${res.n} residential samples`);
-  assert.ok(Math.abs(median(dt.band) - 2.2) < 0.25, `downtown band ${median(dt.band)}`);
-  assert.ok(Math.abs(median(res.band) - 2.85) < 0.2, `residential band ${median(res.band)}`);
+  // CC-ROADS: the lot rings are snapped onto the roadway's offset plus the band, so the bands as built are the parameters
+  // within 0.1 m (CC-005f's 1 m raster outline: about 2.2 m downtown and 2.85 m residential)
+  assert.ok(Math.abs(median(dt.band) - S.downtownBand) < 0.1, `downtown band ${median(dt.band)}`);
+  assert.ok(Math.abs(median(res.band) - S.residentialBand) < 0.1, `residential band ${median(res.band)}`);
+  assert.equal(S.downtownBand, 1.8);
+  assert.equal(S.residentialBand, 2.7);
+  // and the curb ring sits on the ribbon's edge, so the gutter is a narrow line, not CC-005e's 0.45 m cover for the
+  // raster offset (tests/gf-geodata.test.mjs measures the curb against the ribbon)
+  assert.equal(S.gutter, 0.12);
+  assert.equal(S.rasterShift, 0);
   // downtown: no grass strip, the walk runs to the curb (allowing the envelope's edge, where the bands meet)
   assert.ok(dt.lawn / dt.n < 0.1, `downtown lawn share ${dt.lawn / dt.n}`);
   assert.ok(Math.abs(median(dt.walk) - (median(dt.band) - S.curbW)) < 0.1, `downtown walk ${median(dt.walk)}`);
@@ -131,7 +139,7 @@ test('bands as built (GF_GEO): downtown ~2.2 m, concrete to the curb; residentia
   assert.ok(res.lawn / res.n > 0.88, `residential lawn share ${res.lawn / res.n}`);
   assert.equal(S.lawnTarget, 0.9);
   assert.ok(Math.abs(median(res.lawnW) - S.lawnTarget) <= 0.25, `lawn ${median(res.lawnW)} m`);
-  assert.ok(median(res.walk) >= S.walkW && median(res.walk) < S.walkW + 0.4, `walk ${median(res.walk)} m`);
+  assert.ok(median(res.walk) >= S.walkW - 0.05 && median(res.walk) < S.walkW + 0.4, `walk ${median(res.walk)} m`);
   // the layout rule itself: lawn capped at LAWN_TARGET, the walk takes the rest; under LAWN_MIN of lawn is paved
   const narrow = sidewalks.layout(1.9, 0.3), fit = sidewalks.layout(2.0, 0.7), wide = sidewalks.layout(2.0, 1.1);
   assert.ok(!narrow.lawn && Math.abs(narrow.walkOut - (2.2 - S.curbW)) < 1e-9, 'a 2.2 m band: walk to the curb');

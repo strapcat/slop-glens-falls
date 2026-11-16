@@ -218,6 +218,20 @@ test('buildings are obstacles to pedestrians only: the car network is unchanged'
   assert.equal(edgeHash(withBuildings), edgeHash(lotsOnly));
 });
 
+// A walking line's point on its own block: inside its curb, or (CC-ROADS: the curb rings are snapped onto the roadway's
+// offset, so a detour's straight leg can graze a curved curb) within 1 cm of it
+function onOwnBlock(blocksOf, x, z, block) {
+  if (blocksOf.blockAt(x, z) === block) return true;
+  for (const ring of [block.polygon.outer, ...block.polygon.holes]) {
+    for (let i = 0; i < ring.length; i++) {
+      const a = ring[i], b = ring[(i + 1) % ring.length], dx = b.x - a.x, dz = b.z - a.z, l2 = dx * dx + dz * dz;
+      const t = l2 ? Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / l2)) : 0;
+      if (Math.hypot(x - a.x - dx * t, z - a.z - dz * t) <= 0.01) return true;
+    }
+  }
+  return false;
+}
+
 test('sidewalk tracks with the buildings: over 2100 edges, none through a building, each on its own block', () => {
   const routes = createPedestrianRoutes({ walkable: withBuildings.walkable, onSidewalk: blocks.onSidewalk }, blocks.blockAt, { insets: [0.6, 1.2] });
   const all = withBuildings.edges.map((e) => routes.along(e));
@@ -230,7 +244,7 @@ test('sidewalk tracks with the buildings: over 2100 edges, none through a buildi
         const x = t.ax + t.ux * t.len * f, z = t.az + t.uz * t.len * f;
         const b = buildingAt(x, z);
         assert.equal(b, null, `track through ${b && b.osm} at (${x.toFixed(1)}, ${z.toFixed(1)})`);
-        if (f === 0 || f === 0.5 || f === 1) assert.equal(blocks.blockAt(x, z), t.block, 'track off its block');
+        if (f === 0 || f === 0.5 || f === 1) assert.ok(onOwnBlock(blocks, x, z, t.block), `track off its block at (${x.toFixed(2)}, ${z.toFixed(2)})`);
       }
       n++;
     }

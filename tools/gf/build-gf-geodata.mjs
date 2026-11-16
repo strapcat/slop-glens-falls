@@ -332,6 +332,151 @@ export function buildWater(elements, box = BBOX_M) {
 // CC-001's single band, 2.8 m elsewhere (room for a residential tree lawn between the curb and the walk)
 export const BLOCK_PARAMS = { res: 1, sidewalk: sidewalkBandAt, minArea: 150, minHole: 10 };
 
+// CC-ROADS: the traced rings are a 1 m raster's outline, up to ~0.5 m (p99) off the draped road ribbon's edge, so the
+// granite curb jogged in and out along a straight street. Each ring is resampled every STEP m and every sample within
+// REACH m of a roadway's edge is moved onto it exactly: the curb ring onto the cut line's offset at its curb radius
+// (width / 2, the same centreline and width the ribbon is draped from: gf-drape.js), the lot ring onto that offset plus
+// the sidewalk band. At a junction the samples settle on the corner where two offsets cross. Samples further from any
+// road (water, the bbox's edge) keep the destaired trace. The snapped ring is simplified within SIMPLIFY m; a ring that
+// would not stay simple keeps the old outline (counted in stats.unsnapped).
+export const SNAP = { step: 0.5, reach: 1.25, simplify: 0.05, iterations: 12, cell: 32 };
+
+// A grid of the cut lines' segments [ax, az, bx, bz, r] for nearest-offset queries (pad: the furthest offset asked for)
+export function capsuleGrid(cut, pad, cell = SNAP.cell) {
+  const grid = new Map();
+  for (const { pts, r } of cut) {
+    for (let k = 0; k + 1 < pts.length; k++) {
+      const sg = [pts[k][0], pts[k][1], pts[k + 1][0], pts[k + 1][1], r];
+      const m = r + pad;
+      for (let i = Math.floor((Math.min(sg[0], sg[2]) - m) / cell); i <= Math.floor((Math.max(sg[0], sg[2]) + m) / cell); i++) {
+        for (let j = Math.floor((Math.min(sg[1], sg[3]) - m) / cell); j <= Math.floor((Math.max(sg[1], sg[3]) + m) / cell); j++) {
+          const key = i * 100000 + j;
+          if (!grid.has(key)) grid.set(key, []);
+          grid.get(key).push(sg);
+        }
+      }
+    }
+  }
+  return { grid, cell };
+}
+// The offset nearest (x, z): { s (signed: distance from the offset, negative inside it), seg, cx, cz (the nearest
+// centreline point), d } over the cut lines at radius r + extra; null when no line is near
+function nearestOffset(G, x, z, extra) {
+  const list = G.grid.get(Math.floor(x / G.cell) * 100000 + Math.floor(z / G.cell));
+  if (!list) return null;
+  let best = null;
+  for (const sg of list) {
+    const dx = sg[2] - sg[0], dz = sg[3] - sg[1], l2 = dx * dx + dz * dz;
+    const t = l2 ? Math.max(0, Math.min(1, ((x - sg[0]) * dx + (z - sg[1]) * dz) / l2)) : 0;
+    const cx = sg[0] + dx * t, cz = sg[1] + dz * t, d = Math.hypot(x - cx, z - cz);
+    const sd = d - (sg[4] + extra);
+    if (!best || sd < best.s) best = { s: sd, cx, cz, d };
+  }
+  return best;
+}
+// One point moved onto the union of the offsets (extra: m beyond each line's curb radius): out of the deepest one it is
+// inside, or onto the nearest; repeated, it settles on a corner where two offsets cross. null when no road is within
+// REACH, or it does not settle.
+export function snapPoint(G, x, z, extra, params = SNAP) {
+  const first = nearestOffset(G, x, z, extra);
+  if (!first || Math.abs(first.s) > params.reach) return null;
+  let px = x, pz = z;
+  for (let it = 0; it < params.iterations; it++) {
+    const n = nearestOffset(G, px, pz, extra);
+    if (!n || n.d < 1e-6) return null;
+    if (Math.abs(n.s) < 1e-3) return [px, pz];
+    px -= ((px - n.cx) / n.d) * n.s;
+    pz -= ((pz - n.cz) / n.d) * n.s;
+  }
+  const end = nearestOffset(G, px, pz, extra);
+  return end && Math.abs(end.s) < 0.02 && Math.hypot(px - x, pz - z) <= params.reach * 1.5 ? [px, pz] : null;
+}
+// Cut the small loops out of a ring that crosses itself (two samples settling either side of a corner make a bow-tie):
+// at each crossing of edges i and j, the shorter way round between them is replaced by the crossing point. Returns the
+// ring, or null when it still crosses itself after MAX cuts.
+export function cutLoops(ring, max = 200) {
+  let r = ring.slice();
+  const cross = (a, b, c, d) => {
+    const den = (b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0]);
+    if (Math.abs(den) < 1e-12) return null;
+    const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / den;
+    const u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / den;
+    return t > 0 && t < 1 && u > 0 && u < 1 ? [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t] : null;
+  };
+  for (let cuts = 0; cuts < max; cuts++) {
+    const n = r.length;
+    let hit = null;
+    // only nearby edges can cross after snapping (moves of at most ~2 m): a window keeps this linear
+    for (let i = 0; i < n && !hit; i++) {
+      for (let k = 2; k < Math.min(n - 1, 80) && !hit; k++) {
+        const j = (i + k) % n;
+        if ((j + 1) % n === i) continue;
+        const p = cross(r[i], r[(i + 1) % n], r[j], r[(j + 1) % n]);
+        if (p) hit = { i, j, p, k };
+      }
+    }
+    if (!hit) return r;
+    // the crossing splits the ring in two loops: vertices i+1 .. i+k, and the rest; keep the larger by area
+    const { i, k, p } = hit;
+    const loopA = [p], loopB = [p];
+    for (let m = 1; m <= k; m++) loopA.push(r[(i + m) % n]);
+    for (let m = k + 1; m <= n; m++) loopB.push(r[(i + m) % n]);
+    r = Math.abs(ringArea(loopA)) > Math.abs(ringArea(loopB)) ? loopA : loopB;
+    if (r.length < 3) return null;
+  }
+  return null;
+}
+
+// A rounded ring tidied: repeated points dropped, and vertices where the outline doubles straight back (a spike of
+// zero area, left by rounding to 0.1 m)
+export function tidyRing(ring) {
+  let r = ring.slice();
+  for (let pass = 0; pass < 8; pass++) {
+    const out = [];
+    let changed = false;
+    for (let i = 0; i < r.length; i++) {
+      const p = r[i], last = out[out.length - 1];
+      if (last && last[0] === p[0] && last[1] === p[1]) { changed = true; continue; }
+      out.push(p);
+    }
+    while (out.length > 1 && out[0][0] === out[out.length - 1][0] && out[0][1] === out[out.length - 1][1]) { out.pop(); changed = true; }
+    const keep = [];
+    const n = out.length;
+    for (let i = 0; i < n; i++) {
+      const a = out[(i - 1 + n) % n], b = out[i], c = out[(i + 1) % n];
+      const cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+      const dot = (b[0] - a[0]) * (c[0] - b[0]) + (b[1] - a[1]) * (c[1] - b[1]);
+      if (Math.abs(cr) < 1e-9 && dot <= 0) { changed = true; continue; } // doubles back
+      keep.push(b);
+    }
+    r = keep;
+    if (!changed || r.length < 3) break;
+  }
+  return r;
+}
+
+// A ring's outline resampled every STEP m with its road-side samples snapped (extra: a number, or (x, z) -> m)
+export function snapRing(ring, G, extra, params = SNAP) {
+  const ex = typeof extra === 'function' ? extra : () => extra;
+  const out = [];
+  let snapped = 0;
+  const n = ring.length;
+  for (let i = 0; i < n; i++) {
+    const [ax, az] = ring[i], [bx, bz] = ring[(i + 1) % n];
+    const L = Math.hypot(bx - ax, bz - az), k = Math.max(1, Math.ceil(L / params.step));
+    for (let m = 0; m < k; m++) {
+      const x = ax + ((bx - ax) * m) / k, z = az + ((bz - az) * m) / k;
+      const p = snapPoint(G, x, z, ex(x, z), params);
+      if (p) snapped++;
+      const v = p || [x, z];
+      const last = out[out.length - 1];
+      if (!last || Math.hypot(v[0] - last[0], v[1] - last[1]) > 0.02) out.push(v);
+    }
+  }
+  if (out.length > 2 && Math.hypot(out[0][0] - out[out.length - 1][0], out[0][1] - out[out.length - 1][1]) <= 0.02) out.pop();
+  return { ring: out, snapped, samples: out.length };
+}
+
 // Even-odd scanline fill of several rings at once (a polygon with holes)
 function fillRings(R, rings, val) {
   const { res, x0, z0, w, h, d } = R;
@@ -458,8 +603,22 @@ function ringsIntersect(a, b) {
 
 // Clean polygon of a traced contour: the smoothest of (destair + RDP 0.5 m, destair + RDP 0.25 m, destair, raw
 // corners) that keeps a simple ring. Wound like the NYC blocks (negative shoelace area).
-function polygonOf(raw, res, rawOnly = false) {
+// CC-ROADS: snap (ring => ring), when given, is tried first: the destaired trace with its road-side samples moved onto
+// the roadway's offset (snapRing), simplified within SNAP.simplify.
+function polygonOf(raw, res, rawOnly = false, snap = null, stats = null) {
   const tries = [() => rdpRing(destair(raw, res * 1.5), 0.5), () => rdpRing(destair(raw, res * 1.5), 0.25), () => destair(raw, res * 1.5), () => raw];
+  if (snap && !rawOnly) {
+    const cut = cutLoops(snap(destair(raw, res * 1.5)));
+    const simple = cut ? cutLoops(rdpRing(cut, SNAP.simplify)) : null;
+    const rounded = simple ? cutLoops(tidyRing(simple.map(([x, z]) => [q(x), q(z)]))) : null;
+    const r = rounded ? tidyRing(rounded.map(([x, z]) => [q(x), q(z)])) : [];
+    if (r.length >= 3 && !ringSelfIntersects(r)) {
+      if (ringArea(r) > 0) r.reverse();
+      if (stats) stats.snapped++;
+      return r;
+    }
+    if (stats) stats.unsnapped++;
+  }
   for (const make of rawOnly ? tries.slice(-1) : tries) {
     const r = make().map(([x, z]) => [q(x), q(z)]);
     if (r.length < 3 || ringSelfIntersects(r)) continue;
@@ -475,7 +634,7 @@ function polygonOf(raw, res, rawOnly = false) {
 // to the raw raster contour; a hole that still touches another ring, or has no simple ring, is dropped (counted in
 // stats.holeConflicts).
 // Returns { outer, holes, area } (area = outline minus holes, m²) or null when no simple outline exists.
-function regionPolygons(R, lab, c, minHole, stats) {
+function regionPolygons(R, lab, c, minHole, stats, snap = null) {
   const { res } = R;
   const raw = traceLabel(R, lab, c);
   // window around the component with a one-cell margin, in its own little grid
@@ -507,11 +666,11 @@ function regionPolygons(R, lab, c, minHole, stats) {
   }
 
   const build = (rawOnly) => {
-    const outer = polygonOf(raw, res, rawOnly);
+    const outer = polygonOf(raw, res, rawOnly, snap, stats);
     if (!outer) return null;
     const holes = [];
     for (const h of holeRaws) {
-      const r = polygonOf(h, res, rawOnly);
+      const r = polygonOf(h, res, rawOnly, snap, stats);
       if (r) holes.push(r.reverse()); // holes wind the other way
     }
     return { outer, holes };
@@ -595,15 +754,19 @@ export function buildBlocks(cut, water, box = BBOX_M, params = BLOCK_PARAMS) {
     if (!best || pc.n > best.n) lotOf.set(owner, pc);
   }
 
+  // CC-ROADS: rings snapped onto the roadways' offsets: the curb at each cut line's radius, the lot at that plus the band
+  const G = capsuleGrid(cut, (typeof sidewalk === 'function' ? sidewalk.max : sidewalk) + SNAP.reach + 1);
+  const snapCurb = (ring) => snapRing(ring, G, 0).ring;
+  const snapLot = (ring) => snapRing(ring, G, sidewalk).ring;
   const blocks = [];
-  const dropped = { small: 0, edge: 0, invalid: 0, lotInvalid: 0, smallHoles: 0, holeConflicts: 0 };
+  const dropped = { small: 0, edge: 0, invalid: 0, lotInvalid: 0, smallHoles: 0, holeConflicts: 0, snapped: 0, unsnapped: 0 };
   for (const c of comps) {
     if (c.i0 <= ci0 || c.i1 >= ci1 || c.j0 <= cj0 || c.j1 >= cj1) { dropped.edge++; continue; }
     if (c.n * res * res < minArea) { dropped.small++; continue; }
-    const curb = regionPolygons(R, lab, c, minHole, dropped);
+    const curb = regionPolygons(R, lab, c, minHole, dropped, params.snap === false ? null : snapCurb);
     if (!curb) { dropped.invalid++; continue; }
     const pc = lotOf.get(c.id);
-    const lot = pc ? regionPolygons(R, props.lab, pc, minHole, dropped) : null;
+    const lot = pc ? regionPolygons(R, props.lab, pc, minHole, dropped, params.snap === false ? null : snapLot) : null;
     if (pc && !lot) dropped.lotInvalid++;
     blocks.push({
       area: Math.round(curb.area),
@@ -690,6 +853,7 @@ function main() {
   log(`link widths: ${stats.widthSource.width} from width tags, ${stats.widthSource.lanes} from lanes, ${stats.widthSource.default} class defaults; ${stats.unnamed} unnamed links`);
   log(`blocks: ${geo.blocks.length} kept (${geo.blocks.filter((b) => !b.lot).length} without a property line); dropped ${dropped.edge} touching the bbox edge, ${dropped.small} under ${BLOCK_PARAMS.minArea} m², ${dropped.invalid} with no simple outline`);
   const nHoles = geo.blocks.reduce((t, b) => t + b.curbHoles.length, 0);
+  log(`block rings snapped onto the roadway offsets: ${dropped.snapped}; kept as traced (would not stay simple): ${dropped.unsnapped}`);
   log(`block holes (water or enclosed roadway): ${nHoles} in ${geo.blocks.filter((b) => b.curbHoles.length).length} blocks; ${dropped.smallHoles} under ${BLOCK_PARAMS.minHole} m² ignored, ${dropped.holeConflicts} dropped (touching another ring or not simple)`);
   log(`water: ${geo.water.length} polygons (${geo.water.map((w) => w.name || w.osm).join(', ')})`);
   for (const s of skipped) log(`  water skipped: ${s}`);

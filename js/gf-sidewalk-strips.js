@@ -2,8 +2,8 @@
 // block's rings (gf-sidewalks.js rings, ringSamples), draped on the ground at every sample:
 //   from a curb ring (only where a road runs beside it)
 //     granite   the curb's face, from under the road to TOP, facing the road, and its CURB_W top
-//     gutter    asphalt beyond the face, just above the draped road (the curb ring is a 1 m raster's outline, up to
-//               about 0.4 m off the drawn ribbon's edge)
+//     gutter    a narrow line of asphalt beyond the face, just above the draped road (CC-ROADS: the curb ring sits on
+//               the drawn ribbon's edge, snapped to it in tools/gf/build-gf-geodata.mjs)
 //   from a lot ring (only where a road runs beside the band)
 //     concrete  the walk, WALK_W in 5 ft flags out from the lot line (to the curb downtown), at TOP
 //     lawn      the tree lawn between the walk and the curb, where there is one (residential), a hair under TOP

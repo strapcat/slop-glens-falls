@@ -7,10 +7,10 @@ import { polygonContains } from './building-collision.js';
 // the Three Squares envelope (gf-downtown.js, approximate, Dave to confirm); everywhere else is residential.
 //
 // The width model (tools/gf/build-gf-geodata.mjs buildBlocks): each block's lot (property line) is drawn BAND metres in
-// from its curb, the downtown band where the envelope holds the cell and the residential band elsewhere. Measured on
-// the regenerated data the property line sits about RASTER_SHIFT further in than the parameter (the raster's half cell
-// and cell centres), so the bands as built are about 2.2 m downtown and (CC-005f) 2.85 m residential. In each band, from
-// the road:
+// from its curb, the downtown band where the envelope holds the cell and the residential band elsewhere. CC-ROADS: the
+// curb and lot rings are snapped onto the roadway's offset (the draped ribbon's edge, and that plus the band), so the
+// bands as built are the parameters: 1.8 m downtown and 2.7 m residential (until CC-ROADS the 1 m raster's outline put
+// them about 0.2 m further in, and the curb up to ~0.5 m either side of the ribbon). In each band, from the road:
 //   the curb      CURB_W of granite, its face REVEAL above the road (the road is ROAD_LIFT above the ground);
 //   a tree lawn   whatever is left, when that is at least LAWN_MIN (residential: about LAWN_TARGET, 0.9 m, Dave's
 //                 preview; CC-005e's ~1.3 m followed the city's 4 ft snow strip on Goodwin Ave and NYSDOT's 4-6 ft with
@@ -27,11 +27,9 @@ const SIDEWALK = {
   // ~1.3 m lawns too wide. A Dave-tuned default, narrower than the city's 4 ft snow strip and NYSDOT's 4-6 ft; change
   // it here and rebuild the geodata (tools/gf/build-gf-geodata.mjs) to retune. residentialBand follows from it.
   lawnTarget: 0.9,
-  // m: about how much further in than the generator's parameter the traced property line sits (the raster's half cell
-  // and cell centres). The line moves in steps: on the 1 m raster a residential parameter of 2.4 gives a band of about
-  // 2.6 m (a 0.8 m lawn), 2.5 or 2.6 one of about 2.85 m; the lawn is capped at LAWN_TARGET and the walk takes the
-  // rest (measured on the built data, tests/gf-sidewalk-appearance.test.mjs)
-  rasterShift: 0.2,
+  // m: how much further in than the generator's parameter the property line sits. CC-ROADS: 0, the lot ring is snapped
+  // onto the roadway's offset plus the band (CC-005e / CC-005f's 1 m raster outline sat about 0.2 m further in, in steps)
+  rasterShift: 0,
   curbW: 0.15, // m: the curb's top
   reveal: 0.13, // m: its face above the road surface
   roadLift: 0.03, // m: the draped road over the ground (gf-drape.js ROAD_LIFT)
@@ -46,7 +44,9 @@ const SIDEWALK = {
   // and within JUNCTION_R of a junction of three or more roads (the curb ramps and corner aprons where the walking lines
   // meet the crossings)
   junctionR: 12,
-  gutter: 0.45, // m of asphalt drawn beyond the curb face (covers the curb ring's raster offset from the ribbon)
+  // m of asphalt drawn beyond the curb face: CC-ROADS, a narrow gutter line (the curb ring now sits on the ribbon's edge,
+  // within ~0.1 m; CC-005e's 0.45 m covered the 1 m raster outline's offset from it)
+  gutter: 0.12,
   flag: 1.524, // m: 5 ft flags (tooled joints across the walk)
   // the walking lines (pedestrian-routes.js insets beyond the roadway, insetsFor()): two, LINE_MARGIN inside the walk's
   // road edge and LOT_MARGIN inside its lot line, measured at the edge's middle (downtown about 0.6 and 1.2 m, residential about 1.9 and 2.5 m); one in
