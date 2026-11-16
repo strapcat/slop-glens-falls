@@ -33,7 +33,9 @@
 .gf-credit-toggle:focus-visible { outline: 2px solid var(--taxi, #f7c600); outline-offset: 2px; }
 
 .gf-credit-full {
-  max-width: min(540px, calc(100vw - 16px));
+  /* wraps rather than reaching the speed / camera panel on the right of a narrow window */
+  max-width: min(540px, calc(100vw - 300px));
+  min-width: 220px;
   padding: 5px 9px;
   border-radius: 8px;
   background: rgba(10, 12, 16, 0.86);
