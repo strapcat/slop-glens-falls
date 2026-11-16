@@ -87,7 +87,13 @@ test('the Path2D cache: bucketed in tiles, each polyline in every tile its box t
   assert.equal(compileLayers(LAYERS, undefined), null);
   class FakePath { constructor() { this.n = 0; } moveTo() { this.n++; } lineTo() { this.n++; } closePath() {} }
   const compiled = compileLayers(LAYERS, FakePath);
-  assert.ok(compiled.lots.size > 10 && compiled.water.size > 5 && compiled.trails.size > 0);
+  assert.ok(compiled.lots.tiles.size > 10 && compiled.water.tiles.size > 0 && compiled.trails.tiles.size > 0);
+  // a river or a long road: one Path2D of its own, not one copy per tile it crosses
+  assert.ok(compiled.water.big.length > 0 && compiled.water.big.every((b) => b.box[2] - b.box[0] > TILE || b.box[3] - b.box[1] > TILE));
+  const bigCompiled = compileLayers({ roads: {}, lots: [], trails: [], water: [{ rings: [[0, 0, 2000, 0, 2000, 10, 0, 10]] }] }, FakePath);
+  assert.equal(bigCompiled.water.tiles.size, 0);
+  assert.equal(bigCompiled.water.big.length, 1);
+  assert.deepEqual(bigCompiled.water.big[0].box, [0, 0, 2000, 10]);
   assert.deepEqual(compiled.roads.map((r) => r.key).slice(-2).every((k) => /motorway|trunk/.test(k)), true, 'motorways drawn last');
 });
 

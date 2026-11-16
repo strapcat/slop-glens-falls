@@ -1214,10 +1214,14 @@ York's map, atlas, search and teleports stay hidden here, and `js/nyc-map.js` is
 - **Zoom:** about 110 m from the centre to the nearer edge on foot, widening with speed (~260 m at the car's top
   speed) and with the helicopter's height above the ground; eased, never snapped.
 - **Cost:** canvas 2D only (no second renderer, scene or render target). The layers are traced once into Path2D
-  objects bucketed in 400 m tiles; a north-up cache canvas round the player (1.5 x the radar's diagonal) is redrawn
+  objects bucketed in 400 m tiles (anything wider than a tile, like the Hudson, gets one Path2D of its own, drawn
+  once); a north-up cache canvas round the player (1.5 x the radar's diagonal) is redrawn
   only when the player nears its edge or the zoom drifts 15 %; each frame blits it rotated and draws the arrow, the
   pip, the dots and (desktop) the traffic. The mobile tier backs the canvas at DPR 1, draws at most 30 times a second
-  and skips the traffic; desktop backs it at up to DPR 2. No knob in `js/device-tier.js` changed.
+  and skips the traffic; desktop backs it at up to DPR 2. No knob in `js/device-tier.js` changed. Measured (headless
+  Chromium, software rendering, `?tier=mobile` at 390 x 844): along 3,003 m of Glen Street (3,040 radar updates) the
+  radar took 0.02 ms per update on average and 2.3 ms at worst, with 20 cache redraws of 1-2.3 ms each; the 3D frame
+  there is ~2 s in software, so a whole-frame comparison with `main` is noise (2.0 / 2.0 s main vs 2.2 / 1.9 s branch).
 - **Controls:** `M` (not while typing in a field), a click or a tap on the radar, or Enter on the focused card opens a
   larger view of the same radar (a GF-owned overlay, `#gf-radar-expanded`); `M`, `Esc`, the close button, or a tap on
   it closes it. `H` hides the radar with the rest of the HUD (and closes the larger view); the touch stick stays.

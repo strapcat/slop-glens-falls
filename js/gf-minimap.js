@@ -200,14 +200,25 @@ function tileItems(items, ptsOf) {
 // Per layer and tile, one Path2D (traced once); null where Path2D is missing
 function compileLayers(layers, Path2DCtor = globalThis.Path2D) {
   if (typeof Path2DCtor !== 'function') return null;
+  // Items within a tile's size go into the tiles their box touches; larger ones (a river, a long road) get a Path2D
+  // of their own, drawn once when their box meets the window (in every tile they would be drawn several times over)
   const compile = (items, ptsOf, trace) => {
-    const out = new Map();
-    for (const [key, list] of tileItems(items, ptsOf)) {
+    const small = [], big = [];
+    for (const item of items) {
+      const box = bboxOf(ptsOf(item));
+      if (box[2] - box[0] > TILE || box[3] - box[1] > TILE) {
+        const p = new Path2DCtor();
+        trace(p, item);
+        big.push({ path: p, box });
+      } else small.push(item);
+    }
+    const tiles = new Map();
+    for (const [key, list] of tileItems(small, ptsOf)) {
       const p = new Path2DCtor();
       for (const item of list) trace(p, item);
-      out.set(key, p);
+      tiles.set(key, p);
     }
-    return out;
+    return { tiles, big };
   };
   const roads = Object.keys(layers.roads)
     .sort((a, b) => ROAD_STYLE[a].order - ROAD_STYLE[b].order)
@@ -243,7 +254,11 @@ function drawCache(cache, compiled, cx, cz, scale, dpr) {
   const k = scale * dpr;
   ctx.setTransform(k, 0, 0, k, W / 2 - cx * k, H / 2 - cz * k);
   const keys = tilesIn(cx - cache.halfW, cz - cache.halfH, cx + cache.halfW, cz + cache.halfH);
-  const each = (tiles, fn) => { for (const key of keys) { const p = tiles.get(key); if (p) fn(p); } };
+  const x0 = cx - cache.halfW, z0 = cz - cache.halfH, x1 = cx + cache.halfW, z1 = cz + cache.halfH;
+  const each = (layer, fn) => {
+    for (const key of keys) { const p = layer.tiles.get(key); if (p) fn(p); }
+    for (const { path, box } of layer.big) if (box[0] <= x1 && box[2] >= x0 && box[1] <= z1 && box[3] >= z0) fn(path);
+  };
   ctx.fillStyle = COLORS.lot;
   each(compiled.lots, (p) => ctx.fill(p, 'evenodd'));
   ctx.fillStyle = COLORS.water;
