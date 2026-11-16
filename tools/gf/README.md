@@ -1225,13 +1225,18 @@ York's map, atlas, search and teleports stay hidden here, and `js/nyc-map.js` is
 - **Controls:** `M` (not while typing in a field), a click or a tap on the radar, or Enter on the focused card opens a
   larger view of the same radar (a GF-owned overlay, `#gf-radar-expanded`); `M`, `Esc`, the close button, or a tap on
   it closes it. `H` hides the radar with the rest of the HUD (and closes the larger view); the touch stick stays.
-- **Where:** the lower left. Desktop: New York's card size (288 x 184; 220 x 148 under 820 px), with the map credit
-  moved just above it. Touch screens (`css/gf-mobile.css`): a 128 px square above the joystick in portrait (style.css's
-  existing +254 px lift), 108 px in landscape (+176 px, where style.css hides the lower-left HUD for New York); the
-  larger view fills the upper part of the screen in portrait (under the camera switch, down to the radar's lift) and
-  the space between the stick and the toolbar / camera-switch column in landscape, above the mode bar, so the stick and the
+- **Where:** desktop: the lower left, New York's card size (288 x 184; 220 x 148 under 820 px). Touch screens
+  (`css/gf-mobile.css`; CC-MINIMAP-fix, after Dave's iPhone test): a small square in the **top-left** corner, 80 px in
+  portrait and 72 px in landscape, clear of the time-of-day toolbar and the camera switch on the right. The card's box
+  (`.hud-bottom-left`, which holds only the card here) moves there; in landscape, where style.css hides that box for
+  New York, GF shows it again in the same corner. The larger view fills the space below the camera switch and above
+  the stick in portrait, and the space between the stick and the right-hand column in landscape, so the stick and the
   Jump / Talk / Exit buttons keep working while it is open. The shared touch rules in `css/style.css` are unchanged.
-
+- **Map credit** (`js/gf-credit.js`, `css/gf-credit.css`): a one-line `© OSM · USGS` label (a button) that opens to the
+  full credit (the OpenStreetMap copyright link, ODbL, and the USGS LiDAR line); a second tap or click, a tap
+  elsewhere, or Esc closes it. Desktop: just above the radar card. Touch screens: beside the joystick, just above the
+  Walk / Drive / Cycle / Fly bar; the full text opens in the free space above the stick (landscape: right of the stick,
+  above the mode bar).
 **Limits.** Not a searchable atlas (no street search or teleport); the roads are today's OSM, not 1993; no park
 outlines (none in GF_GEO); the larger view is the same heading-up radar, zoomed out, not a north-up city map.
 
