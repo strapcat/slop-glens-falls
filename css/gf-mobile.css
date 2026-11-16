@@ -67,19 +67,90 @@ body.touch-enabled .mode-btn {
    screens. */
 body.touch-enabled .hud-top-left { display: none !important; }
 
-/* The credit (gf-main.js #gf-attribution, inline-styled at the bottom left) covered the Walk / Drive / Cycle / Fly
-   buttons on a phone: on touch screens it sits small in the top-left corner (where the badge was), clear of the
-   time-of-day toolbar. Still on screen, still a link (ODbL and the USGS LiDAR credit). */
+/* CC-MINIMAP-fix: the map credit (js/gf-credit.js #gf-attribution) is a one-line "© OSM · USGS" label beside the
+   joystick, just above the Walk / Drive / Cycle / Fly bar (clear of the stick, its caption, the mode bar and the
+   Jump / Talk / Exit buttons). A tap opens the full credit (the OSM copyright link, ODbL, and the USGS LiDAR line) in
+   the free space above the stick (landscape: right of the stick, above the mode bar); a second tap, a tap elsewhere
+   or Esc closes it. Under the touch controls (12) for hits. */
 body.touch-enabled #gf-attribution {
-  top: max(var(--edge, 12px), env(safe-area-inset-top)) !important;
-  bottom: auto !important;
-  left: max(var(--edge, 12px), env(safe-area-inset-left)) !important;
-  max-width: 30vw;
-  font-size: 9px !important;
-  line-height: 1.25 !important;
-  z-index: 11 !important; /* under the touch controls (12) */
+  top: auto !important;
+  left: calc(max(var(--edge, 12px), env(safe-area-inset-left)) + 144px) !important;
+  bottom: calc(max(var(--edge, 12px), env(safe-area-inset-bottom)) + 66px) !important;
+  z-index: 11 !important;
+}
+body.touch-enabled #gf-attribution .gf-credit-toggle {
+  padding: 2px 7px;
+  font-size: 10px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+body.touch-enabled #gf-credit-full {
+  position: fixed;
+  left: max(var(--edge, 12px), env(safe-area-inset-left));
+  bottom: calc(max(var(--edge, 12px), env(safe-area-inset-bottom)) + 254px);
+  max-width: min(300px, calc(100vw - 2 * var(--edge, 12px)));
+  font-size: 10px;
 }
 @media (max-height: 500px) {
-  /* landscape: a wide top-left corner, above the joystick */
-  body.touch-enabled #gf-attribution { max-width: 36vw; }
+  body.touch-enabled #gf-credit-full {
+    left: calc(max(var(--edge, 12px), env(safe-area-inset-left)) + 144px);
+    bottom: calc(max(var(--edge, 12px), env(safe-area-inset-bottom)) + 92px);
+    max-width: min(360px, 50vw);
+  }
+}
+
+/* CC-MINIMAP / CC-MINIMAP-fix: the street radar on touch screens. style.css hides the radar on every touch screen and
+   the whole lower-left HUD in landscape (New York relies on both, so they stay). Here, for Glens Falls only, the
+   lower-left HUD box (which holds only the radar card here: gf-main.js hides #hud-location) moves to the top-left
+   corner, where the GitHub badge is hidden, and the radar is a small square: 80 px in portrait, 72 px in landscape,
+   clear of the time-of-day toolbar and the camera switch on the right. A tap opens the larger view below it. */
+body.touch-enabled .hud-bottom-left {
+  top: max(var(--edge, 12px), env(safe-area-inset-top));
+  bottom: auto;
+  left: max(var(--edge, 12px), env(safe-area-inset-left));
+  max-width: none;
+  gap: 0;
+}
+body.touch-enabled #minimap-card {
+  display: block;
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+body.touch-enabled #gf-radar-expanded {
+  /* below the camera switch (top + 62 + 54) and the radar, above the stick (style.css's 254 px lift) */
+  left: max(var(--edge, 12px), env(safe-area-inset-left));
+  right: max(var(--edge, 12px), env(safe-area-inset-right));
+  top: calc(max(var(--edge, 12px), env(safe-area-inset-top)) + 122px);
+  bottom: calc(max(var(--edge, 12px), env(safe-area-inset-bottom)) + 254px);
+  width: auto;
+  height: auto;
+  transform: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 360px) {
+  /* the toolbar wraps and style.css drops the camera switch to top + 114 */
+  body.touch-enabled #gf-radar-expanded { top: calc(max(var(--edge, 12px), env(safe-area-inset-top)) + 176px); }
+}
+@media (max-height: 500px) {
+  /* landscape: style.css hides the lower-left HUD box here; shown again, still only the radar's size, top-left */
+  body.touch-enabled .hud-bottom-left {
+    display: flex;
+    top: max(var(--edge, 12px), env(safe-area-inset-top));
+    bottom: auto;
+  }
+  body.touch-enabled #minimap-card { width: 72px; height: 72px; border-radius: 14px; }
+  body.touch-enabled #gf-radar-expanded {
+    /* right of the 136 px stick (and of the radar above it), left of the toolbar / camera switch column (238 px wide),
+       under the toolbar, above the credit label and the mode bar */
+    left: calc(max(var(--edge, 12px), env(safe-area-inset-left)) + 148px);
+    right: auto;
+    width: min(440px, calc(100vw - 2 * max(var(--edge, 12px), env(safe-area-inset-left), env(safe-area-inset-right)) - 148px - 258px));
+    top: calc(max(var(--edge, 12px), env(safe-area-inset-top)) + 54px);
+    bottom: calc(max(var(--edge, 12px), env(safe-area-inset-bottom)) + 92px);
+    transform: none;
+  }
 }

@@ -228,19 +228,21 @@ test('the touch guards cancel a held touch on the controls, only on touch screen
   assert.doesNotMatch(read('js/nyc-main.js'), /gf-touch-guards/);
 });
 
-test('the GitHub badge is hidden on touch screens; the OSM / USGS credit stays, in the corner, as a link', () => {
+test('the GitHub badge is hidden on touch screens; the OSM / USGS credit stays on screen, as a label that opens to the link', () => {
   const hide = ruleFor('body.touch-enabled .hud-top-left', 'display');
   assert.ok(hide && /display:\s*none/.test(hide.body), 'the badge is hidden on touch screens');
-  const credit = cssRules().find((r) => r.selectors.includes('body.touch-enabled #gf-attribution') && /top:/.test(r.body));
+  // CC-MINIMAP-fix: the radar took the top-left corner; the credit is a one-line label by the joystick
+  const credit = cssRules().find((r) => r.selectors.includes('body.touch-enabled #gf-attribution') && /bottom:/.test(r.body));
   assert.ok(credit, 'the credit is placed');
   assert.doesNotMatch(credit.body, /display:\s*none|visibility:\s*hidden|opacity:\s*0[;\s]/);
   assert.doesNotMatch(read('css/gf-mobile.css'), /\+ (112|58)px/, 'no offsets left over from clearing the badge');
-  assert.match(credit.body, /top:\s*max\(var\(--edge, 12px\), env\(safe-area-inset-top\)\)/);
-  // gf-main.js still makes the credit: the OSM copyright link (ODbL) and the USGS LiDAR line
-  const main = read('js/gf-main.js');
-  assert.match(main, /credit\.id = 'gf-attribution';/);
-  assert.match(main, /link\.href = 'https:\/\/www\.openstreetmap\.org\/copyright';/);
-  assert.match(main, /credit\.append\('Map data © ', link, ' \(ODbL\)', document\.createElement\('br'\), GF_LIDAR_HEIGHTS\.credit/);
+  assert.match(credit.body, /top:\s*auto/);
+  // the credit (js/gf-credit.js, made by gf-main.js): the OSM copyright link (ODbL) and the USGS LiDAR line
+  const src = read('js/gf-credit.js');
+  assert.match(src, /credit\.id = 'gf-attribution';/);
+  assert.match(src, /const OSM_COPYRIGHT = 'https:\/\/www\.openstreetmap\.org\/copyright';/);
+  assert.match(src, /full\.append\('Map data © ', link, ' \(ODbL\)', doc\.createElement\('br'\), lidar\);/);
+  assert.match(read('js/gf-main.js'), /createGfCredit\(document, \{ lidar: GF_LIDAR_HEIGHTS\.credit/);
 });
 
 test('the follow camera: unchanged on desktop and New York; backed off and wider in portrait on the mobile tier; ?camdist= overrides', () => {
