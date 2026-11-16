@@ -1225,7 +1225,7 @@ York's map, atlas, search and teleports stay hidden here, and `js/nyc-map.js` is
   moved just above it. Touch screens (`css/gf-mobile.css`): a 128 px square above the joystick in portrait (style.css's
   existing +254 px lift), 108 px in landscape (+176 px, where style.css hides the lower-left HUD for New York); the
   larger view fills the upper part of the screen in portrait (under the camera switch, down to the radar's lift) and
-  the middle in landscape (between the stick and the action buttons, above the mode bar), so the stick and the
+  the space between the stick and the toolbar / camera-switch column in landscape, above the mode bar, so the stick and the
   Jump / Talk / Exit buttons keep working while it is open. The shared touch rules in `css/style.css` are unchanged.
 
 **Limits.** Not a searchable atlas (no street search or teleport); the roads are today's OSM, not 1993; no park
