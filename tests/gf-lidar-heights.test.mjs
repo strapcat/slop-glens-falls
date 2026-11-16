@@ -195,7 +195,7 @@ test('cars and pedestrians: the same obstacles, network and sidewalk tracks as C
   // curb and lot rings are snapped onto the roadway offsets, so the residential lot line sits at the designed 2.7 m, about
   // 0.15 m nearer than the raster put it: a few straight walking lines along long curved streets now meet a lot (CC-005f:
   // [2229, 8569])
-  assert.deepEqual([all.filter((l) => l.length).length, all.reduce((n, l) => n + l.length, 0)], [2194, 8513]);
+  assert.deepEqual([all.filter((l) => l.length).length, all.reduce((n, l) => n + l.length, 0)], [2196, 8507]);
 });
 
 test('CC-003 and CC-004 untouched: their data, records, meshes and generators are byte-identical', () => {

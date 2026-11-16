@@ -339,7 +339,7 @@ export const BLOCK_PARAMS = { res: 1, sidewalk: sidewalkBandAt, minArea: 150, mi
 // the sidewalk band. At a junction the samples settle on the corner where two offsets cross. Samples further from any
 // road (water, the bbox's edge) keep the destaired trace. The snapped ring is simplified within SIMPLIFY m; a ring that
 // would not stay simple keeps the old outline (counted in stats.unsnapped).
-export const SNAP = { step: 0.5, reach: 1.25, simplify: 0.05, iterations: 12, cell: 32 };
+export const SNAP = { step: 0.5, reach: 1.25, simplify: 0.1, iterations: 12, cell: 32 };
 
 // A grid of the cut lines' segments [ax, az, bx, bz, r] for nearest-offset queries (pad: the furthest offset asked for)
 export function capsuleGrid(cut, pad, cell = SNAP.cell) {
