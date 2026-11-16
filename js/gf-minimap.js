@@ -431,7 +431,7 @@ function installGfMinimap({ doc = globalThis.document, controllerManager, layers
   close.textContent = '×';
   const caption = doc.createElement('div');
   caption.className = 'gf-radar-caption';
-  caption.textContent = 'Street radar · OSM roads and water';
+  caption.textContent = 'Street radar · map data © OpenStreetMap contributors (ODbL)';
   overlay.append(big, close, caption);
   doc.body.appendChild(overlay);
 

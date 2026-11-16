@@ -8,7 +8,7 @@
 
 .gf-radar-expanded {
   position: fixed;
-  z-index: 30;
+  z-index: 41; /* over the map credit (40): the caption carries the OSM credit while open */
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
