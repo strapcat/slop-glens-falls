@@ -69,6 +69,20 @@ test('the lots, obstacles to pedestrians only, leave the car network unchanged',
   assert.ok(blocks.lotObstacles.length >= 360 && blocks.lotObstacles.every((o) => o.pedestrianOnly && o.polygon.outer.length >= 3));
 });
 
+// A walking line's point on its own block: inside its curb, or (CC-ROADS: the curb rings are snapped onto the roadway's
+// offset, so a detour's straight leg can graze a curved curb) within 1 cm of it
+function onOwnBlock(blocksOf, x, z, block) {
+  if (blocksOf.blockAt(x, z) === block) return true;
+  for (const ring of [block.polygon.outer, ...block.polygon.holes]) {
+    for (let i = 0; i < ring.length; i++) {
+      const a = ring[i], b = ring[(i + 1) % ring.length], dx = b.x - a.x, dz = b.z - a.z, l2 = dx * dx + dz * dz;
+      const t = l2 ? Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / l2)) : 0;
+      if (Math.hypot(x - a.x - dx * t, z - a.z - dz * t) <= 0.01) return true;
+    }
+  }
+  return false;
+}
+
 test('sidewalk tracks: over 2000 edges have one, each track stays on its own block', () => {
   const all = tracks(blocks, network);
   const withTracks = all.filter((t) => t.length).length;
@@ -77,7 +91,8 @@ test('sidewalk tracks: over 2000 edges have one, each track stays on its own blo
   for (const list of all) {
     for (const t of list) {
       for (const f of [0, 0.5, 1]) {
-        assert.equal(blocks.blockAt(t.ax + t.ux * t.len * f, t.az + t.uz * t.len * f), t.block, 'track off its block');
+        const x = t.ax + t.ux * t.len * f, z = t.az + t.uz * t.len * f;
+        assert.ok(onOwnBlock(blocks, x, z, t.block), `track off its block at (${x.toFixed(2)}, ${z.toFixed(2)})`);
       }
       n++;
     }

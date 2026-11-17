@@ -7,8 +7,10 @@ import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { toLocal, toLonLat, BBOX, BBOX_M } from '../tools/gf/geo-frame.mjs';
 import {
-  parseWidth, roadWidth, onewayOf, clipPolyline, joinRings, buildRoads, buildWater, buildBlocks, WIDTH_DEFAULTS
+  parseWidth, roadWidth, onewayOf, clipPolyline, joinRings, buildRoads, buildWater, buildBlocks, WIDTH_DEFAULTS, LANE_WIDTH,
+  capsuleGrid, snapPoint, snapRing, cutLoops, tidyRing, SNAP
 } from '../tools/gf/build-gf-geodata.mjs';
+import { sidewalkBandAt } from '../js/gf-sidewalks.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const OUT = path.join(root, 'js/gf-geodata.js');
@@ -140,6 +142,105 @@ function shoelace(f) {
   return a / 2;
 }
 
+// --- CC-ROADS: curb and lot rings on the roadway offsets ------------------------------------------------------------
+
+// A street grid turned 27 degrees off the raster's axes (where a 1 m raster's outline stair-steps worst), 100 m spacing
+function diagonalFixture() {
+  nextId = 1;
+  const els = [], grid = [], a = (27 * Math.PI) / 180, c = Math.cos(a), sn = Math.sin(a);
+  for (let j = 0; j < 4; j++) {
+    grid.push([]);
+    for (let i = 0; i < 4; i++) {
+      const u = -150 + i * 100, v = -150 + j * 100;
+      const n = node(u * c - v * sn, u * sn + v * c);
+      grid[j].push(n);
+      els.push(n);
+    }
+  }
+  for (let j = 0; j < 4; j++) els.push(way(grid[j], { highway: 'residential', name: `Row ${j}` }));
+  for (let i = 0; i < 4; i++) els.push(way(grid.map((r) => r[i]), { highway: i === 1 ? 'tertiary' : 'residential', name: `Column ${i}` }));
+  return els;
+}
+// Signed distance of (x, z) from the union of the cut lines' offsets at radius r + extra (0 on the edge)
+function offsetDistance(cut, x, z, extra = 0) {
+  let best = Infinity;
+  for (const { pts, r } of cut) {
+    for (let k = 0; k + 1 < pts.length; k++) {
+      const [ax, az] = pts[k], [bx, bz] = pts[k + 1], dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz;
+      const t = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2)) : 0;
+      best = Math.min(best, Math.hypot(x - ax - dx * t, z - az - dz * t) - (r + extra));
+    }
+  }
+  return best;
+}
+// The road-side deviations of a ring (every 0.5 m along it, where an offset is within 1.5 m)
+function ringDeviations(ring, dist) {
+  const out = [];
+  const n = ring.length / 2;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n, ax = ring[i * 2], az = ring[i * 2 + 1], bx = ring[j * 2], bz = ring[j * 2 + 1];
+    const L = Math.hypot(bx - ax, bz - az);
+    for (let s = 0; s < L; s += 0.5) {
+      const d = dist(ax + ((bx - ax) * s) / L, az + ((bz - az) * s) / L);
+      if (Math.abs(d) < 1.5) out.push(Math.abs(d));
+    }
+  }
+  return out.sort((p, q) => p - q);
+}
+const pct = (sorted, p) => sorted[Math.min(sorted.length - 1, Math.floor(p * (sorted.length - 1)))];
+
+test('blocks (CC-ROADS): on a diagonal grid the curb ring follows the drawn ribbon\'s edge, not a 1 m raster stair', () => {
+  const els = diagonalFixture();
+  const box = { x0: -200, x1: 200, z0: -200, z1: 200 };
+  const { cut, roadGraph } = buildRoads(els, box);
+  const { blocks } = buildBlocks(cut, [], box, { res: 1, sidewalk: 1.8, minArea: 150, minHole: 10 });
+  const { blocks: raster } = buildBlocks(cut, [], box, { res: 1, sidewalk: 1.8, minArea: 150, minHole: 10, snap: false });
+  assert.ok(blocks.length >= 1 && blocks.length === raster.length, `${blocks.length} blocks`);
+  // the cut lines are the road graph's links at width / 2: the ribbon gf-drape.js drapes
+  assert.equal(cut.length, roadGraph.links.length);
+  for (const [i, l] of roadGraph.links.entries()) assert.equal(cut[i].r, l[6] / 2);
+  const curb = blocks.flatMap((b) => ringDeviations(b.curb, (x, z) => offsetDistance(cut, x, z)));
+  const before = raster.flatMap((b) => ringDeviations(b.curb, (x, z) => offsetDistance(cut, x, z)));
+  // snapped: on the edge within the 0.1 m rounding; the raster's outline wandered several times that
+  assert.ok(pct(curb, 0.5) <= 0.04 && pct(curb, 0.99) <= 0.08, `curb deviation p50 ${pct(curb, 0.5)} p99 ${pct(curb, 0.99)}`);
+  assert.ok(pct(before, 0.9) > 3 * pct(curb, 0.9), `the raster outline: p90 ${pct(before, 0.9)}`);
+  // no stair: along a straight street the ring's edges are long, not 1 m jogs
+  const edges = blocks.flatMap((b) => {
+    const r = b.curb, n = r.length / 2, out = [];
+    for (let i = 0; i < n; i++) { const j = (i + 1) % n; out.push(Math.hypot(r[j * 2] - r[i * 2], r[j * 2 + 1] - r[i * 2 + 1])); }
+    return out;
+  });
+  assert.ok(Math.max(...edges) > 60, 'a block side is one straight edge');
+  // the property line: the band in from the curb, on the offset at r + band
+  const lot = blocks.filter((b) => b.lot).flatMap((b) => ringDeviations(b.lot, (x, z) => offsetDistance(cut, x, z, 1.8)));
+  assert.ok(lot.length > 0 && pct(lot, 0.99) <= 0.08, `lot deviation p99 ${pct(lot, 0.99)}`);
+});
+
+test('blocks (CC-ROADS): the snapping steps', () => {
+  // one road along x, curb radius 4: a point 0.4 m off its edge moves onto it; one 3 m off is left alone
+  const G = capsuleGrid([{ pts: [[-50, 0], [50, 0]], r: 4 }], 4);
+  assert.deepEqual(snapPoint(G, 10, 4.4, 0).map((v) => +v.toFixed(6)), [10, 4]);
+  assert.deepEqual(snapPoint(G, 10, -3.7, 0).map((v) => +v.toFixed(6)), [10, -4]);
+  assert.equal(snapPoint(G, 10, 7, 0), null);
+  assert.deepEqual(snapPoint(G, 10, 6.5, 2.7).map((v) => +v.toFixed(6)), [10, 6.7], 'a lot line at r + band');
+  // a junction: two roads crossing; a point near the corner settles where the two offsets cross
+  const X = capsuleGrid([{ pts: [[-50, 0], [50, 0]], r: 4 }, { pts: [[0, -50], [0, 50]], r: 3 }], 4);
+  const c = snapPoint(X, 2.9, 3.7, 0); // inside both offsets: out of the deeper, then the other
+  assert.ok(Math.abs(c[0] - 3) < 0.01 && Math.abs(c[1] - 4) < 0.01, `corner ${c}`);
+  // a stair-stepped ring beside the road: snapped, its road side is straight
+  const stair = [];
+  for (let x = -20; x <= 20; x += 1) stair.push([x, 4 + ((x + 20) % 2 ? 0.5 : -0.4)]);
+  stair.push([20, 30], [-20, 30]);
+  const { ring, snapped } = snapRing(stair, G, 0);
+  assert.ok(snapped > 40, `${snapped} samples snapped`);
+  for (const [x, z] of ring) if (z < 4 + SNAP.reach) assert.ok(Math.abs(z - 4) < 1e-6, `(${x}, ${z}) on the edge`);
+  // a bow-tie is cut back to one loop; a spike left by rounding is dropped
+  const bow = cutLoops([[0, 0], [10, 0], [10, 10], [5, -1], [0, 10]]);
+  assert.ok(bow && bow.length >= 3);
+  assert.deepEqual(tidyRing([[0, 0], [10, 0], [10, 0], [10, 10], [10, 5], [10, 10], [0, 10]]), [[0, 0], [10, 0], [10, 10], [0, 10]]);
+  assert.equal(SNAP.step, 0.5);
+});
+
 // --- The generated js/gf-geodata.js ------------------------------------------------------------------------------
 const GF = built ? (await import(pathToFileURL(OUT).href)).GF_GEO : null;
 
@@ -270,6 +371,51 @@ for (const street of ['Glen Street', 'Warren Street']) {
     assert.ok(inGeo, `${street} is in OSM but missing from the road graph`);
   });
 }
+
+test('gf-geodata (CC-ROADS): curbs on the ribbon edges, lot lines a band in; widths from tags, lanes and defaults', { skip: (!built && NOT_BUILT) || (!fetched && NOT_FETCHED), timeout: 300000 }, () => {
+  const roads = JSON.parse(fs.readFileSync(path.join(RAW, 'osm_gf_roads.json'), 'utf8'));
+  const { cut, stats, roadGraph } = buildRoads(roads.elements);
+  // widths: OSM tag first, then lanes x LANE_WIDTH, then the class default (the extract has no usable width tags)
+  assert.deepEqual(stats.widthSource, { width: 0, lanes: 781, default: 3532 });
+  assert.equal(LANE_WIDTH, 3.3);
+  const { names, classes, links } = roadGraph;
+  const widthsOf = (name) => [...new Set(links.filter((l) => names[l[2]] === name).map((l) => l[6]))].sort((p, q) => p - q);
+  // Glen Street: every way has a lanes tag (2, 3 or 4 x 3.3 m); OSM counts travel lanes, not parking, so downtown it is
+  // 6.6 m curb to curb (flagged for Dave in CC-ROADS; only 5 ways in the extract carry a parking tag)
+  assert.deepEqual(widthsOf('Glen Street'), [6.6, 9.9, 13.2]);
+  assert.deepEqual(widthsOf('Logan Avenue'), [8], 'a residential street: the class default');
+  assert.ok(links.filter((l) => classes[l[3]] === 'service').every((l) => l[6] === WIDTH_DEFAULTS.service || l[5] > 0));
+  // the curb rings and lot lines: a grid of the cut segments for the distance (the whole city: sample every 4th block)
+  const segs = [];
+  for (const { pts, r } of cut) for (let k = 0; k + 1 < pts.length; k++) segs.push([...pts[k], ...pts[k + 1], r]);
+  const C = 40, grid = new Map();
+  for (const sg of segs) {
+    const m = sg[4] + 6;
+    for (let i = Math.floor((Math.min(sg[0], sg[2]) - m) / C); i <= Math.floor((Math.max(sg[0], sg[2]) + m) / C); i++) {
+      for (let j = Math.floor((Math.min(sg[1], sg[3]) - m) / C); j <= Math.floor((Math.max(sg[1], sg[3]) + m) / C); j++) {
+        const k = i * 100000 + j;
+        if (!grid.has(k)) grid.set(k, []);
+        grid.get(k).push(sg);
+      }
+    }
+  }
+  const dist = (x, z, extra) => {
+    let best = Infinity;
+    for (const sg of grid.get(Math.floor(x / C) * 100000 + Math.floor(z / C)) || []) {
+      const dx = sg[2] - sg[0], dz = sg[3] - sg[1], l2 = dx * dx + dz * dz;
+      const t = l2 ? Math.max(0, Math.min(1, ((x - sg[0]) * dx + (z - sg[1]) * dz) / l2)) : 0;
+      best = Math.min(best, Math.hypot(x - sg[0] - dx * t, z - sg[1] - dz * t) - (sg[4] + extra));
+    }
+    return best;
+  };
+  const sample = GF.blocks.filter((_, i) => i % 4 === 0);
+  const curb = sample.flatMap((b) => ringDeviations(b.curb, (x, z) => dist(x, z, 0)));
+  const lot = sample.filter((b) => b.lot).flatMap((b) => ringDeviations(b.lot, (x, z) => dist(x, z, sidewalkBandAt(x, z))));
+  // until CC-ROADS the 1 m raster's outline sat p50 0.12, p90 0.32, p99 0.54 m off the ribbon
+  assert.ok(curb.length > 50000 && pct(curb, 0.5) <= 0.04 && pct(curb, 0.9) <= 0.08 && pct(curb, 0.99) <= 0.12,
+    `curb deviation p50 ${pct(curb, 0.5)} p90 ${pct(curb, 0.9)} p99 ${pct(curb, 0.99)}`);
+  assert.ok(lot.length > 50000 && pct(lot, 0.5) <= 0.04 && pct(lot, 0.99) <= 0.15, `lot deviation p50 ${pct(lot, 0.5)} p99 ${pct(lot, 0.99)}`);
+});
 
 test('gf-geodata: rebuilding from the raw extract reproduces js/gf-geodata.js byte for byte', { skip: (!built && NOT_BUILT) || (!fetched && NOT_FETCHED), timeout: 300000 }, () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gf-geodata '));

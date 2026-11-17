@@ -191,8 +191,11 @@ test('cars and pedestrians: the same obstacles, network and sidewalk tracks as C
   const all = net.edges.map((e) => routes.along(e));
   // CC-005e: the residential lots sit about 1 m further back (tools/gf/build-gf-geodata.mjs BLOCK_PARAMS), so CC-003's walking
   // lines detour round fewer of them (CC-003b: [2184, 9759]). CC-005f: the residential band narrowed again
-  // (a 0.9 m tree lawn), so the residential lots sit about 0.25 m nearer the curb (CC-005e: [2232, 8502])
-  assert.deepEqual([all.filter((l) => l.length).length, all.reduce((n, l) => n + l.length, 0)], [2229, 8569]);
+  // (a 0.9 m tree lawn), so the residential lots sit about 0.25 m nearer the curb (CC-005e: [2232, 8502]). CC-ROADS: the
+  // curb and lot rings are snapped onto the roadway offsets, so the residential lot line sits at the designed 2.7 m, about
+  // 0.15 m nearer than the raster put it: a few straight walking lines along long curved streets now meet a lot (CC-005f:
+  // [2229, 8569])
+  assert.deepEqual([all.filter((l) => l.length).length, all.reduce((n, l) => n + l.length, 0)], [2196, 8507]);
 });
 
 test('CC-003 and CC-004 untouched: their data, records, meshes and generators are byte-identical', () => {

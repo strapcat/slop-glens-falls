@@ -7,10 +7,10 @@ import { polygonContains } from './building-collision.js';
 // the Three Squares envelope (gf-downtown.js, approximate, Dave to confirm); everywhere else is residential.
 //
 // The width model (tools/gf/build-gf-geodata.mjs buildBlocks): each block's lot (property line) is drawn BAND metres in
-// from its curb, the downtown band where the envelope holds the cell and the residential band elsewhere. Measured on
-// the regenerated data the property line sits about RASTER_SHIFT further in than the parameter (the raster's half cell
-// and cell centres), so the bands as built are about 2.2 m downtown and (CC-005f) 2.85 m residential. In each band, from
-// the road:
+// from its curb, the downtown band where the envelope holds the cell and the residential band elsewhere. CC-ROADS: the
+// curb and lot rings are snapped onto the roadway's offset (the draped ribbon's edge, and that plus the band), so the
+// bands as built are the parameters: 1.8 m downtown and 2.7 m residential (until CC-ROADS the 1 m raster's outline put
+// them about 0.2 m further in, and the curb up to ~0.5 m either side of the ribbon). In each band, from the road:
 //   the curb      CURB_W of granite, its face REVEAL above the road (the road is ROAD_LIFT above the ground);
 //   a tree lawn   whatever is left, when that is at least LAWN_MIN (residential: about LAWN_TARGET, 0.9 m, Dave's
 //                 preview; CC-005e's ~1.3 m followed the city's 4 ft snow strip on Goodwin Ave and NYSDOT's 4-6 ft with
@@ -27,11 +27,9 @@ const SIDEWALK = {
   // ~1.3 m lawns too wide. A Dave-tuned default, narrower than the city's 4 ft snow strip and NYSDOT's 4-6 ft; change
   // it here and rebuild the geodata (tools/gf/build-gf-geodata.mjs) to retune. residentialBand follows from it.
   lawnTarget: 0.9,
-  // m: about how much further in than the generator's parameter the traced property line sits (the raster's half cell
-  // and cell centres). The line moves in steps: on the 1 m raster a residential parameter of 2.4 gives a band of about
-  // 2.6 m (a 0.8 m lawn), 2.5 or 2.6 one of about 2.85 m; the lawn is capped at LAWN_TARGET and the walk takes the
-  // rest (measured on the built data, tests/gf-sidewalk-appearance.test.mjs)
-  rasterShift: 0.2,
+  // m: how much further in than the generator's parameter the property line sits. CC-ROADS: 0, the lot ring is snapped
+  // onto the roadway's offset plus the band (CC-005e / CC-005f's 1 m raster outline sat about 0.2 m further in, in steps)
+  rasterShift: 0,
   curbW: 0.15, // m: the curb's top
   reveal: 0.13, // m: its face above the road surface
   roadLift: 0.03, // m: the draped road over the ground (gf-drape.js ROAD_LIFT)
@@ -46,7 +44,9 @@ const SIDEWALK = {
   // and within JUNCTION_R of a junction of three or more roads (the curb ramps and corner aprons where the walking lines
   // meet the crossings)
   junctionR: 12,
-  gutter: 0.45, // m of asphalt drawn beyond the curb face (covers the curb ring's raster offset from the ribbon)
+  // m of asphalt drawn beyond the curb face: CC-ROADS, a narrow gutter line (the curb ring now sits on the ribbon's edge,
+  // within ~0.1 m; CC-005e's 0.45 m covered the 1 m raster outline's offset from it)
+  gutter: 0.12,
   flag: 1.524, // m: 5 ft flags (tooled joints across the walk)
   // the walking lines (pedestrian-routes.js insets beyond the roadway, insetsFor()): two, LINE_MARGIN inside the walk's
   // road edge and LOT_MARGIN inside its lot line, measured at the edge's middle (downtown about 0.6 and 1.2 m, residential about 1.9 and 2.5 m); one in
@@ -95,6 +95,50 @@ const ringsDist = (rings, x, z) => {
       const j = (i + 2) % r.length;
       d = Math.min(d, segDist(x, z, r[i], r[i + 1], r[j], r[j + 1]));
     }
+  }
+  return d;
+};
+
+// CC-ROADS: the same distance through a grid of the rings' edges (built once per ring list), searched outwards cell by
+// cell and stopped as soon as no further cell can hold a nearer edge: exact (the same value as ringsDist), but a block
+// whose snapped rings have hundreds of vertices no longer costs hundreds of edges per sample
+const RING_CELL = 8;
+function ringGrid(rings) {
+  const cells = new Map();
+  let i0 = Infinity, i1 = -Infinity, j0 = Infinity, j1 = -Infinity;
+  for (const r of rings) {
+    for (let i = 0; i < r.length; i += 2) {
+      const j = (i + 2) % r.length;
+      const seg = [r[i], r[i + 1], r[j], r[j + 1]];
+      const a0 = Math.floor(Math.min(seg[0], seg[2]) / RING_CELL), a1 = Math.floor(Math.max(seg[0], seg[2]) / RING_CELL);
+      const b0 = Math.floor(Math.min(seg[1], seg[3]) / RING_CELL), b1 = Math.floor(Math.max(seg[1], seg[3]) / RING_CELL);
+      for (let ci = a0; ci <= a1; ci++) {
+        for (let cj = b0; cj <= b1; cj++) {
+          const k = ci * 100000 + cj;
+          if (!cells.has(k)) cells.set(k, []);
+          cells.get(k).push(seg);
+        }
+      }
+      i0 = Math.min(i0, a0); i1 = Math.max(i1, a1); j0 = Math.min(j0, b0); j1 = Math.max(j1, b1);
+    }
+  }
+  return { cells, i0, i1, j0, j1 };
+}
+const gridDist = (g, x, z) => {
+  const ci = Math.floor(x / RING_CELL), cj = Math.floor(z / RING_CELL);
+  const reach = Math.max(Math.abs(ci - g.i0), Math.abs(ci - g.i1), Math.abs(cj - g.j0), Math.abs(cj - g.j1));
+  let d = Infinity;
+  for (let k = 0; k <= reach; k++) {
+    // the cells at Chebyshev ring k round (ci, cj)
+    for (let i = ci - k; i <= ci + k; i++) {
+      for (let j = cj - k; j <= cj + k; j++) {
+        if (Math.max(Math.abs(i - ci), Math.abs(j - cj)) !== k) continue;
+        const list = g.cells.get(i * 100000 + j);
+        if (list) for (const sg of list) d = Math.min(d, segDist(x, z, sg[0], sg[1], sg[2], sg[3]));
+      }
+    }
+    // an edge in a cell k + 1 rings out is at least k cells (k * RING_CELL m) away
+    if (d <= k * RING_CELL) break;
   }
   return d;
 };
@@ -196,6 +240,9 @@ function createGfSidewalks({ geo, blocks, ground }) {
 
   const curbRings = (b) => b.curbRings || (b.curbRings = [b.polygon.outer, ...b.polygon.holes].map((r) => r.flatMap((p) => [p.x, p.z])));
   const lotRings = (b) => b.lotRings || (b.lotRings = b.lot ? [b.lot.outer, ...b.lot.holes].map((r) => r.flatMap((p) => [p.x, p.z])) : []);
+  // CC-ROADS: distances to a block's curb / lot rings through a grid of their edges (exact, see gridDist)
+  const curbDist = (b, x, z) => gridDist(b.curbGrid || (b.curbGrid = ringGrid(curbRings(b))), x, z);
+  const lotDist = (b, x, z) => (b.lot ? gridDist(b.lotGrid || (b.lotGrid = ringGrid(lotRings(b))), x, z) : Infinity);
   const inLot = (b, x, z) => !!b.lot && polygonContains(b.lot, x, z);
   // A roadside spot of a band: a road's edge no further than the band (and the curb's raster offset) away
   const roadside = (x, z, curbD) => roadEdge(x, z) < curbD + 1.0;
@@ -233,7 +280,7 @@ function createGfSidewalks({ geo, blocks, ground }) {
     if (!b) return false;
     if (!b.lot) return true;
     if (inLot(b, x, z)) return false;
-    const lotD = ringsDist(lotRings(b), x, z), curbD = ringsDist(curbRings(b), x, z);
+    const lotD = lotDist(b, x, z), curbD = curbDist(b, x, z);
     return lotD <= layout(curbD, lotD).walkOut + 0.05 || nearCorner(b, x, z) || nearJunction(x, z);
   }
 
@@ -242,7 +289,7 @@ function createGfSidewalks({ geo, blocks, ground }) {
   function walkAt(x, z) {
     const b = blocks.blockAt(x, z);
     if (!b || !b.lot || inLot(b, x, z)) return false;
-    const lotD = ringsDist(lotRings(b), x, z), curbD = ringsDist(curbRings(b), x, z);
+    const lotD = lotDist(b, x, z), curbD = curbDist(b, x, z);
     if (!roadside(x, z, curbD + lotD)) return false;
     return lotD <= layout(curbD, lotD).walkOut + 0.05 || nearCorner(b, x, z) || nearJunction(x, z);
   }
@@ -252,7 +299,7 @@ function createGfSidewalks({ geo, blocks, ground }) {
   function bandAt(x, z) {
     const b = blocks.blockAt(x, z);
     if (!b || !b.lot) return null;
-    const q = ringsNearest(lotRings(b), x, z), curbD = ringsDist(curbRings(b), x, z);
+    const q = ringsNearest(lotRings(b), x, z), curbD = curbDist(b, x, z);
     const lot = inLot(b, x, z);
     let nx = (x - q.x) * (lot ? -1 : 1), nz = (z - q.z) * (lot ? -1 : 1);
     const l = Math.hypot(nx, nz);
@@ -284,9 +331,9 @@ function createGfSidewalks({ geo, blocks, ground }) {
   function raiseExact(x, z) {
     const b = blocks.blockAt(x, z);
     if (!b) return 0;
-    const curbD = ringsDist(curbRings(b), x, z);
+    const curbD = curbDist(b, x, z);
     if (!b.lot || !inLot(b, x, z)) {
-      const lotD = b.lot ? ringsDist(lotRings(b), x, z) : 0;
+      const lotD = b.lot ? lotDist(b, x, z) : 0;
       if (!roadside(x, z, curbD + lotD)) return 0;
       // a driveway: up from the depressed curb across the apron (a lawn's width) or the walk (downtown)
       if (serviceEdge(x, z) < 0.3) {
@@ -296,7 +343,7 @@ function createGfSidewalks({ geo, blocks, ground }) {
       }
       return S.top;
     }
-    const lotD = ringsDist(lotRings(b), x, z);
+    const lotD = lotDist(b, x, z);
     if (lotD >= S.ramp || !roadside(x, z, curbD)) return 0;
     return S.top * (1 - lotD / S.ramp);
   }
@@ -369,14 +416,14 @@ function createGfSidewalks({ geo, blocks, ground }) {
   }
   function lotAt(entry, sm) {
     const b = entry.block;
-    const curbD = ringsDist(curbRings(b), sm.x, sm.z);
+    const curbD = curbDist(b, sm.x, sm.z);
     if (!(curbD < S.residentialBand + 1.6) || !roadside(sm.x, sm.z, curbD)) return { roadside: false };
     let { walkOut, lawn } = layout(curbD, 0);
     // a corner: paved on to the curb, as far along (sm's normal, mitred at a vertex) as stays behind the curb's top
     if (sm.toCorner <= S.pad || nearJunction(sm.x, sm.z)) {
       const behind = (d) => {
         const x = sm.x + sm.nx * d, z = sm.z + sm.nz * d;
-        return blocks.blockAt(x, z) === b && ringsDist(curbRings(b), x, z) >= S.curbW;
+        return blocks.blockAt(x, z) === b && curbDist(b, x, z) >= S.curbW;
       };
       let lo = walkOut, hi = curbD * 2 + 1;
       if (behind(lo)) {
@@ -400,7 +447,7 @@ function createGfSidewalks({ geo, blocks, ground }) {
     const px = ox + e.rx * side * probe, pz = oz + e.rz * side * probe;
     const b = blocks.blockAt(px, pz);
     if (!b || !b.lot || inLot(b, px, pz)) return S.insets;
-    const lotD = ringsDist(lotRings(b), px, pz), curbD = ringsDist(curbRings(b), px, pz);
+    const lotD = lotDist(b, px, pz), curbD = curbDist(b, px, pz);
     const { walkOut } = layout(curbD, lotD);
     const lotOff = probe + lotD; // the lot line from the centre line
     const near = lotOff - walkOut + S.lineMargin - e.half, far = lotOff - S.lotMargin - e.half;

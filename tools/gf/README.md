@@ -117,8 +117,38 @@ The method follows `tools/geo-blocks.mjs`, with parameters in `BLOCK_PARAMS`:
    `sidewalkBandAt`, 1.8 m in the downtown envelope (`js/gf-downtown.js`) and (CC-005f) 2.5 m elsewhere; a plain number still
    gives one band all round.
 
+7. CC-ROADS, snapping: each traced ring (curb and lot, outlines and holes) is destaired, resampled every 0.5 m, and
+   every sample within 1.25 m of a roadway's offset is moved onto it: the curb ring onto each cut line's offset at its
+   curb radius (`width / 2`, the same centreline and width `gf-drape.js` drapes the ribbon from), the lot ring onto that
+   plus the band. Near a junction a sample settles where two offsets cross. Samples further from any road (water, the
+   bbox edge) keep the destaired trace. Small bow-ties are cut out (the larger loop is kept) and rounding spikes
+   dropped. The ring is then simplified within 0.1 m (`SNAP`). A ring that would not stay simple keeps the step-3
+   outline; on the current extract all 732 rings snap.
+
 The tracer throws if a contour walk runs longer than a closed outline can be (4 × the island's cells), so a broken
 outline stops the build instead of reaching the output.
+
+**Straight curbs (CC-ROADS).** Dave walked the CC-MINIMAP preview on his iPhone and found many streets jagged and
+uneven in width. The 3D road is a separate draped ribbon whose edges are already a smooth offset of the OSM
+centreline. The granite curb, its gutter and the walk followed the block ring, which was a 1 m raster's outline. On
+straight streets that outline wandered either side of the ribbon edge in long chords:
+
+| curb ring vs ribbon edge (every 0.5 m, 0.51 M samples) | p50 | p90 | p99 | over 0.3 m |
+| --- | --- | --- | --- | --- |
+| before (destaired raster, RDP 0.5 m) | 0.12 m | 0.32 m | 0.54 m | 11.8 % |
+| after (snapped, step 7) | 0.02 m | 0.06 m | 0.10 m | 0.1 % (water and bbox edges) |
+
+The terrain under the curb (CC-005b) made the wobble easy to see, but it was not the cause, and the DEM is unchanged.
+On the mobile tier a second effect remains: with no MSAA at pixel ratio 1, every high-contrast diagonal edge
+pixel-steps on a phone. That is screen aliasing, not geometry; CC-ROADS does not change PR #19's tier settings.
+
+**Widths** are unchanged: `roadWidth()` takes a parseable `width` tag, else `lanes` × 3.3 m, else the class default
+(motorway / trunk 11, primary / secondary 12, tertiary 10, unclassified / residential 8, living_street 6, service 5,
+`*_link` 6 m). On the current extract: 0 links from `width` tags, 781 from `lanes`, 3,532 class defaults. Examples:
+Glen Street 6.6 m (44 links, `lanes=2`), 9.9 m (1) and 13.2 m (5, `lanes=4`); Logan Avenue 8 m (residential default); a
+driveway 5 m (service default). OSM counts travel lanes, not parking, so Glen Street downtown is a narrow 6.6 m curb to
+curb. Only 5 ways in the extract carry a parking tag, too few for a rule, so nothing is added (flagged for Dave). The
+widths are today's OSM, not 1993.
 
 Block-bounding roads are all fetched roads except tunnels and `service` ways (driveways, parking aisles, untagged
 service roads), which run into lots. `service=alley` does bound blocks. All service ways stay in the road graph.
@@ -913,15 +943,15 @@ freehand shape.
 
 | | generator band | curb to lot line (median) | curb | lawn | walk |
 | --- | --- | --- | --- | --- | --- |
-| downtown | 1.8 m | 2.2 m | 0.15 m granite | none (under 0.6 m is paved) | ~2.05 m, to the curb |
-| residential (CC-005f) | 2.5 m | 2.85 m | 0.15 m granite | 0.9 m grass (`lawnTarget`, 3 ft; under 0.6 m is paved) | at least 1.65 m (5.4 ft), median ~1.8 m |
+| downtown | 1.8 m | 1.8 m | 0.15 m granite | none (under 0.6 m is paved) | 1.65 m, to the curb |
+| residential (CC-005f) | 2.7 m | 2.7 m | 0.15 m granite | 0.9 m grass (`lawnTarget`, 3 ft; under 0.6 m is paved) | 1.65 m (5.4 ft) |
 
-CC-005e had 2.8 m, a ~3.1 m band and a ~1.3 m lawn. CC-005f narrows the lawn to `SIDEWALK.lawnTarget` (0.9 m) after
+CC-005e had 2.8 m, a ~3.1 m band and a ~1.3 m lawn. CC-005f narrowed the lawn to `SIDEWALK.lawnTarget` (0.9 m) after
 Dave's preview. The generator's residential parameter follows from it: `curbW + lawnTarget + walkW − rasterShift`.
-The property line is traced on a 1 m raster, so it moves in steps: 2.4 m gives a band of about 2.6 m (a 0.8 m lawn,
-paved wherever the band is narrower), and 2.5 or 2.6 m gives about 2.85 m. The layout caps the lawn at `lawnTarget`,
-and the walk takes the rest of the band, so it is never narrower than 1.65 m. To retune, change `lawnTarget` and
-rebuild the geodata.
+Until CC-ROADS the property line was traced on a 1 m raster and moved in steps: the bands were about 2.2 m downtown and
+2.85 m residential. CC-ROADS snaps the lot ring onto the road's offset plus the band, so `rasterShift` is 0 and the bands
+are as built: 1.8 m and 2.7 m. The layout caps the lawn at `lawnTarget`, and the walk takes the rest of the band. To
+retune, change `lawnTarget` and rebuild the geodata.
 
 **Heights.** The road is ROAD_LIFT (0.03 m) above the ground. The curb face rises 0.13 m from under the road to the
 top, 0.16 m above the ground. The walk, lawn and curb top stand at that height; a 0.5 m ramp inside the lot line takes it
@@ -932,8 +962,9 @@ unchanged.
 **What is drawn** (`gf-sidewalk-strips.js`; only where a road runs beside the band, so not along water, the bbox edge
 or alleys):
 
-- **Curb:** granite face and top along the curb ring, joints every 1.83 m, darker on the face. A 0.45 m asphalt gutter
-  beyond it covers the curb ring's raster offset (±0.4 m, 90% of samples) from the road ribbon's edge.
+- **Curb:** granite face and top along the curb ring, joints every 1.83 m, darker on the face, with a 0.12 m asphalt gutter
+  line beyond it. CC-ROADS: the curb ring sits on the road ribbon's edge (p99 0.1 m). CC-005e's 0.45 m gutter covered
+  the raster outline's offset of about ±0.4 m.
 - **Walk:** concrete strip out from the lot line, tooled joints every 1.524 m along it, faded with distance.
 - **Lawn:** mown grass between walk and curb, residential only.
 - **Corners:** paved to the curb within 3.5 m (along the lot line) of a lot corner turning 36° or more, and within 12 m
@@ -971,7 +1002,12 @@ materials carry their own copies of its small TSL helpers.
 - **Trees and the walk:** see **Trees off the walk (CC-005f)** below. Trees are still not pedestrian obstacles (as in
   CC-005), and there are no tree pits.
 - **No car-curb collision:** cars ride up a curb (their ground includes the raise).
-- **Curves:** a curb follows the 1 m raster outline, simplified to 0.5 m, so curb returns are faceted.
+- **Curves:** CC-ROADS: a curb follows the roadway's offset, simplified within 0.1 m. Curb returns at junctions are
+  where the two offsets cross, sharp rather than rounded, since OSM has no corner radii. Dead ends follow the curb
+  radius round.
+- **Distances:** `gf-sidewalks.js` measures a sample's distance to its block's curb and lot rings through a per-block
+  grid of their edges (8 m cells, searched outwards; exact). The snapped rings have more vertices, and without the grid
+  the slowest cell's strips took twice as long to build.
 
 ### Trees off the walk (CC-005f)
 
