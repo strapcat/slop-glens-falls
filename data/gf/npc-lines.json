@@ -1,32 +1,610 @@
 {
   "randos": {
-    "day": [
-      "PLACEHOLDER — Dave writes this (rando, day 1)",
-      "PLACEHOLDER — Dave writes this (rando, day 2)",
-      "PLACEHOLDER — Dave writes this (rando, day 3)"
-    ],
-    "night": [
-      "PLACEHOLDER — Dave writes this (rando, night 1)",
-      "PLACEHOLDER — Dave writes this (rando, night 2)",
-      "PLACEHOLDER — Dave writes this (rando, night 3)"
-    ],
-    "any": [
-      "PLACEHOLDER — Dave writes this (rando, any time 1)",
-      "PLACEHOLDER — Dave writes this (rando, any time 2)"
-    ]
+    "day": [],
+    "night": [],
+    "any": [],
+    "groups": {
+      "thrill-hill-talk": {
+        "name": "Townsfolk",
+        "any": [
+          "You going up to Thrill tonight? Everybody's going after the game.",
+          "Thrill Hill's up past Crandall Park, in Cole's Woods. Just follow the woodsmoke.",
+          "Bring cash for a cup and a flashlight for the walk home.",
+          "Don't tell my mother I told you where Thrill Hill is.",
+          "It's a long walk in the dark. Once you see the fire, you're close.",
+          "Cole's Woods is ski trails during the day. Friday night it's a whole other thing.",
+          "It's somewhere by the Camel Humps, I think. If you end up falling down Killer Hill you're lost.",
+          "My older brother says Thrill was better in his day. He says that about everything.",
+          "I went once. I came home smelling like a campfire, and my dad knew right away.",
+          "An old guy at the diner says they were partying at Thrill Hill back in the seventies. Hard to picture.",
+          "Somebody always brings a boombox, and somebody always brings the same Rush tape.",
+          "If you go, bring bug spray. Or a cigar. Apparently those work too.",
+          "I bet the parks guys find cups up there every Saturday morning. Poor guys.",
+          "I heard there's a keg at Thrill tonight. I heard that last week too.",
+          "Thrill Hill's the only place in town where you can do a proper keg stand",
+          "My cousin swears Henry Crandall's ghost walks those woods. My cousin also believes in Bigfoot.",
+          "Skip Thrill Hill? Sure, if you’re a nerd.",
+          "You walk more than a mile out there in the dark, and nobody remembers the walk home.",
+          "Thrill Hill? Never heard of it. Ask me again after dark.",
+          "Sick of the argument. If I hear one more Bonham versus Peart at Thrill, I'm walking home through the woods alone.",
+          "Sick of the argument. Those two have been arguing about drummers since tenth grade. It's always a tie, and they're always mad."
+        ]
+      },
+      "gf-history-talk": {
+        "name": "Townsfolk",
+        "any": [
+          "Before it was Glens Falls, folks called it Wing's Falls, after old Abraham Wing. They also called it Wing's Corners and Pearl Village.",
+          "They say Abraham Wing lost the name of the falls to Colonel Glen in a card game. The history books insist it was a wine supper, but that's just the official story.",
+          "Legend has it Colonel Glen raced to Schenectady, printed up handbills, and had 'em tacked up in every tavern from here to Albany, after he won the name off Wing. Fastest name change ever.",
+          "There's an old letter from Mr. Glen to Mr. Wing, signed 'Glen's Falls, April 29th, 1788.' That's what the history books use to pin down when the name started, card game or not.",
+          "One old list of Indian place names says Chepontuc was a name for the falls. It means 'a difficult place to climb or get around.'",
+          "At the falls the river splits into three channels, with big black limestone piers standing right on the edge. Pretty sight, I'll say that.",
+          "Ask three people how high the falls are and you'll hear forty feet, fifty feet and sixty feet. The history books can't agree either.",
+          "The caves under the falls are real, but the old Queensbury history book calls the adventures in The Last of the Mohicans 'wholly fictitious.' Don't tell the tourists.",
+          "One of Cooper's biographers says he visited the cave with friends in 1825, and a pal said it was 'the very scene for a romance.' Cooper said he'd write one.",
+          "In 1777 Burgoyne's raiders burned the settlers' homes, and by 1780 the last pioneers had cleared out for Quaker Hill. Wasn't much left but ashes.",
+          "The Feeder Canal runs seven miles over to Fort Edward, with thirteen locks. They dug it in 1824, but boats couldn't really use it till 1832.",
+          "Around 1830 folks figured this town was finished, with the nearby timber gone. Then the Feeder Canal opened and the log drives started, and lumber turned into big business.",
+          "That Big Boom up at the Big Bend is a barricade of timbers, iron and chains. They put it in around 1850 so the spring floods couldn't carry all the logs away.",
+          "In 1872 more than a million market logs came down to the Big Boom in a single season. A market log's thirteen feet long, mind you.",
+          "An 1885 history says only Rockland, Maine made as much lime as Glens Falls, and ours was the purest and whitest around. Those kilns burned day and night.",
+          "The black marble block New York sent for the Washington Monument, the one marked 'New York — Excelsior,' came out of a Glens Falls quarry.",
+          "The Great Fire hit May 31st, 1864, and burned out nearly the whole business district. Only three stores were left standing.",
+          "The Republican newspaper lost its presses in the 1864 fire, but it still put out an extra the very next day, printed over at the Sandy Hill Herald.",
+          "A second big fire hit April 26th, 1902. Calvin Robbins' blacksmith shop, built around 1830, is one of the few buildings that came through both fires.",
+          "The Fowler shirt and collar factory on Glen Street burned in that 1902 fire. Two of its officers started over on Lawrence Street, and that's the Shirt Factory.",
+          "The Glens Falls Collar Company started up in May of 1876. A few years later the Libby factory on Park Street could turn out about two hundred shirts and six hundred dozen collars and cuffs a day.",
+          "Dr. Holden wrote the big history of Queensbury, and he collected Americana, too. Crandall Library bought his collection, about 2,500 pieces, back in 1919.",
+          "The Glens Falls Insurance Company started in 1849 as a little local mutual outfit. The history books say none of the founders figured it'd make our name known all over the country.",
+          "We were a village from 1839, and we didn't become a city till 1908. The Morning Post ran a big campaign for it.",
+          "Charles Evans Hughes was born right here on Maple Street in 1862, at the Baptist parsonage. He grew up to be Chief Justice, and as governor he signed the bill that made us a city.",
+          "Back in 1831 the Messenger bragged we had about a thousand people, four lawyers, three doctors and one minister.",
+          "After more than a century with no police, the village hired four uniformed men in 1874. Leave your horse untied in the street and it'd cost you one to twenty-five dollars.",
+          "When the new water works went in around 1873, the firemen got so much pressure they blew the front right off a store putting out a little fire.",
+          "The horse cars to Sandy Hill and Fort Edward started in 1885. Then in 1891 a trolley line took their place.",
+          "When the railroad to Fort Edward opened on the Fourth of July, 1869, it ran eleven round trips, and the rides were free for everybody.",
+          "Finch, Pruyn started in 1865 selling lumber, and around 1904 it merged with a few outfits and switched to making paper. That mill sits on a narrow strip between the Feeder Canal and the river.",
+          "In the 1890s Dr. Bemis ran an eye sanitarium here, eight buildings' worth, and thousands came for his cures. It ran from 1893 to 1902.",
+          "Hyde House on Warren Street was finished in 1912, built like a Florentine palace for Charlotte Pruyn Hyde and her husband Louis. Her father was Samuel Pruyn of Finch, Pruyn.",
+          "Mrs. Hyde set up a trust in 1952 to turn her house and her art into a museum for the town. It opened in 1963, three months after she passed.",
+          "Henry Crandall wasn't much of a reader himself, but in 1892 he put up twenty-five hundred dollars and a room for a library. He said folks could take the books as far as Quebec if they wanted.",
+          "Henry Crandall's buried in Crandall Park under a tall granite shaft with a five-pointed star on top. That star was his log mark.",
+          "Henry Crandall bought Cole's Woods in 1901 from Norman Cole, the Messenger editor. He dredged ponds back there and built a swimming pool, too.",
+          "In 1944 Look magazine ran a whole series calling Glens Falls 'Hometown, U.S.A.' They took over five thousand photos, and the name's stuck ever since.",
+          "Some folks say Look picked us because the War Department's Robert Patterson grew up here, and the Army helped them get color film. Nobody's sure.",
+          "The Civic Center opened May 18th, 1979, on a corner that'd sat empty for over a decade. Then in 1980 Mickey Luce, a local Olympian, carried the Olympic torch in.",
+          "My grandfather swore Abraham Wing lost the name of these falls to Colonel Glen over a hand of cards. Said the Wing family never played cards again.",
+          "They say Wing put the name of the falls right on the table, and Glen took it. I wouldn't bet a town's name, but I wasn't there.",
+          "Was it poker or whist? Everybody argues about that, but they all say Wing lost the falls in a card game.",
+          "Folks around here will tell you Wing tried a bad bluff and Glen called it, and that's how we got the name. You won't find that story in Holden's book.",
+          "I play a little cards at this counter, nothing big. They say old Wing bet the name of the falls, and I think about that every time I stay in too long."
+        ]
+      },
+      "hockey-red-wings": {
+        "name": "Red Wings fan",
+        "any": [
+          "Four Calder Cups since 1981, and this town you can walk across in twenty minutes. Think about that.",
+          "May 20th, 1981, Game 6 against Maine. We clinched right here at the Civic Center. Six thousand people, and I was one of 'em.",
+          "In '86 we put away Hershey in Game 6 at home. Sixty-four hundred in the building. Biggest crowd ever, at the time.",
+          "Down three games to none to Hershey in '89, and we won four straight. Four! Don't ever tell me hockey's boring.",
+          "Bill Dineen got us the '86 and '89 Cups. Man could coach.",
+          "Melrose and the '92 team beat St. John's in seven. Funny thing, both teams lost every home game in that series.",
+          "Merkosky's got the Red Wings record for goals, assists, points and games. Good luck catching him.",
+          "Jody Gage was wearing the sweater when the building was brand new. Original Civic Center hero.",
+          "'92 Cup run: New Haven, Springfield, Rochester, then St. John's. I can name every round.",
+          "Keep your eye on the kid in net, Osgood. He looks like the real deal to me.",
+          "First game ever, October 11th, 1979. We beat Hershey, 8–3. I still have the ticket stub.",
+          "We've made the playoffs every spring since 1980 except '85. Don't bring up '85.",
+          "Hershey's the team we love to hate. We went through 'em on the way to the Cup in '81, '86 and '89.",
+          "We swept Capital District in four straight this spring. Best week of my year.",
+          "Then Springfield took us in seven. Seven! I'm still not over it.",
+          "Mike Ilitch owns Detroit, and he owns us too. Detroit's the big club, but Glens Falls is where the Wings get built.",
+          "Red and white, same sweater as Detroit, winged wheel on the front. You put it on, you're family.",
+          "The Civic Center opened in '79 and I haven't missed a home opener since. Forty-eight hundred seats, and I say none of 'em are bad.",
+          "Crowds dipped under four thousand a night a couple years back. Bring a friend, people. Bring three.",
+          "Newell Brown's got the bench now that Melrose is gone. Different guy, same goal: another Cup.",
+          "You hear Rodin got into it with Norm Maracle at Dango's? Goalie still had quick hands.",
+          "I was at Dango's that night. One minute it's wings and a pitcher, next minute Rodin and Maracle are nose to nose.",
+          "Rodin says he won. Maracle's buddies say Maracle won. The bartender says everybody's paying for that chair.",
+          "Never pick a fight with a goalie. They spend all night getting hit with pucks for fun.",
+          "Haus and Norm Maracle almost came to blows at the Country Club over a pitching wedge. A pitching wedge!",
+          "Norm left his wedge by the green, Haus picked it up, and now it's a whole thing.",
+          "Haus swears he was just holding it for him. Maracle says Haus was eyeing that wedge all summer.",
+          "Last I heard, the wedge is still in Haus's bag. Somebody call the Thrill Cop."
+        ]
+      },
+      "hockey-icehawks": {
+        "name": "IceHawks fan",
+        "any": [
+          "Red Wings are gone, but hockey isn't. The IceHawks are in town.",
+          "These guys came up from Winston-Salem, North Carolina. I'm still trying to picture hockey down there.",
+          "First game was in Flint, and we lost 7–2. We'll forgive 'em. It's October.",
+          "UHL's not the AHL, but I'll take a hot dog and a body check any Friday.",
+          "The Red Wings won four Cups here. I say the IceHawks go after the Colonial Cup.",
+          "Red, black and gray. That's a jersey with an attitude.",
+          "Flint, Port Huron, Kalamazoo. This team is teaching me Michigan geography.",
+          "Make the playoffs, and this whole town shows up in red. Watch.",
+          "They say the Coyotes' farm team might send us some players. Phoenix! To Glens Falls!",
+          "I miss the Red Wings, sure. But the IceHawks can skate, and the seats are the same.",
+          "Barry Melrose won a Calder Cup in this building in '92. I'm just saying, a guy like that could help.",
+          "'Adirondack IceHawks.' Say it fast. It's a mouthful, but I love it.",
+          "Forty-eight hundred seats, and the Civic Center's still our house.",
+          "Cheap seats, loud crowd, nobody here is shy about yelling at the refs.",
+          "Hockey in Glens Falls goes back to 1979, thanks to the Red Wings. The IceHawks are carrying the torch.",
+          "I bought a jersey with a hawk on it. My wife asked if I'd joined a gang.",
+          "Kalamazoo Wings? Another Wings? Hockey's just Wings everywhere.",
+          "When the Zamboni's out there, the whole building cheers. Don't ask me why.",
+          "UHL stands for United Hockey League, for the record. Not as fancy as the AHL, but the hits are real.",
+          "The Red Wings banners are still up in the rafters. I look up during the anthem. Then I cheer for the hawks."
+        ]
+      },
+      "hockey-phantoms": {
+        "name": "Phantoms fan",
+        "any": [
+          "Phantoms are in Glens Falls! First AHL hockey since the Red Wings left.",
+          "Opening night, 5,411 people. Sold out. Senator Schumer dropped the puck.",
+          "Opening night we lost 3–2 to Worcester with eleven seconds left. Eleven! I'm not over it.",
+          "Patrick Maroon scored for us on opening night. Remember that name.",
+          "Orange, black and purple. Looks like a Flyers fan fell into a Halloween costume.",
+          "They're the Flyers' farm team, so every kid out there is dreaming of Philadelphia.",
+          "They came here from Philly, from the old Spectrum. Now they've got the Civic Center.",
+          "Zac Rinaldo had 331 penalty minutes in one season. That's a lot of time in the box.",
+          "Michael Leighton had five shutouts in 2010–11. That's not a goalie, that's a wall.",
+          "Ben Holmstrom's our captain. Everybody loves that guy.",
+          "January 2012, we beat Hershey 4–3 in overtime, outdoors, in a baseball stadium in Philly! I'll never stop bringing it up.",
+          "The Phantoms wore red-and-white Red Wings-style jerseys one night in 2012. Nice nod to the old days.",
+          "'ADIRONDACK' across the front of the jersey on opening night? I loved it.",
+          "The mayor told the AHL to beware of the Phantoms. Okay, Mayor. We'll try.",
+          "Terry Murray's behind the bench now. Let's see what he does with the power play.",
+          "We haven't made the playoffs yet. Next year, I swear.",
+          "Jason Akeson is going to break every team record. Watch.",
+          "Jon Matsumoto scored thirty goals that first year. Thirty!",
+          "Erik Gustafsson had 44 assists in 2010–11. A defenseman! That's a team record.",
+          "Paul Holmgren said they were 'writing a new history for hockey in Glens Falls.' I'm holding him to it."
+        ]
+      },
+      "hockey-thunder": {
+        "name": "Thunder fan",
+        "any": [
+          "Thunder fan right here. ECHL hockey, minor-league prices, major-league noise.",
+          "The Thunder came from Stockton, California. Calgary swapped teams with us. A market swap, they call it.",
+          "Our logo's a red-bearded thunder god holding a hockey stick instead of a hammer. That's tough.",
+          "First season, 2015–16, we beat Manchester 4–1 in the first round. Welcome to Glens Falls!",
+          "First Glens Falls team to win a playoff series since the Red Wings in '94. Not bad for year one.",
+          "Manchester Monarchs were our rivals. Four straight years in the playoffs. Hated 'em. Kind of miss 'em.",
+          "We're the Devils' ECHL team now. Used to be Calgary.",
+          "Locals own the Thunder, you know. Not some NHL suits.",
+          "In 2023–24 we won twelve straight. Twelve! Team record.",
+          "Forty-three wins that year, 97 points. Best record in team history.",
+          "We clinched a series at home that year, first time since 1992. Wow.",
+          "Red, black, white and gray. Looks like a storm cloud on skates.",
+          "Pete MacArthur wore the C and then coached us. Thunder through and through.",
+          "Sylvain Cloutier's the coach now. Fresh start, same Thunder.",
+          "We sat out the 2020–21 season because of COVID. Worst winter ever, no hockey.",
+          "They call it Harding Mazzotti Arena now, but I still call it the Civic Center. Don't @ me.",
+          "We were the first ECHL team in Glens Falls, after all those AHL and UHL teams.",
+          "Stockton Thunder made the Kelly Cup Finals in 2013. They brought some of that luck east. Maybe.",
+          "Thirty-six home games a year, and every one counts.",
+          "Cail MacLean was our first coach. Brad Tapper took us to the conference finals in '18."
+        ]
+      },
+      "hockey-gfhs-93": {
+        "name": "Glens Falls Indians fan",
+        "any": [
+          "Two state titles in a row, 1990 and 1991. Tell me another school around here that did that.",
+          "We beat Skaneateles 2–1 for the first one. Two to one! My voice is still gone.",
+          "Malone took us right to the wire in '91, and we won it 4–3. Hockey doesn't get better than that.",
+          "Coach Miller started this program in 1985. Before that, nobody around here had a high school team.",
+          "Albany Academy wins half the trophies in Section II. We just like taking some back.",
+          "Red and black, baby. We're the Indians, and everybody knows it.",
+          "Section II champs in '88 and again in '92. We keep bringing it home.",
+          "Massena beat Saratoga 10–0 in the state final this year. Ten–nothing! I'm not gloating. Okay, I am.",
+          "Red Wings win the Calder Cup, Indians win Section II, same spring of '92. Best spring in this town's history.",
+          "Class of '93 got two state titles before we even got our licenses.",
+          "Five a.m. practice. You've gotta love this game or be a little crazy.",
+          "My dad says there was no high school hockey here when he was my age. Now we've got state titles.",
+          "I skate on weekends and watch the Red Wings when I can. That's a good winter.",
+          "Division II, small school, big heart. We play like we're twice our size.",
+          "Everybody says the Red Wings are the big team in town. Don't tell the Indians that.",
+          "Nobody believed a program that started in '85 could win states. Ask Skaneateles.",
+          "Wear red and black to the Civic Center on game night. The Red Wings fans like to see it.",
+          "My buddy's brother played for the Indians. Now he thinks he's a pro.",
+          "Whoever invented the slapshot owes my goalie an apology.",
+          "Teacher asked where my homework was. I said, 'Section II playoffs.' She didn't buy it."
+        ]
+      }
+    }
   },
   "specials": {
     "thrill-hill-crowd": {
       "name": "Thrill Hill crowd",
       "where": "thrill-hill",
       "night": [
-        "PLACEHOLDER — Dave writes this (Thrill Hill crowd, night 1)",
-        "PLACEHOLDER — Dave writes this (Thrill Hill crowd, night 2)",
-        "PLACEHOLDER — Dave writes this (Thrill Hill crowd, night 3)"
+        {
+          "speaker": "Keg guy",
+          "text": "5 bucks a cup, all you can drink. You don't pay, you don't pour."
+        },
+        {
+          "speaker": "Keg guy",
+          "text": "Easy on the pump, you're getting all foam. Give it here."
+        },
+        {
+          "speaker": "Key guy",
+          "text": "Keg stand?   No?   you must be a freshman"
+        },
+        {
+          "speaker": "Boombox guy",
+          "text": "Hands off the boombox. Those D batteries cost me six bucks."
+        },
+        {
+          "speaker": "Car battery guy",
+          "text": "This runs off my brother's car battery. If it dies, we all walk."
+        },
+        {
+          "speaker": "Bonzo guy",
+          "text": "Bonzo. End of discussion. One bass drum and he still hits harder than anybody alive."
+        },
+        {
+          "speaker": "Bonzo guy",
+          "text": "Listen to When the Levee Breaks. That's not a drum, that's a building falling down."
+        },
+        {
+          "speaker": "Bonzo guy",
+          "text": "Good Times Bad Times, the bass drum triplets. One foot. Your guy needs two kits to do that."
+        },
+        {
+          "speaker": "Bonzo guy",
+          "text": "Peart plays like he's doing math homework. Bonham plays like he's mad at the drums."
+        },
+        {
+          "speaker": "Bonzo guy",
+          "text": "Moby Dick. He played part of that solo with his bare hands. Bare hands, man."
+        },
+        {
+          "speaker": "Bonzo guy",
+          "text": "Rush is for guys who read the liner notes. Zeppelin is for guys who have a life."
+        },
+        {
+          "speaker": "Bonzo guy",
+          "text": "He's been gone since 1980 and he's still the best. Think about that."
+        },
+        {
+          "speaker": "Bonzo guy",
+          "text": "You can't teach groove. Put on Fool in the Rain and tell me I'm wrong."
+        },
+        {
+          "speaker": "Bonzo guy",
+          "text": "Your guy writes the lyrics too? That explains it. Too busy writing to swing."
+        },
+        {
+          "speaker": "Bonzo guy",
+          "text": "Fine, Peart's a great drummer. Bonham was a force of nature. Different thing."
+        },
+        {
+          "speaker": "Professor guy",
+          "text": "Neil Peart. The Professor. Next question."
+        },
+        {
+          "speaker": "Professor guy",
+          "text": "Put on YYZ. That's Morse code for the Toronto airport, played on drums."
+        },
+        {
+          "speaker": "Professor guy",
+          "text": "Tom Sawyer. Every fill is perfect. Every single one."
+        },
+        {
+          "speaker": "Professor guy",
+          "text": "Bonham had one bass drum. Neil's got more drums than you've got friends, and he plays all of them."
+        },
+        {
+          "speaker": "Professor guy",
+          "text": "Seven-eight time, man. Bonham couldn't count to seven."
+        },
+        {
+          "speaker": "Professor guy",
+          "text": "Neil writes the lyrics too. Drummer and poet. What'd Bonham write, a grocery list?"
+        },
+        {
+          "speaker": "Professor guy",
+          "text": "La Villa Strangiato. Nine and a half minutes. Go ahead, hum me the Zeppelin version."
+        },
+        {
+          "speaker": "Professor guy",
+          "text": "New Rush album's coming out this fall. Neil's still getting better. Your guy's stuck in 1980."
+        },
+        {
+          "speaker": "Professor guy",
+          "text": "Every hit lands exactly where it should. That's not math, that's art."
+        },
+        {
+          "speaker": "Professor guy",
+          "text": "Okay, Levee sounds huge, I'll give you that. But the stairwell's doing half the work."
+        },
+        {
+          "speaker": "Alum",
+          "text": "Class of '93. Never left. Somebody's gotta show you kids how it's done."
+        },
+        {
+          "speaker": "Freshman",
+          "text": "Long walk? Nah. I come up here all the time."
+        },
+        {
+          "speaker": "Freshman",
+          "text": "Which way is Glen Street again? Asking for a friend."
+        },
+        {
+          "speaker": "Freshman",
+          "text": "I’m puking (bends over and “blaaaaaaahhhh” appears as text) -"
+        },
+        {
+          "speaker": "Couple on a log",
+          "text": "Shh, we're looking at the stars. dont harsh are mellow."
+        },
+        {
+          "speaker": "Red Wings fan",
+          "text": "We were up by a one goal on albany, then that brawl broke out and everyone on the ice got a game mis-conduct"
+        },
+        {
+          "speaker": "Nervous kid",
+          "text": "Nobody's walking back through those woods alone, right? Right?"
+        },
+        {
+          "speaker": "Rumor-monger",
+          "text": "My cousin swears he saw old Henry Crandall's carriage down by the pond. I'm just saying."
+        }
       ],
       "day": [
-        "PLACEHOLDER — Dave writes this (Thrill Hill, day 1)",
-        "PLACEHOLDER — Dave writes this (Thrill Hill, day 2)"
+        {
+          "speaker": "Skier or jogger",
+          "text": "Every Saturday there are cups all over the trail. Who hauls a keg this far into the woods?"
+        },
+        {
+          "speaker": "Dog walker",
+          "text": "Drop it, Buster. Drop it! That's not a toy, that's somebody's sneaker."
+        },
+        {
+          "speaker": "Hungover kid",
+          "text": "You seen a jean jacket? Or a Zeppelin tape? Or my keys? Mostly my keys."
+        },
+        {
+          "speaker": "Parks worker",
+          "text": "Third bag this morning. I'm not mad, I'm just counting."
+        },
+        {
+          "speaker": "Parks worker",
+          "text": "Still warm. Somebody kicked dirt on it and called it a night."
+        },
+        {
+          "speaker": "Policeman who never seems to be able to bust thrill",
+          "text": "I lost my flashlight throwing at a kid as I tried to catch him.   Dont tell my captain"
+        },
+        {
+          "speaker": "Older local",
+          "text": "Me? Party up here? Never. Okay, once. Okay, every Friday in '74."
+        },
+        {
+          "speaker": "Rumor-monger",
+          "text": "They say the star on Crandall's monument glows some nights. I've never seen it, but I've never looked."
+        }
+      ]
+    },
+    "buckley-tire": {
+      "name": "Townsfolk",
+      "night": [],
+      "day": [],
+      "any": [
+        "Question. Where is Buckley Tire?",
+        "I heard Buckley Tire is the best, you know over on 254 Warren St.",
+        "I got the best deal at Buckley Tire.",
+        "Dude, I saw DJ Buckley last night at that comedy show. Was that a MF Doom mash with Grateful Dead jam he played?",
+        "Blockade, if you know you know.",
+        "Fun fact, Buckley Tire was incorporated on April 14, 1965 as Buckley Tire Service Inc.",
+        "Buckley Tire priced 4 winter tires at several big multi-location chains and Buckley beat them by $20 per tire.",
+        "I've been a Buckley Tire customer for 28 years, and Jason and his mom and dad are the kindest people I know."
+      ]
+    },
+    "jeff-hammel": {
+      "name": "Townsfolk",
+      "any": [
+        "You gotta see Jeff Hammel at the Queensbury this weekend, I haven't laughed that hard in years.",
+        "Jeff Hammel's hosting a Weekend of Laughs here at the hotel, so grab a table before it fills up.",
+        "Don't tell him I said this, but Jeff Hammel can actually work a room.",
+        "Every time Jeff Hammel puts on a comedy night at the Queensbury, I'm in the front row.",
+        "Jeff Hammel's got a comedy night going at the Queensbury, so go see him."
+      ]
+    },
+    "charles-penguin": {
+      "name": "Townsfolk",
+      "any": [
+        "Charles Penguin's hosting Monday nights now, with a band and everything.",
+        "You ever see Charles Penguin work a crowd? The guy's a legend.",
+        "Charles Penguin's putting on a comedy show at the Queensbury, and you know it's gonna be good.",
+        "Who's Charles Penguin? Pal, if you have to ask, you weren't there."
+      ]
+    },
+    "party-oregano-guy": {
+      "name": "Oregano Guy",
+      "any": [
+        {
+          "speaker": "Oregano Guy",
+          "text": "Eager. Hey man, you holding? I'm looking to get right before the show."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "Disappointed. Got a bag off a guy behind the Aviation Mall. Smells like my grandma's spaghetti sauce."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "Suspicious. Third bag this month and it's oregano again. I'm starting to think it's me."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "Suspicious. You know anybody legit? Not the dude at the arcade, he burned me with oregano."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "Frustrated. Rolled one up at Thrill Hill and everyone said I smelled like pizza."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "Disappointed. I smoked an entire bag of oregano last night. Didn't feel a thing, but I was kind of hungry."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "Frustrated. Swear to God, if one more guy sells me Italian seasoning I'm opening a restaurant."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "Hopeful. My buddy says Crandall Park after dark is where you find the real stuff. My buddy's been wrong before."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "Frustrated. Sixty bucks for this? My mom gets a whole jar at Price Chopper for two dollars."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "Hopeful. Shh, don't tell anybody, but I think this one's legit. Wait. Nope. Basil this time."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "Hopeful. Okay, new business plan. You cook? I got oregano, man, primo stuff."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "Eager. I've got four bags I bought thinking they were weed. Now they're yours for five bucks, great on pizza."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "Suspicious. Don't laugh. I'm basically the only oregano dealer in Glens Falls now."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "Eager. Your mom makes sauce, right? Tell her I've got a guy. The guy is me."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "Disappointed. Paid sixty, selling for five. Worst dealer in town, but my lasagna's never been better."
+        }
+      ]
+    },
+    "thrill-cop": {
+      "name": "The Thrill Cop",
+      "any": [
+        "One of these Fridays I'm gonna walk right up on that fire and catch every one of 'em.",
+        "Thrill Hill. Two words that keep me up at night.",
+        "You hear anything about a keg this weekend, you tell me first. I'll make it worth your while. Probably.",
+        "I've got a map of every trail in Cole's Woods on my fridge. My wife hates it.",
+        "Last time I got close, they scattered in twelve directions. Twelve! How many trails are in there?",
+        "Those kids can hear my cruiser from Glen Street. I'm thinking about getting a bicycle.",
+        "I found a cup. Red. Still sticky. They were here.",
+        "The captain says Thrill Hill isn't a priority. The captain doesn't understand.",
+        "Night shift, flashlight, bug spray and patience. Tonight's the night. I can feel it.",
+        "Some kid told me the party moved to the Snake Trail. Or the Four Corners. Or the Wall. I'm checking all three."
+      ]
+    },
+    "cast-link-lines": {
+      "name": "Cast",
+      "any": [
+        {
+          "speaker": "Keg Guy",
+          "text": "See a flashlight bobbing through the trees? That's the cop. Grab the tap and scatter."
+        },
+        {
+          "speaker": "Keg Guy",
+          "text": "No, Oregano Guy, I'm not trading you a cup for a bag of spices."
+        },
+        {
+          "speaker": "Puke Freshman",
+          "text": "Keg Guy said one keg stand and I'm officially in. I did two. Now I'm officially sick."
+        },
+        {
+          "speaker": "Bonzo",
+          "text": "The cop showed up last Friday and we all ran. I argued Bonham the whole way home."
+        },
+        {
+          "speaker": "The Professor",
+          "text": "Even the cop has an opinion. He said Ringo. Ringo!"
+        },
+        {
+          "speaker": "The Cop",
+          "text": "Two kids ran right past me arguing about drummers. Didn't even notice I was a cop."
+        },
+        {
+          "speaker": "The Cop",
+          "text": "Caught that tie-dye kid with three baggies. Sent them to the lab. Oregano. Again."
+        },
+        {
+          "speaker": "Oregano Guy",
+          "text": "That cop searched my bag again. Sniffed it, then asked if I deliver."
+        }
+      ]
+    },
+    "rodin": {
+      "name": "Rodin",
+      "any": [
+        {
+          "speaker": "Rodin",
+          "text": "Yeah, I went a round with Norm Maracle at Dango's. Ask anybody. Actually, don't ask his buddies."
+        },
+        {
+          "speaker": "Rodin",
+          "text": "Goalies think they own the whole bar, not just the crease."
+        },
+        {
+          "speaker": "Rodin",
+          "text": "Haus and me, we've both got a Maracle story. Mine's better."
+        }
+      ]
+    },
+    "haus": {
+      "name": "Haus",
+      "any": [
+        {
+          "speaker": "Haus",
+          "text": "I didn't steal it. I found it. On the green. Lying there. Basically asking for me."
+        },
+        {
+          "speaker": "Haus",
+          "text": "Best wedge I've ever owned, and I didn't pay a dime."
+        },
+        {
+          "speaker": "Haus",
+          "text": "Rodin fought him at Dango's. I beat him on the back nine. Different methods."
+        }
+      ]
+    },
+    "wing-ghost": {
+      "name": "Abraham Wing",
+      "any": [
+        {
+          "speaker": "Abraham Wing",
+          "text": "I still say I had the better hand. Glen just sat there with that smile."
+        },
+        {
+          "speaker": "Abraham Wing",
+          "text": "They named the whole town after him, and all he did was win a card game."
+        },
+        {
+          "speaker": "Abraham Wing",
+          "text": "If I had folded, you'd be standing in Wing's Falls right now."
+        }
+      ]
+    },
+    "glen-ghost": {
+      "name": "Colonel Glen",
+      "any": [
+        {
+          "speaker": "Colonel Glen",
+          "text": "Wing never could bluff. I almost felt bad taking the name. Almost."
+        },
+        {
+          "speaker": "Colonel Glen",
+          "text": "A wine supper? That's what they wrote down. I remember the cards."
+        },
+        {
+          "speaker": "Colonel Glen",
+          "text": "He can call it Wing's Falls all he wants. The handbills say otherwise."
+        }
       ]
     }
   }

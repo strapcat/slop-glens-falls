@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { parseNpcLines, loadNpcLines, createNpcSpeech, FALLBACK_LINES, FALLBACK_LINE, LINES_URL, PERIODS } from '../js/gf-npc-lines.js';
-import { createNpcTalk, pickTalkTarget, createNpcGrid, footprintDistance, TALK_KEY, TALK, STEP, FLINCH } from '../js/gf-npc-talk.js';
+import { parseNpcLines, loadNpcLines, createNpcSpeech, lineText, FALLBACK_LINES, FALLBACK_LINE, LINES_URL, PERIODS } from '../js/gf-npc-lines.js';
+import { createNpcTalk, createOneBound, pickTalkTarget, createNpcGrid, footprintDistance, TALK_KEY, TALK, STEP, FLINCH } from '../js/gf-npc-talk.js';
 
 // CC-NPC1: talking to people in Glens Falls. The line file (Dave's data/gf/npc-lines.json) and its fallback, the
 // choice of line (day / night / any, never twice in a row), the Thrill Hill crowd's special, who can be talked to (range
@@ -25,21 +25,65 @@ const SAMPLE = {
 
 // ---------------------------------------------------------------- the line file
 
-test('the line file Dave edits: valid, every list seeded with 2-3 marked placeholders, no real dialogue', () => {
-  const text = read('data/gf/npc-lines.json');
+// CC-NPC2: the starter line bank (Dave's Notion page, 2026-11-16): every group and its count
+const BANK = {
+  groups: { 'thrill-hill-talk': 21, 'gf-history-talk': 45, 'hockey-red-wings': 28, 'hockey-icehawks': 20, 'hockey-phantoms': 20,
+    'hockey-thunder': 20, 'hockey-gfhs-93': 20 },
+  specials: { 'thrill-hill-crowd': { night: 33, day: 8 }, 'party-oregano-guy': 15, 'thrill-cop': 10, 'buckley-tire': 8, 'jeff-hammel': 5,
+    'charles-penguin': 4, 'cast-link-lines': 8, rodin: 3, haus: 3, 'wing-ghost': 3, 'glen-ghost': 3 }
+};
+const bankText = () => read('data/gf/npc-lines.json');
+// every line in the file: [where, text, speaker]
+function allLines(lines) {
+  const out = [];
+  const add = (where, list) => list.forEach((l) => out.push([where, lineText(l), typeof l === 'string' ? null : l.speaker]));
+  for (const p of PERIODS) add(`randos.${p}`, lines.randos[p]);
+  for (const g of Object.values(lines.randos.groups)) for (const p of PERIODS) add(g.id, g[p]);
+  for (const sp of Object.values(lines.specials)) for (const p of PERIODS) add(sp.id, sp[p]);
+  return out;
+}
+
+test('the line file Dave edits: valid JSON, every group of the starter bank present with its count, no warnings', () => {
+  const text = bankText();
+  assert.doesNotThrow(() => JSON.parse(text));
   const { lines, warnings, ok } = parseNpcLines(text);
   assert.equal(ok, true);
   assert.deepEqual(warnings, []);
-  const lists = [...PERIODS.map((p) => ['randos.' + p, lines.randos[p]])];
+  // the plain rando lists stay empty: town talk comes from the named groups
+  for (const p of PERIODS) assert.deepEqual(lines.randos[p], [], `randos.${p}`);
+  assert.deepEqual(Object.keys(lines.randos.groups).sort(), Object.keys(BANK.groups).sort());
+  for (const [id, n] of Object.entries(BANK.groups)) {
+    const g = lines.randos.groups[id];
+    assert.equal(g.day.length + g.night.length + g.any.length, n, `${id}: ${n} lines`);
+    assert.ok(g.name, `${id} has a name for the bubble`);
+  }
+  assert.deepEqual(Object.keys(lines.specials).sort(), Object.keys(BANK.specials).sort());
+  for (const [id, n] of Object.entries(BANK.specials)) {
+    const sp = lines.specials[id];
+    if (typeof n === 'number') assert.equal(sp.day.length + sp.night.length + sp.any.length, n, `${id}: ${n} lines`);
+    else for (const [p, k] of Object.entries(n)) assert.equal(sp[p].length, k, `${id}.${p}: ${k} lines`);
+  }
   const crowd = lines.specials['thrill-hill-crowd'];
-  assert.ok(crowd, 'the thrill-hill-crowd special');
   assert.equal(crowd.name, 'Thrill Hill crowd');
   assert.equal(crowd.where, 'thrill-hill');
-  lists.push(['thrill-hill-crowd.night', crowd.night], ['thrill-hill-crowd.day', crowd.day]);
-  for (const [name, list] of lists) {
-    assert.ok(list.length >= 2 && list.length <= 3, `${name}: 2-3 lines`);
-    for (const line of list) assert.match(line, /^PLACEHOLDER — Dave writes this/, `${name}: a marked placeholder`);
+  // only the crowd has a place: the cop, Oregano Guy and the stored characters must not take it over
+  assert.deepEqual(Object.values(lines.specials).filter((sp) => sp.where).map((sp) => sp.id), ['thrill-hill-crowd']);
+  // no placeholders, no source notes in the spoken text, nothing over the cap
+  const every = allLines(lines);
+  for (const [where, t] of every) {
+    assert.doesNotMatch(t, /PLACEHOLDER|Source:|Wikipedia|https?:/i, where);
+    assert.ok(t.length <= 400, `${where}: ${t.length} characters (the cap)`);
   }
+  // Dave's wording as written: spot checks of the odd ones (not to be fixed)
+  const has = (re) => every.some(([, t]) => re.test(t));
+  assert.ok(has(/^Keg stand\?   No\?   you must be a freshman$/));
+  assert.ok(every.some(([, t, sp]) => sp === 'Key guy' && /^Keg stand/.test(t)));
+  assert.ok(has(/dont harsh are mellow\.$/));
+  assert.ok(has(/^I’m puking \(bends over and “blaaaaaaahhhh” appears as text\) -$/));
+  assert.ok(has(/^Thrill Hill's the only place in town where you can do a proper keg stand$/));
+  assert.ok(has(/^Skip Thrill Hill\? Sure, if you’re a nerd\.$/));
+  assert.ok(has(/MF Doom mash/) && has(/April 14, 1965/));
+  assert.ok(has(/^Eager\. Hey man, you holding\?/));
   // the guide sits next to it
   assert.match(read('data/gf/NPC-LINES.md'), /npc-lines\.json/);
   // the game reads it from its own folder (relative to js/), nothing else
@@ -84,7 +128,7 @@ test('missing or broken lists: a warning each, empty lists, the rest kept', () =
   // no randos at all, specials not an object
   const r2 = parseNpcLines({ specials: [] });
   assert.ok(r2.warnings.some((w) => /randos is missing/.test(w)) && r2.warnings.some((w) => /specials should be/.test(w)));
-  assert.deepEqual(r2.lines.randos, { day: [], night: [], any: [] });
+  assert.deepEqual(r2.lines.randos, { day: [], night: [], any: [], groups: {} });
   // nothing to say anywhere: the placeholder line
   assert.equal(createNpcSpeech({ lines: r2.lines }).say({}, 0, 0, 'night').text, FALLBACK_LINE);
 });
@@ -174,7 +218,7 @@ test('thrill-hill-crowd: bound people speak its lines at night; its place gives 
   assert.equal(speech.say(ghost, 0, 0, 'night').speaker, null);
   // a future special added by data only, bound by the one hook
   speech.setLines(parseNpcLines({ ...SAMPLE, specials: { ...SAMPLE.specials, 'crandall-ghost-carriage': { name: 'Ghost carriage (fiction)', night: ['g1'] } } }).lines);
-  assert.deepEqual(speech.say(ghost, 0, 0, 'night'), { text: 'g1', speaker: 'Ghost carriage (fiction)', special: 'crandall-ghost-carriage' });
+  assert.deepEqual(speech.say(ghost, 0, 0, 'night'), { text: 'g1', speaker: 'Ghost carriage (fiction)', special: 'crandall-ghost-carriage', group: null });
   speech.unbind(ghost);
   assert.equal(speech.boundTo(ghost), null);
 });
@@ -182,12 +226,179 @@ test('thrill-hill-crowd: bound people speak its lines at night; its place gives 
 test('the game binds the party\'s people to thrill-hill-crowd and its fire to the thrill-hill place', () => {
   const ui = read('js/gf-npc-talk-ui.js');
   assert.match(ui, /THRILL_HILL = \{ special: 'thrill-hill-crowd', place: 'thrill-hill', radius: 30 \}/);
-  assert.match(ui, /for \(const p of party\.schedule\.people\) speech\.bind\(p, THRILL_HILL\.special\)/);
+  // every guest is the crowd but the last, who is Oregano Guy
+  assert.match(ui, /people\.forEach\(\(p, k\) => speech\.bind\(p, k === people\.length - 1 \? OREGANO_GUY : THRILL_HILL\.special\)\)/);
+  assert.match(ui, /OREGANO_GUY = 'party-oregano-guy'/);
+  // by day one trail walker is the Thrill Cop (not a place: that would take the crowd's day lines in the 30 m circle)
+  assert.match(ui, /THRILL_COP = \{ special: 'thrill-cop'/);
+  assert.match(ui, /thrillCop\.update\(elapsed, peds, period\(\) === 'day'\)/);
   assert.match(ui, /speech\.registerPlace\(THRILL_HILL\.place, \{ x: fire\.x, z: fire\.z, r: THRILL_HILL\.radius \}\)/);
   // and the data's special names the same place
   assert.equal(parseNpcLines(read('data/gf/npc-lines.json')).lines.specials['thrill-hill-crowd'].where, 'thrill-hill');
   // the party turns a guest to the player while talking (talkFacing), and back to the fire after
   assert.match(read('js/gf-thrill-hill.js'), /Number\.isFinite\(p\.talkFacing\) \? p\.talkFacing : p\.heading \+ sway/);
+});
+
+// ---------------------------------------------------------------- CC-NPC2: the starter bank's rules
+
+test('Jeff Hammel and Charles Penguin stay separate: neither group names the other, no line names both', () => {
+  const { lines } = parseNpcLines(bankText());
+  const hammel = lines.specials['jeff-hammel'].any.map(lineText), penguin = lines.specials['charles-penguin'].any.map(lineText);
+  assert.ok(hammel.length && penguin.length);
+  for (const t of hammel) assert.doesNotMatch(t, /charles|penguin/i, t);
+  for (const t of penguin) assert.doesNotMatch(t, /jeff|hammel/i, t);
+  for (const [where, t, speaker] of allLines(lines)) {
+    const both = `${t} ${speaker || ''}`;
+    assert.ok(!(/jeff|hammel/i.test(both) && /charles|penguin/i.test(both)), `${where}: ${t}`);
+  }
+  // and neither is placed in the game yet (stored for CC-CAST)
+  assert.doesNotMatch(read('js/gf-npc-talk-ui.js'), /jeff-hammel|charles-penguin/);
+});
+
+test('object lines: { text, speaker } parse, the speaker shows over the line, and no-repeat compares the text', () => {
+  const r = parseNpcLines({ randos: { day: [], night: [], any: [] }, specials: { s: { name: 'Group', any: [
+    { text: '  one  ', speaker: ' Keg guy ' }, { text: 'two' }, 'three', { text: 'one', speaker: 'Someone else' },
+    { speaker: 'nobody' }, { text: '   ' }, { text: 'four', speaker: 7 }, { text: 'x'.repeat(450), speaker: 'Long' }
+  ] } } });
+  const list = r.lines.specials.s.any;
+  assert.deepEqual(list.slice(0, 5), [{ text: 'one', speaker: 'Keg guy' }, 'two', 'three', { text: 'one', speaker: 'Someone else' }, 'four']);
+  assert.equal(list[5].text.length, 400, 'cut at 400 like a plain line');
+  for (const re of [/any\[4\] has no "text"/, /any\[5\] is empty/, /any\[6\]\.speaker should be a name/, /any\[7\] is longer/]) {
+    assert.ok(r.warnings.some((w) => re.test(w)), `warns ${re}`);
+  }
+  const speech = createNpcSpeech({ lines: r.lines, random: seeded(9) });
+  const npc = {};
+  speech.bind(npc, 's');
+  const seen = new Map();
+  let before = null;
+  for (let i = 0; i < 300; i++) {
+    const said = speech.say(npc, 0, 0, i % 2 ? 'day' : 'night');
+    assert.notEqual(said.text, before, `draw ${i}: never the same text twice in a row (the two "one" lines count as one)`);
+    before = said.text;
+    seen.set(`${said.text}|${said.speaker}`, true);
+  }
+  assert.ok(seen.has('one|Keg guy') && seen.has('one|Someone else'), 'each object line keeps its own speaker');
+  assert.ok(seen.has('two|Group') && seen.has('three|Group'), 'a line without a speaker shows the special\'s name');
+});
+
+test('rando groups: one group picked with equal weight among those with lines now, then a line from it, by time of day', () => {
+  const lines = parseNpcLines({ randos: { day: [], night: [], any: [], groups: {
+    big: { name: 'Big', any: Array.from({ length: 40 }, (_, i) => `b${i}`) },
+    small: { name: 'Small', any: ['s1', 's2'] },
+    days: { name: 'Days', day: ['dd1', 'dd2'] },
+    nights: { name: 'Nights', night: ['nn1', 'nn2'] },
+    empty: { name: 'Empty', day: [], night: [] }
+  } } }).lines;
+  const speech = createNpcSpeech({ lines, random: seeded(21) });
+  const count = (period) => {
+    const c = {};
+    for (let i = 0; i < 3000; i++) {
+      const r = speech.say({}, 0, 0, period); // a new person each time: no-repeat does not bend the odds
+      c[r.group] = (c[r.group] || 0) + 1;
+      assert.equal(r.speaker, lines.randos.groups[r.group].name, 'the bubble shows the group\'s name');
+      assert.equal(r.special, null);
+    }
+    return c;
+  };
+  const day = count('day'), night = count('night');
+  assert.deepEqual(Object.keys(day).sort(), ['big', 'days', 'small'], 'by day: day + any groups only');
+  assert.deepEqual(Object.keys(night).sort(), ['big', 'nights', 'small'], 'by night: night + any groups only');
+  for (const n of [...Object.values(day), ...Object.values(night)]) assert.ok(n > 850 && n < 1150, `about a third each, not by size (${n})`);
+  // no immediate repeat for one person across groups
+  const p = {};
+  let before = null;
+  for (let i = 0; i < 300; i++) { const t = speech.say(p, 0, 0, 'day').text; assert.notEqual(t, before); before = t; }
+  // a group whose only line was just said hands over to another group rather than repeat
+  const solo = createNpcSpeech({ lines: parseNpcLines({ randos: { day: [], night: [], any: [], groups: { a: { any: ['only'] }, b: { any: ['other'] } } } }).lines, random: () => 0 });
+  const q = {};
+  assert.deepEqual([solo.say(q, 0, 0, 'day').text, solo.say(q, 0, 0, 'day').text, solo.say(q, 0, 0, 'day').text], ['only', 'other', 'only']);
+  assert.equal(solo.say({}, 0, 0, 'day').speaker, null, 'a group without a name shows no name');
+  // the plain lists, when not empty, are one more group (no name)
+  const mixed = createNpcSpeech({ lines: parseNpcLines({ randos: { day: ['plain'], night: [], any: [], groups: { g: { name: 'G', any: ['grouped'] } } } }).lines, random: seeded(4) });
+  const got = new Set(Array.from({ length: 200 }, () => mixed.say({}, 0, 0, 'day').speaker));
+  assert.deepEqual([...got].sort(), [null, 'G'].sort());
+});
+
+test('the real bank: town talk by day and night comes from the groups (never the placeholder); the crowd keeps its own lists', () => {
+  const { lines } = parseNpcLines(bankText());
+  const speech = createNpcSpeech({ lines, random: seeded(17) });
+  const groups = new Set();
+  for (let i = 0; i < 2000; i++) {
+    for (const period of ['day', 'night']) {
+      const r = speech.say({}, 5000, 5000, period);
+      assert.notEqual(r.text, FALLBACK_LINE);
+      assert.ok(r.group && lines.randos.groups[r.group], 'a town group');
+      groups.add(r.group);
+    }
+  }
+  assert.deepEqual([...groups].sort(), Object.keys(BANK.groups).sort(), 'every group is heard');
+  // the crowd: night lines at night (with their speakers), day lines by day, never each other's
+  const guest = {};
+  speech.bind(guest, 'thrill-hill-crowd');
+  const night = new Set(lines.specials['thrill-hill-crowd'].night.map(lineText)), day = new Set(lines.specials['thrill-hill-crowd'].day.map(lineText));
+  for (let i = 0; i < 200; i++) {
+    const n = speech.say(guest, 0, 0, 'night');
+    assert.ok(night.has(n.text) && n.speaker && n.speaker !== 'Thrill Hill crowd', 'a crowd line with its own speaker');
+    assert.ok(day.has(speech.say(guest, 0, 0, 'day').text), 'by day, the day list (the night list is not chosen)');
+  }
+  // anyone within 30 m of the fire by day: the crowd's day lines, not the cop's
+  speech.registerPlace('thrill-hill', { x: 0, z: 0, r: 30 });
+  assert.equal(speech.specialFor({}, 10, 10, 'day').id, 'thrill-hill-crowd');
+  // the bound characters
+  const oregano = {}, cop = {};
+  speech.bind(oregano, 'party-oregano-guy');
+  speech.bind(cop, 'thrill-cop');
+  assert.equal(speech.say(oregano, 0, 0, 'night').speaker, 'Oregano Guy');
+  assert.equal(speech.say(cop, 900, 900, 'day').speaker, 'The Thrill Cop');
+  // the stored groups speak for nobody unless bound
+  for (const id of ['buckley-tire', 'jeff-hammel', 'charles-penguin', 'cast-link-lines', 'rodin', 'haus', 'wing-ghost', 'glen-ghost', 'thrill-cop', 'party-oregano-guy']) {
+    assert.equal(lines.specials[id].where, null, `${id}: no place`);
+  }
+});
+
+test('a file with no randos.groups loads and speaks exactly as before; a malformed groups is ignored with a warning', () => {
+  const plain = parseNpcLines(SAMPLE);
+  assert.deepEqual(plain.warnings, []);
+  assert.deepEqual(plain.lines.randos.groups, {});
+  // the same draws as a speech made from the same lines without the groups key at all
+  const a = createNpcSpeech({ lines: plain.lines, random: seeded(8) }), b = createNpcSpeech({ lines: { ...plain.lines, randos: { ...plain.lines.randos, groups: undefined } }, random: seeded(8) });
+  const pa = {}, pb = {};
+  for (let i = 0; i < 50; i++) assert.deepEqual(a.say(pa, 0, 0, i % 3 ? 'day' : 'night'), b.say(pb, 0, 0, i % 3 ? 'day' : 'night'));
+  assert.equal(a.say({}, 0, 0, 'day').speaker, null);
+  for (const groups of [[], 'x', 3, null]) {
+    const r = parseNpcLines({ ...SAMPLE, randos: { ...SAMPLE.randos, groups } });
+    assert.equal(r.ok, true);
+    assert.deepEqual(r.lines.randos.groups, {});
+    assert.ok(r.warnings.some((w) => /randos\.groups should be/.test(w)), String(groups));
+  }
+  const r = parseNpcLines({ ...SAMPLE, randos: { ...SAMPLE.randos, groups: { bad: 'no', blank: { name: '' , any: ['x'] }, none: { name: 'N' } } } });
+  assert.ok(r.warnings.some((w) => /randos\.groups\.bad should be/.test(w)));
+  assert.ok(r.warnings.some((w) => /randos\.groups\.blank\.name/.test(w)));
+  assert.ok(r.warnings.some((w) => /randos\.groups\.none has no/.test(w)));
+  assert.equal(r.lines.randos.groups.blank.name, null);
+  // empty plain lists plus groups: never the "could not be read" placeholder
+  const only = createNpcSpeech({ lines: parseNpcLines({ randos: { day: [], night: [], any: [], groups: { g: { name: 'G', night: ['late'] } } } }).lines });
+  assert.equal(only.say({}, 0, 0, 'night').text, 'late');
+  assert.equal(only.say({}, 0, 0, 'day').text, FALLBACK_LINE, 'nothing at all for the day: the placeholder, as before');
+});
+
+test('the Thrill Cop: one trail walker at a time by day, the nearest to the fire; let go at night or when they leave', () => {
+  const speech = createNpcSpeech({ lines: parseNpcLines(bankText()).lines });
+  const trail = { trail: { edge: 1 } }, street = { edge: {} };
+  const a = { placed: true, x: 100, z: 0, route: trail }, b = { placed: true, x: 50, z: 0, route: trail }, c = { placed: true, x: 10, z: 0, route: street }, d = { placed: true, x: 5, z: 0, route: trail };
+  speech.bind(d, 'thrill-hill-crowd'); // already someone else
+  const peds = [a, b, c, d];
+  const cop = createOneBound({ speech, special: 'thrill-cop', anchor: { x: 0, z: 0 }, eligible: (p) => !!(p.route && p.route.trail) && Math.hypot(p.x, p.z) < 1000 });
+  assert.equal(cop.update(0, peds, true), b, 'the nearest eligible walker not already bound');
+  assert.equal(speech.boundTo(b), 'thrill-cop');
+  assert.equal(speech.boundTo(c), null, 'not a street walker');
+  assert.equal(cop.update(1, peds, true), b, 'checked every 2 s, not every frame');
+  b.x = 5000; // respawned far away
+  assert.equal(cop.update(2.1, peds, true), a);
+  assert.equal(speech.boundTo(b), null, 'let go');
+  assert.equal(cop.update(4.2, peds, false), null, 'nobody at night');
+  assert.equal(speech.boundTo(a), null);
+  assert.equal(speech.say(a, 100, 0, 'night').special, null, 'the old holder is a rando again');
 });
 
 // ---------------------------------------------------------------- who can be talked to

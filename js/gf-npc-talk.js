@@ -301,4 +301,29 @@ function createNpcTalk({ sources, speech, period, canStand = () => true, ground 
   };
 }
 
-export { createNpcTalk, pickTalkTarget, createNpcGrid, footprintDistance, TALK_KEY, TALK, GRID, STEP, FLINCH, PED, PARTY };
+// CC-NPC2: one pedestrian at a time speaks as special `special` (the Thrill Cop), while `on()` and while they are
+// `eligible(p)` (walking the park trails): checked every `every` seconds, not every frame. When the holder stops being
+// eligible (walked out, respawned elsewhere, nightfall) they are let go and the eligible pedestrian nearest `anchor`
+// ({ x, z }) not already bound to anything takes over; none eligible: nobody, until someone walks in.
+function createOneBound({ speech, special, eligible, anchor, every = 2 }) {
+  let holder = null, next = -Infinity;
+  return {
+    update(clock, peds, on) {
+      if (clock < next) return holder;
+      next = clock + every;
+      if (holder && (!on || !holder.placed || !eligible(holder))) { speech.unbind(holder); holder = null; }
+      if (!on || holder) return holder;
+      let best = null, bestD = Infinity;
+      for (const p of peds) {
+        if (!p.placed || speech.boundTo(p) !== null || !eligible(p)) continue;
+        const d = (p.x - anchor.x) ** 2 + (p.z - anchor.z) ** 2;
+        if (d < bestD) { best = p; bestD = d; }
+      }
+      if (best) { speech.bind(best, special); holder = best; }
+      return holder;
+    },
+    get holder() { return holder; }
+  };
+}
+
+export { createNpcTalk, createOneBound, pickTalkTarget, createNpcGrid, footprintDistance, TALK_KEY, TALK, GRID, STEP, FLINCH, PED, PARTY };
