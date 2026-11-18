@@ -3,7 +3,7 @@ import { isTypingInField } from './city-runtime.js';
 import { cityUniforms } from './tsl-materials.js';
 import { isNight } from './gf-thrill-hill-plan.js';
 import { createNpcSpeech, loadNpcLines } from './gf-npc-lines.js';
-import { createNpcTalk, TALK_KEY } from './gf-npc-talk.js';
+import { createNpcTalk, createOneBound, TALK_KEY } from './gf-npc-talk.js';
 
 // CC-NPC1: talking to people in Glens Falls, on screen. installGfNpcTalk() is Glens Falls's one hook (gf-main.js):
 // it reads Dave's line file (data/gf/npc-lines.json, gf-npc-lines.js), binds the Thrill Hill party's people to their
@@ -15,6 +15,11 @@ import { createNpcTalk, TALK_KEY } from './gf-npc-talk.js';
 // party: gf-thrill-hill.js's party or null; ground(x, z): the terrain; canStand(x, z): may a pedestrian step aside there
 
 const THRILL_HILL = { special: 'thrill-hill-crowd', place: 'thrill-hill', radius: 30 }; // m round the fire
+// CC-NPC2: the two cheap placements from the line bank (data/gf/npc-lines.json). One guest at the fire speaks as
+// Oregano Guy (the last of the party's people; the rest are the crowd), and by day one pedestrian walking the park trails
+// (Cole's Woods, Crandall Park, Fire Road) speaks as the Thrill Cop. Neither has a look of their own yet (CC-CAST)
+const OREGANO_GUY = 'party-oregano-guy';
+const THRILL_COP = { special: 'thrill-cop', reach: 1600 }; // m from the fire: the whole trail network (1.46 km at most)
 const EDGE = 10; // px: the bubble's margin inside the safe area
 
 function el(tag, className, parent) {
@@ -27,10 +32,14 @@ function el(tag, className, parent) {
 function installGfNpcTalk({ controllerManager, camera, peds, party = null, ground, canStand }) {
   const speech = createNpcSpeech();
   const period = () => (isNight(cityUniforms.uInteriorGlow.value) ? 'night' : 'day');
+  let thrillCop = null;
   if (party) {
-    for (const p of party.schedule.people) speech.bind(p, THRILL_HILL.special);
+    const people = party.schedule.people;
+    people.forEach((p, k) => speech.bind(p, k === people.length - 1 ? OREGANO_GUY : THRILL_HILL.special));
     const { fire } = party.stats();
     speech.registerPlace(THRILL_HILL.place, { x: fire.x, z: fire.z, r: THRILL_HILL.radius });
+    thrillCop = createOneBound({ speech, special: THRILL_COP.special, anchor: fire,
+      eligible: (p) => !!(p.route && p.route.trail) && (p.x - fire.x) ** 2 + (p.z - fire.z) ** 2 < THRILL_COP.reach ** 2 });
   }
   const talk = createNpcTalk({
     sources: () => ({ peds, party: party ? party.schedule.people : null }),
@@ -158,6 +167,7 @@ function installGfNpcTalk({ controllerManager, camera, peds, party = null, groun
 
   function update(dt, elapsed) {
     const mode = controllerManager.activeMode;
+    if (thrillCop) thrillCop.update(elapsed, peds, period() === 'day');
     talk.update(dt, elapsed, mode, controllerManager.getActiveEntity());
     const t = talk.talk();
     const target = talk.target();
@@ -183,10 +193,11 @@ function installGfNpcTalk({ controllerManager, camera, peds, party = null, groun
     stats: talk.stats,
     lines: loaded,
     speech,
+    thrillCop: () => (thrillCop ? thrillCop.holder : null),
     get last() { return last; }
   };
   if (globalThis.slopGlensFalls) globalThis.slopGlensFalls.npcTalk = api;
   return api;
 }
 
-export { installGfNpcTalk, THRILL_HILL };
+export { installGfNpcTalk, THRILL_HILL, OREGANO_GUY, THRILL_COP };
