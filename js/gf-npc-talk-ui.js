@@ -41,9 +41,11 @@ function installGfNpcTalk({ controllerManager, camera, peds, party = null, groun
     thrillCop = createOneBound({ speech, special: THRILL_COP.special, anchor: fire,
       eligible: (p) => !!(p.route && p.route.trail) && (p.x - fire.x) ** 2 + (p.z - fire.z) ** 2 < THRILL_COP.reach ** 2 });
   }
+  // CC-NPC2b: the count of day / night changes (a special's line, e.g. the fire crowd's, is kept for one of them)
+  let lastPeriod = period(), periodEpoch = 0;
   const talk = createNpcTalk({
     sources: () => ({ peds, party: party ? party.schedule.people : null }),
-    speech, period, canStand, ground
+    speech, period, canStand, ground, epoch: () => periodEpoch
   });
   const loaded = { ok: false, warnings: [], done: false };
   loadNpcLines((url) => fetch(new URL(url, import.meta.url), { cache: 'no-cache' }).then((r) => {
@@ -74,7 +76,7 @@ function installGfNpcTalk({ controllerManager, camera, peds, party = null, groun
   const bubbleText = el('div', 'npc-bubble-text', bubble);
   const bubbleMore = el('div', 'npc-bubble-more', bubble);
   el('kbd', '', bubbleMore).textContent = 'T';
-  el('span', '', bubbleMore).textContent = 'next';
+  el('span', '', bubbleMore).textContent = 'close';
   // the safe area (notch, home bar) as the browser reports it, read off a probe padded with env()
   const probe = el('div', 'npc-safe-probe', layer);
   let safe = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -167,13 +169,15 @@ function installGfNpcTalk({ controllerManager, camera, peds, party = null, groun
 
   function update(dt, elapsed) {
     const mode = controllerManager.activeMode;
-    if (thrillCop) thrillCop.update(elapsed, peds, period() === 'day');
+    const now = period();
+    if (now !== lastPeriod) { lastPeriod = now; periodEpoch++; }
+    if (thrillCop) thrillCop.update(elapsed, peds, now === 'day');
     talk.update(dt, elapsed, mode, controllerManager.getActiveEntity());
     const t = talk.talk();
     const target = talk.target();
     if (t) placeBubble(t);
     else if (!bubble.hidden) { bubble.hidden = true; shownText = null; }
-    // the prompt over whoever is in reach, unless they are already talking (the bubble says "T next")
+    // the prompt over whoever is in reach, unless they are already talking (the bubble says "T close")
     const showPrompt = !!target && !(t && t.npc === target.npc);
     if (showPrompt) {
       const s = toScreen(target.x, target.y + 0.12, target.z);

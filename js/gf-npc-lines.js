@@ -134,6 +134,8 @@ function createNpcSpeech({ lines = FALLBACK_LINES, random = Math.random } = {}) 
   const bound = new WeakMap(); // object -> special id
   const places = new Map(); // place name -> { x, z, r }
   const last = new WeakMap(); // person -> the text they said last
+  let locks = new WeakMap(); // CC-NPC2b: person -> their one line { key, epoch, line }
+  let lastPicked; // the text of the line picked last, for anyone (no two people in a row with the same line)
 
   const has = (list, period) => list && ((list[period] && list[period].length) || (list.any && list.any.length));
   const pool = (list, period) => [...(list[period] || []), ...(list.any || [])];
@@ -160,8 +162,20 @@ function createNpcSpeech({ lines = FALLBACK_LINES, random = Math.random } = {}) 
 
   // What `npc` at (x, z) says now: { text, speaker (the line's own, else its special's or group's name, or null),
   // special (its id, or null), group (the randos' group id, or null) }
-  function say(npc, x, z, period) {
+  //
+  // CC-NPC2b: one person, one line. With `key` (who the person is now: e.g. which spawn of a pooled pedestrian, and the
+  // special they are bound to), the first line picked for them is kept and said every time after, until their key
+  // changes (a new person in the pool, a new part). A line from a special (the Thrill Hill crowd, Oregano Guy, the Thrill
+  // Cop) is also kept only for one `epoch` (the game's count of day / night changes), so the fire's people say a fresh
+  // line each night. A fresh pick is never the line picked last for anyone. Without `key`: a new line each time, never
+  // the same one twice in a row from the same person (CC-NPC1).
+  function say(npc, x, z, period, { key, epoch = 0 } = {}) {
     const who = npc && typeof npc === 'object' ? npc : null;
+    const locking = who && key !== undefined;
+    if (locking) {
+      const lock = locks.get(who);
+      if (lock && lock.key === key && (!lock.line.special || lock.epoch === epoch)) return { ...lock.line };
+    }
     const before = who ? last.get(who) : undefined;
     const special = specialFor(npc, x, z, period);
     // the candidate sources in the order tried: the special; or one rando group picked with equal weight, the others
@@ -178,7 +192,7 @@ function createNpcSpeech({ lines = FALLBACK_LINES, random = Math.random } = {}) 
     let source = null, options = null;
     for (const s of sources) {
       const lines = pool(s, period);
-      const fresh = lines.filter((l) => lineText(l) !== before);
+      const fresh = lines.filter((l) => lineText(l) !== before && !(locking && lineText(l) === lastPicked));
       if (fresh.length) { source = s; options = fresh; break; }
       if (!source && lines.length) { source = s; options = lines; }
     }
@@ -186,12 +200,17 @@ function createNpcSpeech({ lines = FALLBACK_LINES, random = Math.random } = {}) 
     const line = options[pick(options.length)];
     const text = lineText(line);
     if (who) last.set(who, text);
-    return {
+    const said = {
       text,
       speaker: lineSpeaker(line) || (source ? source.name : null) || null,
       special: special ? special.id : null,
       group: !special && source ? source.id : null
     };
+    if (locking) {
+      locks.set(who, { key, epoch, line: said });
+      lastPicked = text;
+    }
+    return { ...said };
   }
 
   return {
@@ -203,7 +222,10 @@ function createNpcSpeech({ lines = FALLBACK_LINES, random = Math.random } = {}) 
     boundTo: (object) => bound.get(object) ?? null,
     // A named place (a special's `where`): a circle of radius r metres round (x, z)
     registerPlace(name, { x, z, r }) { places.set(name, { x, z, r }); },
-    setLines(next) { data = next || FALLBACK_LINES; },
+    // a new line file: everyone picks afresh from it
+    setLines(next) { data = next || FALLBACK_LINES; locks = new WeakMap(); lastPicked = undefined; },
+    // the line kept for `object` (CC-NPC2b), or null
+    lockedLine: (object) => (locks.get(object) ? { ...locks.get(object).line } : null),
     get lines() { return data; }
   };
 }

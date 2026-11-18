@@ -202,6 +202,7 @@ function createPedestrianSystem(network, { player, nearEdges, nearSignals, mayCr
       p._curbNode = null;
       p.rig.placed = false; // stands afresh where it now is
       p.placed = true;
+      p.spawns = (p.spawns || 0) + 1; // a new person each time (Glens Falls's talk keys a person's line to it)
       if (crosswalk) atCurb(p);
       return true;
     }
