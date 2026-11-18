@@ -231,7 +231,9 @@ test('the game binds the party\'s people to thrill-hill-crowd and its fire to th
   assert.match(ui, /OREGANO_GUY = 'party-oregano-guy'/);
   // by day one trail walker is the Thrill Cop (not a place: that would take the crowd's day lines in the 30 m circle)
   assert.match(ui, /THRILL_COP = \{ special: 'thrill-cop'/);
-  assert.match(ui, /thrillCop\.update\(elapsed, peds, period\(\) === 'day'\)/);
+  assert.match(ui, /thrillCop\.update\(elapsed, peds, now === 'day'\)/);
+  // CC-NPC2b: each day / night change is a new epoch (the crowd's lines are kept for one)
+  assert.match(ui, /if \(now !== lastPeriod\) \{ lastPeriod = now; periodEpoch\+\+; \}/);
   assert.match(ui, /speech\.registerPlace\(THRILL_HILL\.place, \{ x: fire\.x, z: fire\.z, r: THRILL_HILL\.radius \}\)/);
   // and the data's special names the same place
   assert.equal(parseNpcLines(read('data/gf/npc-lines.json')).lines.specials['thrill-hill-crowd'].where, 'thrill-hill');
@@ -455,18 +457,21 @@ function ped(x, z, extra = {}) {
   return { placed: true, x, z, ax: x, az: z - 5, ux: 0, uz: 1, t: 5, len: 20, dir: 1, node: null, v: 1.3, speed: 1.3, pause: 0,
     conversation: null, socialTime: 0, dodge: 0, dodgeTarget: 0, avoidUntil: 0, avoidSpeed: 0, avoidT: 0, rig: { placed: true, pelvisY: 1, s: 1 }, ...extra };
 }
-function world({ peds = [], party = [], night = false, canStand = () => true } = {}) {
-  const speech = createNpcSpeech({ lines: parseNpcLines(SAMPLE).lines, random: seeded(5) });
-  const talk = createNpcTalk({ sources: () => ({ peds, party }), speech, period: () => (night ? 'night' : 'day'), canStand, ground: () => 0 });
+function world({ peds = [], party = [], night = false, canStand = () => true, lines = parseNpcLines(SAMPLE).lines, seed = 5 } = {}) {
+  const speech = createNpcSpeech({ lines, random: seeded(seed) });
+  // the time of day can change (w.setNight); each change is a new epoch, as gf-npc-talk-ui.js counts them
+  let epoch = 0;
+  const talk = createNpcTalk({ sources: () => ({ peds, party }), speech, period: () => (night ? 'night' : 'day'), canStand, ground: () => 0, epoch: () => epoch });
   const player = { position: { x: 0, y: 0, z: 0 }, heading: 0, speed: 0 };
   let clock = 0;
   const step = (seconds = 0.1, mode = 'person') => {
     for (let s = 0; s < seconds - 1e-9; s += 0.05) { clock += 0.05; talk.update(0.05, clock, mode, player); }
   };
-  return { talk, speech, player, step, get clock() { return clock; } };
+  const setNight = (on) => { if (on !== night) { night = on; epoch++; } };
+  return { talk, speech, player, step, setNight, get clock() { return clock; } };
 }
 
-test('talk: the pedestrian stops, faces the player, says a line; again: the next line; it ends after 4 s and they walk on', () => {
+test('talk: the pedestrian stops, faces the player, says their line; again: the bubble closes; it ends after 4 s and they walk on', () => {
   const p = ped(0, 2);
   const w = world({ peds: [p] });
   assert.deepEqual(w.talk.press(), { ok: false, reason: 'nobody in reach' }, 'before the first update');
@@ -484,19 +489,182 @@ test('talk: the pedestrian stops, faces the player, says a line; again: the next
   w.step();
   assert.equal(p.conversation.b.x, 0.5, 'the partner it faces follows the player');
   assert.equal(p.conversation.remaining, Infinity, 'the crowd does not end it; the talk does');
-  // T again: the next line from the same person, and the timer starts over
-  w.step(3);
-  const second = w.talk.press();
-  assert.notEqual(second.text, first.text);
-  assert.equal(w.talk.talk().count, 2);
+  // CC-NPC2b: T again while the bubble is open closes it (no new line), and they walk on
+  w.step(1);
+  assert.deepEqual(w.talk.press(), { ok: true, kind: 'ped', closed: true });
+  assert.equal(w.talk.talk(), null);
+  assert.equal(p.conversation, null, 'walks on');
+  // T again: the same line, and the timer starts over
+  w.step();
+  const again = w.talk.press();
+  assert.equal(again.text, first.text);
+  assert.equal(again.speaker, first.speaker);
   assert.ok(w.talk.talk().remaining > 3.9);
   w.step(3.5);
-  assert.ok(w.talk.talk(), 'still talking 3.5 s after the second line');
+  assert.ok(w.talk.talk(), 'still talking 3.5 s after the line');
   w.step(1);
   assert.equal(w.talk.talk(), null, 'over after 4 s');
   assert.equal(p.conversation, null, 'walks on');
   assert.ok(p.socialTime > w.clock, 'and does not start another chat at once');
-  assert.equal(w.talk.stats.talks, 1);
+  assert.equal(w.talk.stats.talks, 2);
+});
+
+// ---------------------------------------------------------------- CC-NPC2b: one person, one line
+
+const BANK_LINES = () => parseNpcLines(bankText()).lines;
+// press Talk at whoever is in reach until a line comes up (a press on an open bubble closes it)
+function hear(w) {
+  if (w.talk.talk()) w.talk.press();
+  w.step();
+  return w.talk.press();
+}
+
+test('one person, one line: the same speaker and text on every press, over and over, after walking away and back', () => {
+  const p = ped(0, 2);
+  const w = world({ peds: [p], lines: BANK_LINES() });
+  w.step();
+  const first = hear(w);
+  assert.equal(first.ok, true);
+  assert.ok(first.group && first.speaker, 'a town group line with its name');
+  for (let i = 0; i < 40; i++) {
+    const r = hear(w);
+    assert.equal(r.text, first.text, `press ${i}`);
+    assert.equal(r.speaker, first.speaker);
+    assert.equal(r.group, first.group);
+    if (i === 20) { w.setNight(true); } // town talk is not tied to the time of day: still their line
+  }
+  w.player.position.z = -10; // walk away (the talk ends) and come back
+  w.step();
+  assert.equal(w.talk.talk(), null);
+  w.player.position.z = 0;
+  w.step();
+  assert.equal(hear(w).text, first.text);
+});
+
+test('two people: each keeps their own line, and the second never gets the line just heard', () => {
+  const lines = BANK_LINES();
+  for (let seed = 1; seed <= 40; seed++) {
+    const a = ped(0, 2), b = ped(0, 2.5);
+    const w = world({ peds: [a, b], lines, seed });
+    w.step();
+    assert.equal(w.talk.target().npc, a);
+    const la = hear(w);
+    a.placed = false; // a walks off; b is the nearest now
+    w.step(0.6);
+    assert.equal(w.talk.target().npc, b);
+    const lb = hear(w);
+    assert.notEqual(lb.text, la.text, `seed ${seed}: not the same line twice in a row`);
+    a.placed = true;
+    b.placed = false;
+    w.step(0.6);
+    assert.equal(hear(w).text, la.text, 'a still has their line');
+    b.placed = true;
+    a.placed = false;
+    w.step(0.6);
+    assert.equal(hear(w).text, lb.text, 'b still has theirs');
+  }
+});
+
+test('a pooled pedestrian respawned (a new person) gets a fresh pick; the same spawn never does', () => {
+  const p = ped(0, 2, { spawns: 1 });
+  const w = world({ peds: [p], lines: BANK_LINES(), seed: 3 });
+  w.step();
+  const first = hear(w);
+  assert.equal(hear(w).text, first.text);
+  const seen = new Set([first.text]);
+  for (let i = 0; i < 10; i++) {
+    p.spawns++; // pedestrian-system.js spawnPed: the pool gave this body to someone new
+    const r = hear(w);
+    assert.notEqual(r.text, [...seen].pop(), 'a fresh pick, not the line just heard');
+    seen.add(r.text);
+    assert.equal(hear(w).text, r.text, 'kept for this spawn');
+  }
+  assert.ok(seen.size > 5, 'new people, new lines');
+  // pedestrian-system.js counts the spawns (inert for New York, which never reads it)
+  assert.match(read('js/pedestrian-system.js'), /p\.spawns = \(p\.spawns \|\| 0\) \+ 1;/);
+});
+
+test('the fire crowd and Oregano Guy keep one line for the night; a new night can bring a new one; the day crowd per day', () => {
+  const lines = BANK_LINES();
+  const guests = Array.from({ length: 8 }, (_, k) => ({ k, phase: 'at', x: (k - 3.5) * 0.4, z: 2, heading: Math.PI }));
+  let changed = 0;
+  for (let seed = 1; seed <= 12; seed++) {
+    const w = world({ party: guests, night: true, lines, seed });
+    guests.forEach((g, k) => w.speech.bind(g, k === guests.length - 1 ? 'party-oregano-guy' : 'thrill-hill-crowd'));
+    const night1 = new Map();
+    for (const g of guests) {
+      // only this guest in reach
+      for (const o of guests) o.phase = o === g ? 'at' : 'away';
+      w.step(0.6);
+      const r = hear(w);
+      assert.equal(r.special, g.k === 7 ? 'party-oregano-guy' : 'thrill-hill-crowd');
+      for (let i = 0; i < 5; i++) assert.equal(hear(w).text, r.text, 'fixed within the night');
+      night1.set(g, r.text);
+    }
+    w.setNight(false); // day: the guests go home (CC-NPC1: away by day)
+    w.setNight(true); // the next night
+    for (const g of guests) {
+      for (const o of guests) o.phase = o === g ? 'at' : 'away';
+      w.step(0.6);
+      const r = hear(w);
+      assert.equal(hear(w).text, r.text);
+      if (r.text !== night1.get(g)) changed++;
+    }
+  }
+  for (const g of guests) g.phase = 'at';
+  assert.ok(changed > 40, `fresh lines on the next night (${changed} of 96 changed)`);
+  // the day crowd: anyone within 30 m of the dead fire keeps one day line per day
+  const p = ped(0, 2);
+  const w = world({ peds: [p], lines, seed: 9 });
+  w.speech.registerPlace('thrill-hill', { x: 0, z: 0, r: 30 });
+  w.step();
+  const d1 = hear(w);
+  assert.equal(d1.special, 'thrill-hill-crowd');
+  assert.ok(lines.specials['thrill-hill-crowd'].day.map(lineText).includes(d1.text));
+  assert.equal(hear(w).text, d1.text);
+  let dayChanged = false;
+  for (let i = 0; i < 6 && !dayChanged; i++) {
+    w.setNight(true); w.setNight(false);
+    const d = hear(w);
+    assert.ok(lines.specials['thrill-hill-crowd'].day.map(lineText).includes(d.text));
+    assert.equal(hear(w).text, d.text);
+    dayChanged = d.text !== d1.text;
+  }
+  assert.ok(dayChanged, 'a new day, a new day line');
+});
+
+test('the Thrill Cop: whoever holds the part keeps one cop line while holding it; let go, they are someone else', () => {
+  const lines = BANK_LINES();
+  const p = ped(0, 2, { spawns: 1, route: { trail: { edge: 1 } } });
+  const w = world({ peds: [p], lines, seed: 2 });
+  w.step();
+  const before = hear(w); // a town line first
+  assert.ok(before.group);
+  const cop = createOneBound({ speech: w.speech, special: 'thrill-cop', anchor: { x: 0, z: 0 }, eligible: () => true });
+  cop.update(w.clock, [p], true);
+  const c = hear(w);
+  assert.equal(c.special, 'thrill-cop');
+  assert.equal(c.speaker, 'The Thrill Cop');
+  for (let i = 0; i < 10; i++) assert.equal(hear(w).text, c.text, 'one cop line while holding the part');
+  cop.update(w.clock + 10, [p], false); // nightfall: let go
+  const after = hear(w);
+  assert.equal(after.special, null);
+  assert.equal(hear(w).text, after.text);
+});
+
+test('the speech without a key still re-rolls (CC-NPC1 behaviour) and the talk always passes one', () => {
+  const speech = createNpcSpeech({ lines: parseNpcLines(SAMPLE).lines, random: seeded(4) });
+  const p = {};
+  const a = speech.say(p, 0, 0, 'day'), b = speech.say(p, 0, 0, 'day');
+  assert.notEqual(a.text, b.text);
+  assert.match(read('js/gf-npc-talk.js'), /speech\.say\(n, n\.x, n\.z, period\(\), \{ key: entry\.a\.key\(n, speech\), epoch: epoch\(\) \}\)/);
+  // a new line file (it loads after the game starts): everyone picks afresh from it
+  const k = {};
+  const first = speech.say(k, 0, 0, 'day', { key: 'x' });
+  assert.deepEqual(speech.lockedLine(k), first);
+  speech.setLines(parseNpcLines({ randos: { day: ['fresh'], night: [], any: [] } }).lines);
+  assert.equal(speech.lockedLine(k), null);
+  assert.equal(speech.say(k, 0, 0, 'day', { key: 'x' }).text, 'fresh');
 });
 
 test('talk: ends when the player walks beyond 6 m, leaves foot, or the pedestrian is gone', () => {

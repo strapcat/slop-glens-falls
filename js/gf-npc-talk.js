@@ -119,7 +119,9 @@ const PED = {
     p.conversation = null;
     p.socialTime = Math.max(p.socialTime || 0, clock + 20); // walks on rather than starting a new chat at once
   },
-  headY: (p, ground) => (p.rig && p.rig.placed && Number.isFinite(p.rig.pelvisY) ? p.rig.pelvisY + 0.78 * (p.rig.s || 1) : ground(p.x, p.z) + HEAD)
+  headY: (p, ground) => (p.rig && p.rig.placed && Number.isFinite(p.rig.pelvisY) ? p.rig.pelvisY + 0.78 * (p.rig.s || 1) : ground(p.x, p.z) + HEAD),
+  // CC-NPC2b: who this pooled pedestrian is now: its spawn (pedestrian-system.js counts them) and the part it holds
+  key: (p, speech) => `ped:${p.spawns || 0}|${speech.boundTo(p) ?? ''}`
 };
 
 // The Thrill Hill party's people (gf-thrill-hill.js schedule.people): only someone standing at the fire. They stay where
@@ -131,13 +133,16 @@ const PARTY = {
   hold(p, st, px, pz) { p.talkFacing = Math.atan2(px - p.x, pz - p.z); },
   valid: (p) => p.phase === 'at',
   stop(p) { p.talkFacing = NaN; },
-  headY: (p, ground) => ground(p.x, p.z) + HEAD
+  headY: (p, ground) => ground(p.x, p.z) + HEAD,
+  // the same guests every night: their line is kept for the night (the speech's epoch), not for good
+  key: (p, speech) => `party|${speech.boundTo(p) ?? ''}`
 };
 
 // sources: () => { peds: [...], party: [...] } (the live lists); speech: createNpcSpeech(); period(): 'day' | 'night';
 // canStand(x, z): may a pedestrian step aside onto (x, z) (on a kerb island, clear of buildings); ground(x, z): the
-// ground's height (for the bubble's anchor)
-function createNpcTalk({ sources, speech, period, canStand = () => true, ground = () => 0 }) {
+// ground's height (for the bubble's anchor); epoch(): the count of day / night changes (CC-NPC2b: a special's line is
+// kept for one of them)
+function createNpcTalk({ sources, speech, period, canStand = () => true, ground = () => 0, epoch = () => 0 }) {
   const grid = createNpcGrid();
   const entries = []; // reused grid entries
   const near = [];
@@ -264,20 +269,24 @@ function createNpcTalk({ sources, speech, period, canStand = () => true, ground 
     }
   }
 
-  // The talk key or button: start talking to the target, or the next line from the person already talking
+  // The talk key or button. CC-NPC2b: one person, one line. Pressed at someone, they say their line (the same one every
+  // time: gf-npc-lines.js keeps it); pressed again while their bubble is open, it closes and they walk on
   function press() {
     if (!target || !player) return { ok: false, reason: 'nobody in reach' };
-    const px = player.position.x, pz = player.position.z;
-    if (!talk || talk.entry.npc !== target.npc) {
+    if (talk && talk.entry.npc === target.npc) {
+      const kind = talk.entry.a.kind;
       endTalk();
-      const entry = own(target);
-      talk = { entry, st: entry.a.start(entry.npc, clock, px, pz), until: 0, text: '', speaker: null, special: null, count: 0 };
-      stats.talks++;
+      return { ok: true, kind, closed: true };
     }
-    const n = talk.entry.npc;
-    const line = speech.say(n, n.x, n.z, period());
-    Object.assign(talk, line, { until: clock + TALK.seconds, count: talk.count + 1 });
-    return { ok: true, kind: talk.entry.a.kind, ...line };
+    const px = player.position.x, pz = player.position.z;
+    endTalk();
+    const entry = own(target);
+    talk = { entry, st: entry.a.start(entry.npc, clock, px, pz), until: 0, text: '', speaker: null, special: null, count: 0 };
+    stats.talks++;
+    const n = entry.npc;
+    const line = speech.say(n, n.x, n.z, period(), { key: entry.a.key(n, speech), epoch: epoch() });
+    Object.assign(talk, line, { until: clock + TALK.seconds, count: 1 });
+    return { ok: true, kind: entry.a.kind, ...line };
   }
 
   return {
