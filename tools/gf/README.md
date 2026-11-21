@@ -1290,7 +1290,7 @@ OSM outline), but `gf-building-terrain.js` draws it with `js/gf-buckley-meshes.j
 | --- | --- |
 | footprint | OSM way 1190839200 (sourced) |
 | height | 7.8 m, USGS 3DEP LiDAR roof over the footprint (CC-003b; sourced) |
-| facade | Dave-requested; modelled from the look described in Dave's spec. His Street View reference photos (Oct 2007, Jan 2022, Aug 2025) never reached this session, so nothing was checked against them |
+| facade | Dave-requested; modelled from the look described in Dave's CC-BUCKLEY and CC-BUCKLEY-fix specs (which draw on Street View 2007-2025 and public listing photos of the entrance: red brick, aluminium frames). The photos themselves never reached the coding session, so nothing was checked against them by eye; nothing traced or committed |
 | 1993 appearance | unconfirmed: Dave says the Oct 2007 view shows the same building and layout; Dave to confirm |
 
 The model is `js/gf-buckley-plan.js` (pure, tested) and `js/gf-buckley-meshes.js`:
@@ -1346,11 +1346,14 @@ is a plain painted colour and the only texture is the sign's canvas lettering. O
 | repair: stopped under / settle / work | 0.5 m/s / 2 s / 3 s | `REPAIR.stopped`, `settle`, `work` |
 | repair price | free (0) | `REPAIR.cost` and the hooks |
 | front block depth / wall height / mansard height | 19 m / 3.3 m / 1.1 m | `APPROX_BUCKLEY.frontDepth`, `frontWall`, `fascia` |
+| mansard shingle rows | every 0.25 m (4 rows), each butt 3.5 cm proud, all round the front block | `APPROX_BUCKLEY.fascia.row`, `lip` |
 | workshop side walls (the arched roof rises to the LiDAR 7.8 m) | 6.0 m | `APPROX_BUCKLEY.rearWall` |
 | two bays | 3.0 m wide, 3.0 m high, from 0.5 m along the front | `APPROX_BUCKLEY.bay` |
-| storefront windows / sign / planter | from 7.6 m along the front; sign 2.8-3.75 m up | `APPROX_BUCKLEY.windows`, `sign`, `planter` |
+| storefront windows / sign / planter | from 7.6 m along the front, glazed 0.9-2.55 m (head lowered from 2.7 m to make room for the brick band), aluminium frames 8 cm; sign 3.0-3.95 m up (raised from 2.8-3.75 m, above the band) | `APPROX_BUCKLEY.windows`, `sign`, `planter` |
+| red brick | a 0.3 m band over the storefront and the entrance, 0.3 m piers each side of the storefront, 6 cm proud, mortar every 7.5 cm; brick red 0x8e3a2e | `APPROX_BUCKLEY.brick`, `PAINT.brick` |
+| east-corner entrance | a 1.0 m glass door, 2.2 m high, with glass sidelights and a 0.45 m glass transom lettered "Buckley Tire Service Inc.", 8 cm aluminium frame, push bar at 1.0 m; lighter, glossier glass than the storefront | `APPROX_BUCKLEY.entrance`, `PAINT.entryGlass` |
 | repair spot | 3.4 m radius, 5 m out in front of the bays | `APPROX_BUCKLEY.zone` |
-| colours | picked from the written description (white walls, reddish-brown trim, brown shingles, red sign, cream doors) | `PAINT` in `gf-buckley-meshes.js` |
+| colours | picked from the written descriptions (white walls, reddish-brown trim, brown shingles, red sign, cream doors) | `PAINT` in `gf-buckley-meshes.js` |
 
 The OSM outline gives a front of about 23 m (75 ft) along Warren St and a connected depth of about 49 m (160 ft). That
 matches Dave's 60-75 ft by 150-180 ft estimate from the photos, so the outline was used as it is.

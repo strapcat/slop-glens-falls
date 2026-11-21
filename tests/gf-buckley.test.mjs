@@ -293,7 +293,7 @@ test('Buckley Tire: the model stands on the OSM outline, front block on Warren S
   const ys = (k) => plan.parts[k].filter((_, i) => i % 3 === 1);
   assert.ok(Math.abs(Math.max(...ys('metalRoof')) - (100 + 7.8)) < 1e-9, 'the arched roof tops out at the LiDAR roof');
   assert.ok(Math.max(...ys('fascia')) <= 100 + APPROX_BUCKLEY.frontWall + APPROX_BUCKLEY.fascia.h + 1e-9, 'the front block is low');
-  for (const k of ['wall', 'trim', 'fascia', 'roof', 'metalRoof', 'door', 'glass', 'planter', 'shrub', 'sign', 'metal', 'apron', 'paint']) {
+  for (const k of ['wall', 'trim', 'fascia', 'shingleEdge', 'roof', 'metalRoof', 'door', 'glass', 'entryGlass', 'brick', 'mortar', 'planter', 'shrub', 'sign', 'metal', 'apron', 'paint']) {
     assert.ok(plan.parts[k] && plan.parts[k].length, `${k} drawn`);
   }
   assert.equal(plan.bays.length, 2);
@@ -314,6 +314,70 @@ test('Buckley Tire: the model stands on the OSM outline, front block on Warren S
   assert.equal(APPROX_BUCKLEY.zone.s, bayMid, 'centred on the two bays');
 });
 
+// front-frame coordinates of a world point: s along the Warren St front (west to east), t into the building
+const frameOf = (x, z) => {
+  const { A, u, nIn } = plan.frame;
+  return [(x - A[0]) * u[0] + (z - A[1]) * u[1], (x - A[0]) * nIn[0] + (z - A[1]) * nIn[1]];
+};
+// a painted colour of gf-buckley-meshes.js (it imports three.js, so read from its source) and its luminance 0..1
+const paint = (k) => Number(read('js/gf-buckley-meshes.js').match(new RegExp(`\\n  ${k}: (0x[0-9a-f]{6})`))[1]);
+const lum = (c) => (0.2126 * ((c >> 16) & 255) + 0.7152 * ((c >> 8) & 255) + 0.0722 * (c & 255)) / 255;
+const verts = (k) => { const v = plan.parts[k] || [], out = []; for (let i = 0; i < v.length; i += 3) out.push([v[i], v[i + 1], v[i + 2]]); return out; };
+
+test('Buckley Tire look (CC-BUCKLEY-fix): aluminium storefront frames, red brick piers and band, shingle rows', () => {
+  const sf = plan.storefront, W = APPROX_BUCKLEY.windows, Br = APPROX_BUCKLEY.brick;
+  // the storefront's frames and mullions are aluminium: no reddish-brown trim in front of the windows above the foot band
+  for (const [x, y, z] of verts('trim')) {
+    const [s, t] = frameOf(x, z);
+    if (t < 0 && s > sf.w0 - 1e-6 && s < sf.w1 + 1e-6) assert.ok(y <= 100 + 0.35 + 1e-6, `trim at (${s.toFixed(2)}, ${y.toFixed(2)}) on the storefront`);
+  }
+  const metalOnFront = verts('metal').map(([x, y, z]) => [...frameOf(x, z), y]).filter(([s, t]) => t < 0 && s >= sf.w0 - W.frame - 1e-6 && s <= sf.w1 + W.frame + 1e-6);
+  assert.ok(metalOnFront.some(([, , y]) => Math.abs(y - (sf.head + W.frame)) < 1e-6), 'an aluminium head');
+  assert.ok(metalOnFront.some(([, , y]) => Math.abs(y - (sf.sill - W.frame)) < 1e-6), 'an aluminium sill');
+  const nPanes = Math.max(1, Math.round((sf.w1 - sf.w0) / W.pane));
+  const mullions = new Set(metalOnFront.filter(([, , y]) => Math.abs(y - sf.sill) < 1e-6).map(([s]) => s.toFixed(3)));
+  assert.ok(mullions.size >= 2 * (nPanes + 1), `${nPanes + 1} mullions`);
+  // red brick: a pier each side of the windows from the ground to the head, and a ~0.3 m band right over the windows
+  assert.equal(sf.piers.length, 2);
+  assert.ok(sf.piers[0][1] <= sf.w0 && sf.piers[1][0] >= sf.w1, 'the piers flank the windows');
+  for (const [p0, p1] of sf.piers) assert.ok(p1 - p0 > 0.2 && p1 - p0 < 0.5, 'narrow piers');
+  assert.ok(Math.abs(sf.band[1] - sf.band[0] - 0.3) < 1e-9 && Math.abs(sf.band[0] - (sf.head + W.frame)) < 1e-9, 'a 0.3 m band directly over the frame');
+  const brick = verts('brick').map(([x, y, z]) => [...frameOf(x, z), y]);
+  assert.ok(brick.some(([s, t, y]) => t < 0 && Math.abs(y - 100) < 1e-6 && s <= sf.w0), 'the west pier reaches the ground');
+  assert.ok(brick.some(([s, t, y]) => t < 0 && Math.abs(y - sf.band[1]) < 1e-6 && s >= sf.w1), 'the band spans the windows');
+  assert.ok(plan.sign.every(([, y]) => y >= sf.band[1] - 1e-6), 'the sign sits above the brick band, which stays visible');
+  assert.ok(plan.stats.brickCourses >= 3 * 2 + 3 + 3, 'mortar courses on the piers and bands');
+  assert.equal(paint('brick'), 0x8e3a2e, 'plain brick red');
+  // the mansard: shingle rows about every 0.25 m, stepped (each row's butt stands proud), all round the front block
+  assert.ok(plan.stats.shingleRows >= 4, `${plan.stats.shingleRows} shingle rows`);
+  const rowYs = new Set(verts('shingleEdge').map(([, y]) => y.toFixed(4)));
+  assert.equal(rowYs.size, plan.stats.shingleRows, 'a butt at each row');
+  const sides = new Set();
+  for (const [x, , z] of verts('shingleEdge')) { const [s, t] = frameOf(x, z); sides.add(t < 1 ? 'front' : s < 2 ? 'west' : s > plan.frame.length - 2 ? 'east' : 'back'); }
+  for (const side of ['front', 'west', 'east']) assert.ok(sides.has(side), `shingles on the ${side}`);
+  assert.equal(APPROX_BUCKLEY.fascia.row, 0.25);
+});
+
+test('Buckley Tire look (CC-BUCKLEY-fix): the east-corner entrance is a framed glass door with a push bar and a transom', () => {
+  const e = plan.entrance, Ent = APPROX_BUCKLEY.entrance;
+  assert.ok(Math.abs(e.door[1] - e.door[0] - Ent.door) < 1e-9 && e.door[0] > Ent.margin && e.door[1] < e.length - Ent.margin, 'a door with sidelights');
+  assert.ok(Math.abs(e.bar - (100 + Ent.bar)) < 1e-9, 'a push bar at 1 m');
+  assert.ok(e.transom[0] > e.doorTop && Math.abs(e.transom[1] - e.transom[0] - Ent.transom) < 1e-9, 'a glass transom over the door');
+  assert.ok(Math.abs(e.band[1] - e.band[0] - 0.3) < 1e-9, 'the brick band over the entrance too');
+  const ys = (k) => verts(k).map(([, y]) => y);
+  assert.ok(ys('entryGlass').some((y) => Math.abs(y - e.transom[1]) < 1e-9), 'the transom is glass');
+  assert.ok(ys('metal').some((y) => Math.abs(y - (e.bar + 0.03)) < 1e-9), 'the push bar is aluminium');
+  assert.ok(ys('metal').some((y) => Math.abs(y - (e.transom[1] + Ent.frame)) < 1e-9), 'an aluminium head over the transom');
+  // the transom's lettering face sits on the transom
+  assert.equal(plan.transom.length, 4);
+  for (const [, y] of plan.transom) assert.ok(y >= e.transom[0] - 1e-9 && y <= e.transom[1] + 1e-9);
+  // its glass reads lighter and glossier than the storefront's
+  assert.ok(lum(paint('entryGlass')) > lum(paint('glass')) + 0.1, 'lighter glass at the entrance');
+  // every entrance part stands on the corner edge just outside the outline (not inside the building, not out on the apron)
+  const onCorner = verts('entryGlass').every(([x, , z]) => !inRing(osmRing, x, z));
+  assert.ok(onCorner);
+});
+
 test('Buckley Tire: no outside imagery: plain colours and a canvas-drawn sign, nothing loaded from a file or Google', () => {
   for (const f of ['js/gf-buckley-plan.js', 'js/gf-buckley-meshes.js', 'js/gf-damage-view.js', 'css/gf-damage.css']) {
     const src = read(f);
@@ -321,7 +385,11 @@ test('Buckley Tire: no outside imagery: plain colours and a canvas-drawn sign, n
   }
   assert.match(read('js/gf-buckley-meshes.js'), /new THREE\.CanvasTexture\(canvas\)/);
   assert.match(read('js/gf-buckley-meshes.js'), /'BUCKLEY TIRE SERVICE'/);
-  assert.doesNotMatch(read('js/gf-buckley-meshes.js'), /cooper/i, 'the modern Cooper Tires signage is left out');
+  assert.match(read('js/gf-buckley-meshes.js'), /'Buckley Tire Service Inc\.'/);
+  for (const f of ['js/gf-buckley-plan.js', 'js/gf-buckley-meshes.js']) {
+    const code = read(f).split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
+    assert.doesNotMatch(code, /cooper|michelin|goodrich|bfg/i, `${f}: no modern brand signage`);
+  }
   // no Buckley image anywhere in the repo's assets
   const walk = (dir) => fs.readdirSync(path.join(root, dir), { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? walk(path.join(dir, d.name)) : [path.join(dir, d.name)]));
   const images = ['js', 'css', 'data', 'tools/gf/data'].filter((d) => fs.existsSync(path.join(root, d))).flatMap(walk).filter((f) => /\.(png|jpe?g|webp|gif)$/i.test(f));

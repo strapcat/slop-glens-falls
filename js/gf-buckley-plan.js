@@ -1,27 +1,34 @@
 // CC-BUCKLEY: Buckley Tire Service (254 Warren St at Rogers St) as a plan: no three.js, so Node tests read it. The walls
 // stand on the OSM outline (way 1190839200, js/gf-buildings.js) and the tall rear workshop's roof reaches the USGS LiDAR
-// height (7.8 m, gf_landmarks.json). Everything else follows the look Dave described in the CC-BUCKLEY spec (his Street
-// View reference photos, Oct 2007, Jan 2022 and Aug 2025, never reached this session): no Google imagery is committed, traced or used as a texture; every colour here is a plain
-// painted colour and the sign's lettering is drawn at run time (gf-buckley-meshes.js). Every size below is a named
+// height (7.8 m, gf_landmarks.json). Everything else follows the look Dave described in the CC-BUCKLEY and
+// CC-BUCKLEY-fix specs (his Street View reference photos, Oct 2007, Jan 2022 and Aug 2025, never reached this session,
+// so nothing here was checked against them): no Google imagery is committed, traced or used as a texture; every colour
+// here is a plain painted colour and the sign's lettering is drawn at run time (gf-buckley-meshes.js). Every size below is a named
 // APPROX value: approximate, not surveyed, for Dave to tweak.
 //
 // The look (the 2007-2025 views; Dave to confirm 1993): a low one-storey front block of white painted masonry with
-// reddish-brown trim and a brown shingled mansard fascia along its front and sides; two service bays with sectional
-// garage doors at the west end of the Warren St front; dark storefront windows in the middle over a raised planter with
-// shrubs, a red "BUCKLEY TIRE SERVICE" sign above them; an aluminium-framed glass entrance on the east corner; a closed
-// cream door on the Rogers St side; behind, a taller workshop with a shallow arched roof and tall multi-pane industrial
-// windows down its sides; a weathered asphalt apron in front. The modern Cooper Tires signage is left out.
+// reddish-brown trim and a brown shingled mansard fascia (shingle rows) along its front and sides; two service bays
+// with sectional garage doors at the west end of the Warren St front; dark storefront windows in aluminium frames in the
+// middle, between narrow red brick piers and under a red brick band, over a raised planter with shrubs, a red "BUCKLEY
+// TIRE SERVICE" sign above them; on the east corner an aluminium-framed glass door with a push bar, glass sidelights and
+// a lettered glass transom, under the same brick band; a closed cream door on the Rogers St side; behind, a taller workshop with a shallow arched roof and tall multi-pane industrial
+// windows down its sides; a weathered asphalt apron in front. No modern brand signage (Cooper, Michelin, BFGoodrich).
 
 const APPROX_BUCKLEY = {
   frontDepth: 19, // m: the low front block, measured in from the Warren St front (the rest of the outline is the workshop)
   frontWall: 3.3, // m: the front block's walls
-  fascia: { h: 1.1, inset: 0.9 }, // m: the mansard band above them (its height, and how far in it leans at the top)
+  fascia: { h: 1.1, inset: 0.9, row: 0.25, lip: 0.035 }, // m: the mansard band above them (its height, how far in it
+  // leans at the top, the height of a shingle row, and how far each row's butt stands out from the row above)
   rearWall: 6.0, // m: the workshop's side walls; its arched roof rises from here to the LiDAR height
   bay: { first: 0.5, w: 3.0, gap: 0.5, h: 3.0 }, // m: the two service bays along the front, from its west end
-  windows: { start: 7.6, end: 0.6, sill: 0.9, head: 2.7, pane: 1.85 }, // m: storefront windows (end: margin at the east end)
+  windows: { start: 7.6, end: 0.6, sill: 0.9, head: 2.55, pane: 1.85, frame: 0.08 }, // m: storefront windows (end: margin
+  // at the east end; frame: the aluminium head, sill and mullions)
+  brick: { band: 0.3, pier: 0.3, out: 0.06, course: 0.075, mortar: 0.012 }, // m: the red brick band over the windows
+  // and the entrance, the piers beside the windows, how far the brick stands proud, a brick course and a mortar line
   planter: { out: 0.9, h: 0.55 }, // m: the raised planter under the windows
-  sign: { start: 7.3, end: 0.4, y0: 2.8, y1: 3.75, out: 0.25 }, // m: the red sign above the windows
-  entrance: { margin: 0.35, h: 2.5 }, // m: the glass entrance on the east corner edge
+  sign: { start: 7.3, end: 0.4, y0: 3.0, y1: 3.95, out: 0.25 }, // m: the red sign, above the brick band
+  entrance: { margin: 0.35, door: 1.0, h: 2.2, transom: 0.45, frame: 0.08, bar: 1.0 }, // m: the glass entrance on the
+  // east corner edge: its door's width and height, the glass transom over it, the aluminium frame, the push bar's height
   sideDoor: { w: 3.0, h: 3.0, at: 0.55 }, // m: the cream door on the Rogers St side (at: along that edge, 0..1)
   rearWindows: { w: 2.2, y0: 1.6, y1: 5.2, every: 4.5, margin: 2.0, minEdge: 8 }, // m: the workshop's side windows
   apron: { west: 5, east: 1.5, out: 11 }, // m: asphalt beyond the front's west end, east end, and out towards Warren St
@@ -160,10 +167,21 @@ function planBuckley(record, { ground = null, A = APPROX_BUCKLEY } = {}) {
   }
 
   // the mansard: a shingled band leaning in from the wall top, and a flat roof inside it
+  // Shingle rows: the slope split into rows about `row` high, each row's lower edge (its butt) standing `lip` proud of
+  // the row above, so the band steps like courses of shingles; the butts' small faces are a darker shade
   const inner = insetRing(frontRing, A.fascia.inset);
+  const shingleRows = Math.max(1, Math.round(A.fascia.h / A.fascia.row));
+  const outward = frontRing.map((p, i) => { const d = sub(p, inner[i]), l = len(d) || 1; return [d[0] / l, d[1] / l]; });
+  const slope = (i, f, lip) => [frontRing[i][0] + (inner[i][0] - frontRing[i][0]) * f + outward[i][0] * lip, yW + A.fascia.h * f,
+    frontRing[i][1] + (inner[i][1] - frontRing[i][1]) * f + outward[i][1] * lip];
   for (let i = 0; i < frontRing.length; i++) {
     const j = (i + 1) % frontRing.length;
-    quad('fascia', V(frontRing[i], yW), V(frontRing[j], yW), V(inner[j], yF), V(inner[i], yF));
+    for (let r = 0; r < shingleRows; r++) {
+      const f0 = r / shingleRows, f1 = (r + 1) / shingleRows, lip = A.fascia.lip;
+      quad('fascia', slope(i, f0, lip), slope(j, f0, lip), slope(j, f1, 0), slope(i, f1, 0));
+      // the butt: from the row below's top (not proud) out to this row's proud lower edge
+      quad('shingleEdge', slope(i, f0, 0), slope(j, f0, 0), slope(j, f0, lip), slope(i, f0, lip));
+    }
   }
   for (const [a, b, c] of triangulate(inner)) tri('roof', V(inner[a], yF), V(inner[b], yF), V(inner[c], yF));
 
@@ -212,14 +230,33 @@ function planBuckley(record, { ground = null, A = APPROX_BUCKLEY } = {}) {
       panel('glass', a, b, base + B.h * 0.55, base + B.h * 0.72, -0.09);
     }
   }
-  const W = A.windows, w0 = W.start, w1 = L - W.end;
+  const W = A.windows, w0 = W.start, w1 = L - W.end, fr = W.frame;
   panel('glass', w0, w1, base + W.sill, base + W.head, -0.04);
-  box('trim', w0 - 0.12, w1 + 0.12, -0.1, 0, base + W.head, base + W.head + 0.12); // head
+  // the aluminium frame: head, sill and mullions
+  box('metal', w0 - fr, w1 + fr, -0.1, 0, base + W.head, base + W.head + fr);
+  box('metal', w0 - fr, w1 + fr, -0.1, 0, base + W.sill - fr, base + W.sill);
   const nPanes = Math.max(1, Math.round((w1 - w0) / W.pane));
   for (let k = 0; k <= nPanes; k++) {
     const s = w0 + ((w1 - w0) * k) / nPanes;
-    box('trim', s - 0.05, s + 0.05, -0.1, 0, base + W.sill, base + W.head);
+    box('metal', s - fr / 2, s + fr / 2, -0.1, 0, base + W.sill, base + W.head);
   }
+  // red brick: a pier each side of the windows and a band over them, standing proud of the white wall, with thin
+  // mortar lines drawn as courses on their faces
+  const Br = A.brick;
+  let brickCourses = 0;
+  const courses = (y0, y1, face) => {
+    for (let y = y0 + Br.course; y < y1 - Br.course / 2; y += Br.course) { face(y - Br.mortar / 2, y + Br.mortar / 2); brickCourses++; }
+  };
+  const brickBox = (s0, s1, y0, y1) => {
+    box('brick', s0, s1, -Br.out, 0, y0, y1);
+    courses(y0, y1, (ya, yb) => panel('mortar', s0, s1, ya, yb, -Br.out - 0.004));
+  };
+  const pierL = [w0 - fr - Br.pier, w0 - fr], pierR = [w1 + fr, w1 + fr + Br.pier];
+  const yHead = base + W.head + fr, yBand = yHead + Br.band;
+  brickBox(pierL[0], pierL[1], base, yHead);
+  brickBox(pierR[0], pierR[1], base, yHead);
+  brickBox(pierL[0], pierR[1], yHead, yBand);
+  const storefront = { w0, w1, sill: base + W.sill, head: base + W.head, piers: [pierL, pierR], band: [yHead, yBand] };
   const Pl = A.planter;
   box('planter', w0, w1, -Pl.out, 0, base, base + Pl.h);
   const shrubs = [];
@@ -244,10 +281,22 @@ function planBuckley(record, { ground = null, A = APPROX_BUCKLEY } = {}) {
     return [p[0] + (q[0] - p[0]) * f + e.nx * out, y, p[1] + (q[1] - p[1]) * f + e.nz * out];
   };
   const doorOn = (e, from, f0, f1, y0, y1, out, m) => quad(m, onEdge(e, from, f0, y0, out), onEdge(e, from, f1, y0, out), onEdge(e, from, f1, y1, out), onEdge(e, from, f0, y1, out));
-  const Ent = A.entrance, mE = Ent.margin / next.l;
-  doorOn(next, B0, mE, 1 - mE, base, base + Ent.h, 0.05, 'glass');
-  for (const f of [mE, 0.5, 1 - mE]) doorOn(next, B0, f - 0.04 / next.l, f + 0.04 / next.l, base, base + Ent.h, 0.07, 'metal');
-  doorOn(next, B0, mE, 1 - mE, base + Ent.h, base + Ent.h + 0.1, 0.07, 'metal');
+  // a glass door in the middle with glass sidelights, a glass transom over them, all in an aluminium frame; a push bar
+  // across the door; the red brick band over the frame. Its glass is lighter and glossier than the storefront's.
+  const Ent = A.entrance, eL = next.l, m = (x) => x / eL;
+  const e0 = Ent.margin, e1 = eL - Ent.margin, dc = eL / 2, d0 = dc - Ent.door / 2, d1 = dc + Ent.door / 2, ef = Ent.frame;
+  const yDoor = base + Ent.h, yT0 = yDoor + ef, yT1 = yT0 + Ent.transom, yTop = yT1 + ef;
+  doorOn(next, B0, m(e0), m(e1), base, yDoor, 0.05, 'entryGlass');
+  doorOn(next, B0, m(e0), m(e1), yT0, yT1, 0.05, 'entryGlass');
+  for (const s of [e0, d0, d1, e1]) doorOn(next, B0, m(s - ef / 2), m(s + ef / 2), base, yTop, 0.08, 'metal'); // jambs, door stiles
+  for (const [y0, y1] of [[yDoor, yT0], [yT1, yTop], [base, base + 0.12]]) doorOn(next, B0, m(e0 - ef / 2), m(e1 + ef / 2), y0, y1, 0.08, 'metal'); // transom bar, head, bottom rail
+  doorOn(next, B0, m(d0 + 0.12), m(d1 - 0.12), base + Ent.bar - 0.03, base + Ent.bar + 0.03, 0.14, 'metal'); // the push bar
+  for (const s of [d0 + 0.14, d1 - 0.14]) doorOn(next, B0, m(s - 0.02), m(s + 0.02), base + Ent.bar - 0.03, base + Ent.bar + 0.03, 0.11, 'metal'); // its standoffs
+  doorOn(next, B0, m(e0 - ef), m(e1 + ef), yTop, yTop + Br.band, Br.out, 'brick');
+  courses(yTop, yTop + Br.band, (ya, yb) => doorOn(next, B0, m(e0 - ef), m(e1 + ef), ya, yb, Br.out + 0.004, 'mortar'));
+  // the transom's face (lettered at run time, "Buckley Tire Service Inc."): bl, br, tr, tl, just in front of its glass
+  const transom = [onEdge(next, B0, m(e0 + ef), yT0, 0.055), onEdge(next, B0, m(e1 - ef), yT0, 0.055), onEdge(next, B0, m(e1 - ef), yT1, 0.055), onEdge(next, B0, m(e0 + ef), yT1, 0.055)];
+  const entrance = { length: eL, door: [d0, d1], doorTop: yDoor, transom: [yT0, yT1], bar: base + Ent.bar, band: [yTop, yTop + Br.band] };
   const far = next.a === B0 ? next.b : next.a;
   const side = edges[(next.i + (next.a === far ? n - 1 : 1)) % n];
   const Sd = A.sideDoor, half = Sd.w / 2 / side.l;
@@ -314,7 +363,8 @@ function planBuckley(record, { ground = null, A = APPROX_BUCKLEY } = {}) {
   const tris = Object.fromEntries(Object.entries(parts).map(([k, v]) => [k, v.length / 9]));
   return {
     frame: { A: A0, B: B0, u, nIn, length: L }, front: frontRing, rear: rearRing, archRect: { x0, x1, z0, z1 }, top, base,
-    parts, sign, zone, apron, bays, stats: { triangles: tris, rearWindows, shrubs: shrubs.length }
+    parts, sign, transom, zone, apron, bays, storefront, entrance,
+    stats: { triangles: tris, rearWindows, shrubs: shrubs.length, shingleRows, brickCourses }
   };
 }
 
