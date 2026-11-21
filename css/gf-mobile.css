@@ -176,7 +176,7 @@ body.touch-enabled #gf-damage .gf-damage-label { display: none; }
 body.touch-enabled #gf-damage .gf-damage-bar { min-width: 0; }
 body.touch-enabled #gf-damage .gf-damage-pct { min-width: 28px; }
 body.touch-enabled #gf-mission {
-  top: calc(max(var(--edge, 12px), env(safe-area-inset-top)) + 124px);
+  top: calc(max(var(--edge, 12px), env(safe-area-inset-top)) + 150px);
   max-width: calc(100vw - 2 * max(var(--edge, 12px), env(safe-area-inset-left)));
   padding: 9px 13px;
   font-size: 13px;

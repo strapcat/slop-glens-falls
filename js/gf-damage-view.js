@@ -50,8 +50,16 @@ function installGfDamageView({ doc = globalThis.document, scene, camera, damage,
     + '<span class="gf-damage-bar"><span class="gf-damage-fill"></span></span><span class="gf-damage-pct">0%</span>';
   const cluster = doc.querySelector('.hud-bottom-right .cluster') || doc.body;
   const cameraSwitch = cluster.querySelector && cluster.querySelector('#camera-switch');
-  if (cameraSwitch) cluster.insertBefore(chip, cameraSwitch);
-  else cluster.appendChild(chip);
+  // On touch screens the chip lives on <body> (css/gf-mobile.css pins it under the radar): the panel's backdrop blur
+  // would otherwise be the box its fixed position is measured from. Checked every frame, as touch can switch on later.
+  const placeChip = () => {
+    const touch = !!doc.body.classList && doc.body.classList.contains('touch-enabled');
+    const home = touch ? doc.body : cluster;
+    if (chip.parentNode === home) return;
+    if (!touch && cameraSwitch) cluster.insertBefore(chip, cameraSwitch);
+    else home.appendChild(chip);
+  };
+  placeChip();
   const fill = chip.querySelector('.gf-damage-fill');
   const pct = chip.querySelector('.gf-damage-pct');
 
@@ -102,6 +110,7 @@ function installGfDamageView({ doc = globalThis.document, scene, camera, damage,
     // view: createRepairMission().update(...); mode: the active mode
     update(dt, mode, view) {
       clock += dt;
+      placeChip();
       // the chip: in the taxi or on the bike
       const inVehicle = damage.D.modes.includes(mode);
       const d = inVehicle ? damage.damage(mode) : 0;

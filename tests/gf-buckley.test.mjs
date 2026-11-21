@@ -357,4 +357,7 @@ test('wiring: Glens Falls only, the shared modules untouched, New York loads non
   const mobile = read('css/gf-mobile.css');
   assert.match(mobile, /body\.touch-enabled #gf-damage \{/);
   assert.match(mobile, /body\.touch-enabled #gf-mission \{/);
+  // ...and on touch screens the chip moves to <body>, out of the blurred speed panel that would otherwise anchor its
+  // fixed position (it showed behind the toast on a 390x844 screen before this)
+  assert.match(read('js/gf-damage-view.js'), /const home = touch \? doc\.body : cluster;/);
 });
