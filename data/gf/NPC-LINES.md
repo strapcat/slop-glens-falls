@@ -10,7 +10,8 @@ The file starts as Dave's line bank from the "Slop Glens Falls" Notion page (202
 
 Walk up to someone (on foot: get out of the taxi with `F`, or press `1`), face them, and press `T`. On a phone or
 tablet, a **Talk** button appears beside Jump while someone is close enough. They stop, turn to you and say a line for
-about four seconds, or until you walk away. Press `T` (or Talk) again to hear another line from the same person. The
+about four seconds, or until you walk away. Press `T` (or Talk) again and the bubble closes. Each person has **one
+line**: talk to them again and they say the same thing. Someone new (another passer-by) gets their own line. The
 name over the line (for example "Red Wings fan" or "Keg guy") says who is talking.
 
 ## The file
@@ -62,7 +63,10 @@ When a line has a `speaker`, the speech bubble shows that name. Otherwise it sho
 - `day`, `night` and `any` directly under `randos` are a plain, nameless group. They are empty now: town talk comes from
   the named groups. If you put lines there, they count as one more group.
 - Night means Twilight and Midnight in the time-of-day buttons; day means Golden Hour and Midday.
-- Nobody says the same line twice in a row.
+- One person, one line: the first line picked for someone is theirs for as long as they are around. Two people in a
+  row never get the same line.
+- The people at the Thrill Hill fire (and Oregano Guy) keep their line for the whole night and pick a new one the next
+  night; anyone by the dead fire by day keeps one day line per day; the Thrill Cop keeps one line while he has the part.
 
 ### `specials`: named characters and groups
 
