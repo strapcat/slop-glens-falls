@@ -1350,7 +1350,7 @@ is a plain painted colour and the only texture is the sign's canvas lettering. O
 | two bays | 3.0 m wide, 3.0 m high, from 0.5 m along the front | `APPROX_BUCKLEY.bay` |
 | storefront windows / sign / planter | from 7.6 m along the front; sign 2.8-3.75 m up | `APPROX_BUCKLEY.windows`, `sign`, `planter` |
 | repair spot | 3.4 m radius, 5 m out in front of the bays | `APPROX_BUCKLEY.zone` |
-| colours | painted by eye (white walls, reddish-brown trim, brown shingles, red sign, cream doors) | `PAINT` in `gf-buckley-meshes.js` |
+| colours | picked from the written description (white walls, reddish-brown trim, brown shingles, red sign, cream doors) | `PAINT` in `gf-buckley-meshes.js` |
 
 The OSM outline gives a front of about 23 m (75 ft) along Warren St and a connected depth of about 49 m (160 ft). That
 matches Dave's 60-75 ft by 150-180 ft estimate from the photos, so the outline was used as it is.
