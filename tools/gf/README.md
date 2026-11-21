@@ -1290,8 +1290,8 @@ OSM outline), but `gf-building-terrain.js` draws it with `js/gf-buckley-meshes.j
 | --- | --- |
 | footprint | OSM way 1190839200 (sourced) |
 | height | 7.8 m, USGS 3DEP LiDAR roof over the footprint (CC-003b; sourced) |
-| facade | Dave-requested; modelled by eye from the Street View views Dave shared (Oct 2007, Jan 2022, Aug 2025) |
-| 1993 appearance | unconfirmed: the 2007 view shows the same building and layout; Dave to confirm |
+| facade | Dave-requested; modelled from the look described in Dave's spec. His Street View reference photos (Oct 2007, Jan 2022, Aug 2025) never reached this session, so nothing was checked against them |
+| 1993 appearance | unconfirmed: Dave says the Oct 2007 view shows the same building and layout; Dave to confirm |
 
 The model is `js/gf-buckley-plan.js` (pure, tested) and `js/gf-buckley-meshes.js`:
 - **Front block:** the outline's front 19 m. It is a low one-storey block of white painted masonry with reddish-brown

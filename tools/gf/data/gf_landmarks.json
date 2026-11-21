@@ -1355,7 +1355,7 @@
           "https://www.openstreetmap.org/way/1190839200"
         ],
         "confidence": "low",
-        "note": "CC-BUCKLEY: a hand-built procedural model (js/gf-buckley-plan.js) standing on the OSM outline. Look Dave-requested, modelled by eye from the Street View views Dave shared (Oct 2007, Jan 2022, Aug 2025); no Google imagery is committed, traced or used as a texture. Every size beyond the outline and the LiDAR height is approximate."
+        "note": "CC-BUCKLEY: a hand-built procedural model (js/gf-buckley-plan.js) standing on the OSM outline. Look Dave-requested, modelled from the look described in Dave's spec (his Street View reference photos, Oct 2007, Jan 2022 and Aug 2025, never reached this session); no Google imagery is committed, traced or used as a texture. Every size beyond the outline and the LiDAR height is approximate."
       },
       "features": [],
       "built": {
@@ -1364,7 +1364,7 @@
       },
       "status1993": {
         "value": null,
-        "note": "the Oct 2007 Street View shows the same building and layout; Dave to confirm it matches 1993"
+        "note": "Dave says the Oct 2007 Street View shows the same building and layout; Dave to confirm it matches 1993"
       },
       "missing": [
         "1993 appearance (Dave)",

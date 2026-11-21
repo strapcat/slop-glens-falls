@@ -206,11 +206,11 @@ test('CC-003 and CC-004 untouched: their data, records, meshes and generators ar
   assert.equal(sha('js/gf-building-meshes.js'), 'b331ca04cb78655388c802e093debd32e9472c90d87c4f687f11458425ed0d4f');
   // CC-BUCKLEY: the landmark data, its generator and records gained Buckley Tire's model (CC-004: 49f29857..., 491ebb86...,
   // 9856eb4b..., f2889fce...); gf-landmark-meshes.js and the CC-003 files are untouched
-  assert.equal(sha('js/gf-landmarks.js'), '19d3ea1300ddf0c622405dfb4ba5c1ff6200ff57ad9217b8ffb12ffbb0b990d6');
+  assert.equal(sha('js/gf-landmarks.js'), '55cf3a190f74914220d38033b2af803bcf46294bafe6eadbeedce668553abbce');
   assert.equal(sha('js/gf-landmark-records.js'), 'ec027a9e7d8408eb8d842f2da1f633db18e67a8d56fc5b15882e0671608be867');
   assert.equal(sha('js/gf-landmark-meshes.js'), '5e0159b02a2a7e806883ba9e0faa12a1b4dacb2f83769af09ea91d78f2bd158a');
   assert.equal(sha('tools/gf/build-gf-landmarks.mjs'), '65201498a67d9f7c7c4dc6c3796965b438ec7d93254ce8b405556864ca62218f');
-  assert.equal(sha('tools/gf/data/gf_landmarks.json'), 'e27d405c25bd92367ea0713218ddbc796f946cc746c278a65cc53102bfb17535');
+  assert.equal(sha('tools/gf/data/gf_landmarks.json'), '6b5588329fbcba8a8ca19fcc900fa8ba3eb4db1ea6421aba44fa240bdb10b930');
 });
 
 // With CC-004 (sourced landmarks) merged, its landmarks go on top of the LiDAR records and win

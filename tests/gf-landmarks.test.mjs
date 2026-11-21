@@ -31,7 +31,7 @@ const { createGfBuildingRecords } = buildingRecordsModule;
 const { applyGfLandmarks, areaCentroid } = landmarkRecordsModule;
 // CC-BUCKLEY: the document gained buckley-tire (a modelled landmark on its OSM outline, at its LiDAR height) and the
 // rules' model note (CC-004: f2889fce...)
-const JSON_SHA = 'e27d405c25bd92367ea0713218ddbc796f946cc746c278a65cc53102bfb17535';
+const JSON_SHA = '6b5588329fbcba8a8ca19fcc900fa8ba3eb4db1ea6421aba44fa240bdb10b930';
 const doc = JSON.parse(fs.readFileSync(path.join(root, 'tools/gf/data/gf_landmarks.json'), 'utf8'));
 const quiet = (fn) => {
   const info = console.info;

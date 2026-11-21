@@ -8,7 +8,7 @@
 // OSM ids and the monument node position: © OpenStreetMap contributors (ODbL 1.0), https://www.openstreetmap.org/copyright
 export const GF_LANDMARKS = {
   source: 'tools/gf/data/gf_landmarks.json',
-  sha256: "e27d405c25bd92367ea0713218ddbc796f946cc746c278a65cc53102bfb17535",
+  sha256: "6b5588329fbcba8a8ca19fcc900fa8ba3eb4db1ea6421aba44fa240bdb10b930",
   attribution: "© OpenStreetMap contributors (ODbL 1.0), https://www.openstreetmap.org/copyright",
   srcCode: 3,
   buildings: [

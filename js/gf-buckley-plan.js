@@ -1,7 +1,7 @@
 // CC-BUCKLEY: Buckley Tire Service (254 Warren St at Rogers St) as a plan: no three.js, so Node tests read it. The walls
 // stand on the OSM outline (way 1190839200, js/gf-buildings.js) and the tall rear workshop's roof reaches the USGS LiDAR
-// height (7.8 m, gf_landmarks.json). Everything else is modelled BY EYE from the Street View views Dave shared (Oct
-// 2007, Jan 2022, Aug 2025): no Google imagery is committed, traced or used as a texture; every colour here is a plain
+// height (7.8 m, gf_landmarks.json). Everything else follows the look Dave described in the CC-BUCKLEY spec (his Street
+// View reference photos, Oct 2007, Jan 2022 and Aug 2025, never reached this session): no Google imagery is committed, traced or used as a texture; every colour here is a plain
 // painted colour and the sign's lettering is drawn at run time (gf-buckley-meshes.js). Every size below is a named
 // APPROX value: approximate, not surveyed, for Dave to tweak.
 //

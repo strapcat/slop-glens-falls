@@ -5,7 +5,7 @@ import { planBuckley } from './gf-buckley-plan.js';
 // (gf-buckley-plan.js): one mesh per material, plain painted colours, no image textures. The only texture is the sign's
 // lettering, drawn on a canvas here at run time ("BUCKLEY TIRE SERVICE", light on red).
 
-// Painted colours (by eye from the Street View views Dave shared; not sampled from them)
+// Painted colours (picked to match Dave's written description; no imagery sampled)
 const PAINT = {
   wall: 0xebe7dd, // white painted masonry
   trim: 0x7b3324, // reddish-brown trim
