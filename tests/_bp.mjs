@@ -1,0 +1,12 @@
+import { GF_BUILDINGS } from '../js/gf-buildings.js';
+import { GF_LANDMARKS } from '../js/gf-landmarks.js';
+import { GF_LIDAR_HEIGHTS } from '../js/gf-lidar-heights.js';
+import { applyLidarHeights } from '../js/gf-building-heights.js';
+import { gfBuildingsOnTerrain } from '../js/gf-building-bases.js';
+import { planBuckley } from '../js/gf-buckley-plan.js';
+const { data } = applyLidarHeights(GF_BUILDINGS, GF_LIDAR_HEIGHTS);
+const res = gfBuildingsOnTerrain(data, GF_LANDMARKS, () => 100);
+const r = res.records.find((x) => x.model === 'buckley-tire');
+console.log('record', r.osm, r.height, r.src, r.base, r.landmark);
+const p = planBuckley(r, { ground: () => 100 });
+console.log(JSON.stringify({ frame: p.frame, front: p.front.map(q => q.map(v => +v.toFixed(1))), rear: p.rear.map(q => q.map(v => +v.toFixed(1))), arch: p.archRect, zone: p.zone, stats: p.stats, top: p.top }, null, 0));

@@ -89,6 +89,10 @@ const GF_PRELOADS = [
   'gf-loading-progress.js',
   'gf-minimap.js',
   'gf-credit.js',
+  'gf-buckley-plan.js',
+  'gf-buckley-meshes.js',
+  'gf-vehicle-damage.js',
+  'gf-damage-view.js',
   'gf-main.js'
 ];
 

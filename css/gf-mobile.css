@@ -154,3 +154,41 @@ body.touch-enabled #gf-radar-expanded {
     transform: none;
   }
 }
+
+/* CC-BUCKLEY: on touch screens the speed panel is hidden, so the vehicle damage chip (js/gf-damage-view.js) sits under
+   the radar in the top-left corner (in the taxi or on the bike only), clear of the camera switch on the right; the
+   mission toast (the Buckley Tire hint, "Fixing..." and "All set.") sits under the camera switch in portrait and between
+   the radar and the toolbar in landscape, never over the stick, the action buttons or the mode bar, and fades. */
+body.touch-enabled #gf-damage {
+  position: fixed;
+  z-index: 11;
+  top: calc(max(var(--edge, 12px), env(safe-area-inset-top)) + 88px);
+  left: max(var(--edge, 12px), env(safe-area-inset-left));
+  width: 124px;
+  padding: 5px 8px;
+  gap: 6px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(14, 16, 20, 0.72);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+body.touch-enabled #gf-damage .gf-damage-label { display: none; }
+body.touch-enabled #gf-damage .gf-damage-bar { min-width: 0; }
+body.touch-enabled #gf-damage .gf-damage-pct { min-width: 28px; }
+body.touch-enabled #gf-mission {
+  top: calc(max(var(--edge, 12px), env(safe-area-inset-top)) + 124px);
+  max-width: calc(100vw - 2 * max(var(--edge, 12px), env(safe-area-inset-left)));
+  padding: 9px 13px;
+  font-size: 13px;
+}
+@media (max-height: 500px) {
+  body.touch-enabled #gf-damage { top: calc(max(var(--edge, 12px), env(safe-area-inset-top)) + 80px); }
+  body.touch-enabled #gf-mission {
+    top: max(var(--edge, 12px), env(safe-area-inset-top));
+    left: calc(max(var(--edge, 12px), env(safe-area-inset-left)) + 88px);
+    right: auto;
+    transform: translateY(-8px);
+    max-width: calc(100vw - 2 * max(var(--edge, 12px), env(safe-area-inset-left), env(safe-area-inset-right)) - 88px - 262px);
+  }
+  body.touch-enabled #gf-mission.is-shown { transform: none; }
+}
