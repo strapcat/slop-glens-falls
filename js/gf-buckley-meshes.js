@@ -13,13 +13,14 @@ const PAINT = {
   brick: 0x8e3a2e, // the red brick band and piers round the storefront and the entrance
   mortar: 0xbfb3a3, // their mortar lines
   fascia: 0x6a3b2c, // brown / red shingles
-  shingleEdge: 0x3f241b, // the shingle rows' butts, in shade
+  fasciaAlt: 0x5a3124, // every other shingle row, a shade darker
+  shingleEdge: 0x2e1a13, // the shingle rows' butts, in shade
   roof: 0x3b3b3d, // flat roofs
   metalRoof: 0x8b9095, // the workshop's arched roof
   door: 0xe6dcc0, // cream sectional doors
   groove: 0xb7ab8d,
   glass: 0x1b222c, // the dark storefront glass
-  entryGlass: 0x5b7584, // the entrance's clearer, glossier glass
+  entryGlass: 0x4c6474, // the entrance's clearer, glossier glass
   metal: 0xb9bdc2, // aluminium frames, window mullions, the push bar
   planter: 0x9b968c,
   shrub: 0x2f5627,

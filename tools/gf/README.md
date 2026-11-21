@@ -1346,7 +1346,7 @@ is a plain painted colour and the only texture is the sign's canvas lettering. O
 | repair: stopped under / settle / work | 0.5 m/s / 2 s / 3 s | `REPAIR.stopped`, `settle`, `work` |
 | repair price | free (0) | `REPAIR.cost` and the hooks |
 | front block depth / wall height / mansard height | 19 m / 3.3 m / 1.1 m | `APPROX_BUCKLEY.frontDepth`, `frontWall`, `fascia` |
-| mansard shingle rows | every 0.25 m (4 rows), each butt 3.5 cm proud, all round the front block | `APPROX_BUCKLEY.fascia.row`, `lip` |
+| mansard shingle rows | every 0.25 m (4 rows), each butt 5 cm proud and alternate rows a shade darker, all round the front block | `APPROX_BUCKLEY.fascia.row`, `lip` |
 | workshop side walls (the arched roof rises to the LiDAR 7.8 m) | 6.0 m | `APPROX_BUCKLEY.rearWall` |
 | two bays | 3.0 m wide, 3.0 m high, from 0.5 m along the front | `APPROX_BUCKLEY.bay` |
 | storefront windows / sign / planter | from 7.6 m along the front, glazed 0.9-2.55 m (head lowered from 2.7 m to make room for the brick band), aluminium frames 8 cm; sign 3.0-3.95 m up (raised from 2.8-3.75 m, above the band) | `APPROX_BUCKLEY.windows`, `sign`, `planter` |

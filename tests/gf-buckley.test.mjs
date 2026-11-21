@@ -292,8 +292,8 @@ test('Buckley Tire: the model stands on the OSM outline, front block on Warren S
   assert.equal(plan.top, 100 + 7.8);
   const ys = (k) => plan.parts[k].filter((_, i) => i % 3 === 1);
   assert.ok(Math.abs(Math.max(...ys('metalRoof')) - (100 + 7.8)) < 1e-9, 'the arched roof tops out at the LiDAR roof');
-  assert.ok(Math.max(...ys('fascia')) <= 100 + APPROX_BUCKLEY.frontWall + APPROX_BUCKLEY.fascia.h + 1e-9, 'the front block is low');
-  for (const k of ['wall', 'trim', 'fascia', 'shingleEdge', 'roof', 'metalRoof', 'door', 'glass', 'entryGlass', 'brick', 'mortar', 'planter', 'shrub', 'sign', 'metal', 'apron', 'paint']) {
+  assert.ok(Math.max(...ys('fascia'), ...ys('fasciaAlt')) <= 100 + APPROX_BUCKLEY.frontWall + APPROX_BUCKLEY.fascia.h + 1e-9, 'the front block is low');
+  for (const k of ['wall', 'trim', 'fascia', 'fasciaAlt', 'shingleEdge', 'roof', 'metalRoof', 'door', 'glass', 'entryGlass', 'brick', 'mortar', 'planter', 'shrub', 'sign', 'metal', 'apron', 'paint']) {
     assert.ok(plan.parts[k] && plan.parts[k].length, `${k} drawn`);
   }
   assert.equal(plan.bays.length, 2);

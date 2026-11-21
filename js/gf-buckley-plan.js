@@ -17,7 +17,7 @@
 const APPROX_BUCKLEY = {
   frontDepth: 19, // m: the low front block, measured in from the Warren St front (the rest of the outline is the workshop)
   frontWall: 3.3, // m: the front block's walls
-  fascia: { h: 1.1, inset: 0.9, row: 0.25, lip: 0.035 }, // m: the mansard band above them (its height, how far in it
+  fascia: { h: 1.1, inset: 0.9, row: 0.25, lip: 0.05 }, // m: the mansard band above them (its height, how far in it
   // leans at the top, the height of a shingle row, and how far each row's butt stands out from the row above)
   rearWall: 6.0, // m: the workshop's side walls; its arched roof rises from here to the LiDAR height
   bay: { first: 0.5, w: 3.0, gap: 0.5, h: 3.0 }, // m: the two service bays along the front, from its west end
@@ -168,7 +168,8 @@ function planBuckley(record, { ground = null, A = APPROX_BUCKLEY } = {}) {
 
   // the mansard: a shingled band leaning in from the wall top, and a flat roof inside it
   // Shingle rows: the slope split into rows about `row` high, each row's lower edge (its butt) standing `lip` proud of
-  // the row above, so the band steps like courses of shingles; the butts' small faces are a darker shade
+  // the row above, so the band steps like courses of shingles; the butts' small faces are a darker shade,
+  // and alternate rows a slightly different brown (weathering), so the rows read from the street
   const inner = insetRing(frontRing, A.fascia.inset);
   const shingleRows = Math.max(1, Math.round(A.fascia.h / A.fascia.row));
   const outward = frontRing.map((p, i) => { const d = sub(p, inner[i]), l = len(d) || 1; return [d[0] / l, d[1] / l]; });
@@ -178,7 +179,7 @@ function planBuckley(record, { ground = null, A = APPROX_BUCKLEY } = {}) {
     const j = (i + 1) % frontRing.length;
     for (let r = 0; r < shingleRows; r++) {
       const f0 = r / shingleRows, f1 = (r + 1) / shingleRows, lip = A.fascia.lip;
-      quad('fascia', slope(i, f0, lip), slope(j, f0, lip), slope(j, f1, 0), slope(i, f1, 0));
+      quad(r % 2 ? 'fasciaAlt' : 'fascia', slope(i, f0, lip), slope(j, f0, lip), slope(j, f1, 0), slope(i, f1, 0));
       // the butt: from the row below's top (not proud) out to this row's proud lower edge
       quad('shingleEdge', slope(i, f0, 0), slope(j, f0, 0), slope(j, f0, lip), slope(i, f0, lip));
     }
