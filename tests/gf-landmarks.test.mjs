@@ -29,7 +29,9 @@ const require = createRequire(import.meta.url);
 const { loadModule } = require('./helpers/module.cjs');
 const { createGfBuildingRecords } = buildingRecordsModule;
 const { applyGfLandmarks, areaCentroid } = landmarkRecordsModule;
-const JSON_SHA = 'f2889fced72f8760763e9935288e7ebb300186c0e5ddb0c6625042c33ed71b28';
+// CC-BUCKLEY: the document gained buckley-tire (a modelled landmark on its OSM outline, at its LiDAR height) and the
+// rules' model note (CC-004: f2889fce...)
+const JSON_SHA = '6b5588329fbcba8a8ca19fcc900fa8ba3eb4db1ea6421aba44fa240bdb10b930';
 const doc = JSON.parse(fs.readFileSync(path.join(root, 'tools/gf/data/gf_landmarks.json'), 'utf8'));
 const quiet = (fn) => {
   const info = console.info;
@@ -88,13 +90,15 @@ const OVERRIDES = [
   ['first-national-bank', 'w186123056', [7.2, 2, 'brick'], [7.2, 2, 'stone']],
   ['davidson-brothers', 'w300084746', [7.2, 2, 'clapboard'], [10.5, 3, 'brick']],
   ['hyde-house', 'w244907795', [10.5, 2, 'brick'], [9.5, 3, 'brick']],
-  ['mcechron-house', 'w741473065', [7.2, 2, 'brick'], [13.0, 3, 'stone']]
+  ['mcechron-house', 'w741473065', [7.2, 2, 'brick'], [13.0, 3, 'stone']],
+  // CC-BUCKLEY: Buckley Tire at its LiDAR roof height (drawn by its procedural model, gf-buckley-meshes.js)
+  ['buckley-tire', 'w1190839200', [10.5, 2, 'brick'], [7.8, 3, 'brick']]
 ];
 
-test('exactly the 18 sourced building overrides; every other record, collider and obstacle as CC-003 made it', () => {
+test('exactly the 19 sourced building overrides (CC-004 18, CC-BUCKLEY Buckley Tire); every other record, collider and obstacle as CC-003 made it', () => {
   const index = new Map(base.records.map((r, i) => [r.osm, i]));
-  assert.equal(GF_LANDMARKS.buildings.length, 18);
-  assert.equal(result.applied.length, 18);
+  assert.equal(GF_LANDMARKS.buildings.length, 19);
+  assert.equal(result.applied.length, 19);
   for (const [id, osm, before, after] of OVERRIDES) {
     const i = index.get(osm);
     const b = base.records[i], r = result.records[i];
@@ -104,7 +108,9 @@ test('exactly the 18 sourced building overrides; every other record, collider an
     assert.equal(result.colliders[i].maxY, after[0], `${id} collider`);
     assert.notEqual(r, b, 'a copy, not the CC-003 record');
   }
-  assert.equal(result.records.filter((r) => r.src === 3).length, 16);
+  assert.equal(result.records.filter((r) => r.src === 3).length, 17);
+  // the one modelled landmark: its record carries the model; everything else has none
+  assert.deepEqual(result.records.filter((r) => r.model).map((r) => [r.osm, r.model]), [['w1190839200', 'buckley-tire']]);
   const overridden = new Set(OVERRIDES.map((o) => o[1]));
   let same = 0;
   base.records.forEach((b, i) => {
@@ -113,7 +119,7 @@ test('exactly the 18 sourced building overrides; every other record, collider an
     assert.deepEqual(result.colliders[i], base.colliders[i]);
     same++;
   });
-  assert.equal(same, 7771);
+  assert.equal(same, 7770);
   assert.equal(result.obstacles, base.obstacles, 'the obstacles are the very same list');
   assert.deepEqual(base, createGfBuildingRecords(GF_BUILDINGS), 'the CC-003 records are not mutated');
 });
@@ -147,10 +153,12 @@ test('the generator refuses sourceless values, bad confidences, unknown ids and 
   assert.throws(() => buildGfLandmarks(fixture('city-hall', (l) => { l.levels.value = 0; }), GF_BUILDINGS), /non-positive levels 0/);
   assert.throws(() => buildGfLandmarks(fixture('civil-war-monument', (l) => { l.node = { lat: '43.3', lon: -73.6 }; }), GF_BUILDINGS), /without a numeric lat\/lon/);
   // and the real document builds
-  assert.equal(buildGfLandmarks(doc, GF_BUILDINGS).buildings.length, 18);
+  assert.equal(buildGfLandmarks(doc, GF_BUILDINGS).buildings.length, 19);
+  // CC-BUCKLEY: a model must be one gf-buckley-meshes.js knows
+  assert.throws(() => buildGfLandmarks(fixture('buckley-tire', (l) => { l.model.value = 'castle'; }), GF_BUILDINGS), /unknown model/);
 });
 
-test('placeholders change nothing; the unsourced features wait in pending; the six Dave-requested ids are accounted for', () => {
+test('placeholders change nothing; the unsourced features wait in pending; the seven Dave-requested ids are accounted for', () => {
   const applied = new Set(GF_LANDMARKS.buildings.map((b) => b.osm));
   for (const l of doc.landmarks.filter((x) => x.status !== 'use')) {
     assert.ok(!applied.has(l.osm), `${l.id} (${l.status}) applied`);
@@ -166,7 +174,7 @@ test('placeholders change nothing; the unsourced features wait in pending; the s
   assert.ok(pending('church-of-the-messiah', 'tower'));
   assert.ok(!featureIds.some((id) => /tower|smokestack|woodpile/.test(id)));
   const dave = doc.landmarks.filter((l) => l.daveRequested).map((l) => l.id);
-  assert.deepEqual(dave.sort(), ['civic-center', 'civil-war-monument', 'crandall-library', 'finch-pruyn-mill', 'sandys-clam-bar', 'talk-of-the-town']);
+  assert.deepEqual(dave.sort(), ['buckley-tire', 'civic-center', 'civil-war-monument', 'crandall-library', 'finch-pruyn-mill', 'sandys-clam-bar', 'talk-of-the-town']);
   for (const id of dave) {
     const done = GF_LANDMARKS.buildings.some((b) => b.id === id) || GF_LANDMARKS.features.some((f) => f.id === id);
     const waiting = GF_LANDMARKS.pending.some((p) => p.id === id && p.daveRequested && p.reason);
@@ -295,7 +303,7 @@ test('CC-003 untouched: its data, records and generator are byte-identical; no l
   assert.ok(calls[0].neighbours(civic).some((n) => n.x0 === civic.minX && n.z0 === civic.minZ && n.height === 7.5));
   calls.length = 0;
   const withLandmarks = buildGfBuildings(new Group(), GF_BUILDINGS, GF_LANDMARKS);
-  assert.equal(withLandmarks.landmarks.applied.length, 18);
+  assert.equal(withLandmarks.landmarks.applied.length, 19);
   assert.equal(withLandmarks.colliders.length, base.colliders.length + 1);
   assert.ok(calls[0].neighbours(civic).some((n) => n.x0 === civic.minX && n.z0 === civic.minZ && n.height === 12.1));
   assert.equal(calls[2].neighbours, undefined, 'houses still have no party walls');

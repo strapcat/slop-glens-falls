@@ -6,7 +6,7 @@ Glens Falls and South Glens Falls, New York, built with [three.js](https://three
 
 Keep `?city=glensfalls` on the link. The bare page (`index.html` with no query) still opens the original New York City, which stays available at the same address.
 
-**Controls:** `1`–`4` Walk / Drive / Cycle / Fly, `WASD` to move, `V` to cycle cameras, `T` (the **Talk** button on touch screens) to talk to someone in reach on foot, `H` to hide the HUD, `M` (or a click on the radar, lower left on desktop; a tap on it, top left on a phone) to open the larger street radar. Glens Falls has a heading-up street radar (`js/gf-minimap.js`); New York keeps its own north-up map and atlas. It works on a phone too: on a touch screen, on-screen controls (a stick, Jump, Talk) replace the keys.
+**Controls:** `1`–`4` Walk / Drive / Cycle / Fly, `WASD` to move, `V` to cycle cameras, `T` (the **Talk** button on touch screens) to talk to someone in reach on foot, `H` to hide the HUD, `M` (or a click on the radar, lower left on desktop; a tap on it, top left on a phone) to open the larger street radar. Glens Falls has a heading-up street radar (`js/gf-minimap.js`); New York keeps its own north-up map and atlas. Crash the taxi or the bike hard and it takes damage (it smokes, then slows); get it to **Buckley Tire** on Warren St (the wrench on the radar), stop in front of the bays, and it is fixed. It works on a phone too: on a touch screen, on-screen controls (a stick, Jump, Talk) replace the keys.
 
 ## How accurate is it?
 

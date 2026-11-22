@@ -1276,6 +1276,88 @@ York's map, atlas, search and teleports stay hidden here, and `js/nyc-map.js` is
 **Limits.** Not a searchable atlas (no street search or teleport); the roads are today's OSM, not 1993; no park
 outlines (none in GF_GEO); the larger view is the same heading-up radar, zoomed out, not a north-up city map.
 
+### Buckley Tire and the first repair (CC-BUCKLEY)
+
+Dave (2026-11-12): if the player's vehicle gets damaged, they have to drive to Buckley Tire to get it fixed. This is
+the first simple mission loop.
+
+**The building.** Buckley Tire Service, 254 Warren St at Rogers St, is OSM way 1190839200 (`building=yes`). Dave's place
+pin (43.3104147, -73.6266758) falls inside it, at its Warren St front. It is a CC-004 landmark (`buckley-tire`,
+`daveRequested`) with a new field, `model`. A modelled building keeps its record, collider and pedestrian obstacle (the
+OSM outline), but `gf-building-terrain.js` draws it with `js/gf-buckley-meshes.js` instead of the plain extrusion.
+
+| | source |
+| --- | --- |
+| footprint | OSM way 1190839200 (sourced) |
+| height | 7.8 m, USGS 3DEP LiDAR roof over the footprint (CC-003b; sourced) |
+| facade | Dave-requested; modelled from the look described in Dave's CC-BUCKLEY and CC-BUCKLEY-fix specs (which draw on Street View 2007-2025 and public listing photos of the entrance: red brick, aluminium frames). The photos themselves never reached the coding session, so nothing was checked against them by eye; nothing traced or committed |
+| 1993 appearance | unconfirmed: Dave says the Oct 2007 view shows the same building and layout; Dave to confirm |
+
+The model is `js/gf-buckley-plan.js` (pure, tested) and `js/gf-buckley-meshes.js`:
+- **Front block:** the outline's front 19 m. It is a low one-storey block of white painted masonry with reddish-brown
+  trim, a brown shingled mansard fascia and a flat roof inside it.
+- **Warren St front:** two cream sectional bay doors with a glazed row at the west end, then dark storefront windows
+  over a raised planter with shrubs. Above them, a red sign with light lettering, "BUCKLEY TIRE SERVICE", drawn on a
+  canvas at run time.
+- **East corner and Rogers St side:** an aluminium-framed glass entrance on the east corner, and a closed cream door on
+  the Rogers St side.
+- **Rear workshop:** the rest of the outline. White walls up to 6 m, then a shallow arched metal roof up to the LiDAR
+  height, with tall multi-pane windows down its east and west sides.
+- **Apron:** a weathered asphalt apron in front, draped on the terrain, with the repair bays painted on it.
+
+The modern Cooper Tires signage is left out. No Google imagery is committed, traced or used as a texture: every colour
+is a plain painted colour and the only texture is the sign's canvas lettering. OSM's neighbouring building
+(w1190839199) stands 5 m to the west, so the apron runs mostly in front, not to the west.
+
+**Damage** (`js/gf-vehicle-damage.js`, Glens Falls only):
+- **Which vehicles:** the taxi and the bike each keep a 0-100 damage value; the walker and the helicopter take none.
+- **What causes it:** hard impacts, from the existing collision events. `controllers.js` reports the player hitting
+  buildings and `traffic.js` the player hitting other cars, and Glens Falls installs both listeners (it has no audio
+  system using them).
+- **What it does:** above 50, light smoke from the hood. Above 80, heavier smoke and the top speed capped at half
+  (clamped right after the controllers move the vehicle). At 100 the vehicle still limps at a quarter of its top
+  speed. There are no explosions and no sound (Glens Falls has no audio yet).
+- **HUD:** a wrench chip with a bar and a percent sits in the speed panel on desktop. On touch screens it sits under
+  the radar in the top-left corner, in the taxi or on the bike only.
+
+**The repair.**
+- **The hint:** at 30 damage the toast says "Your car's banged up. Get it to Buckley Tire on Warren St." once per
+  crash-and-repair cycle, and fades after 6 s. The radar marks Buckley with a drawn wrench (CC-MINIMAP's marker hook)
+  until the vehicle is fixed.
+- **The repair spot:** a 3.4 m circle on the apron in front of the two bays, inside Buckley's lot. Stop there (under
+  0.5 m/s) for 2 s and "Fixing…" plays with a progress bar for 3 s.
+- **When it's done:** damage goes back to 0, the smoke clears, and "All set. Drive safe." shows.
+- **Placeholder text:** the lines are in `data/gf/mission-text.json` for Dave to rewrite. `data/gf/npc-lines.json` is
+  not touched, and its Buckley family lines stay unwired until CC-CAST.
+- **Cost:** it's free; `createRepairMission({ repairCost, pay })` is the hook for a price later.
+- **Saving:** the player's save (`gf-player-state`) keeps each vehicle's damage, `firstRepairDone` and the repair count.
+
+**Assumptions, all in one place for Dave to tweak:**
+
+| what | value | where |
+| --- | --- | --- |
+| damage threshold (impact speed below which nothing happens) | 4.5 m/s (10 mph) | `DAMAGE.threshold` |
+| damage per m/s above it | 2.2 (a 45 mph crash does about 34; three wreck a car) | `DAMAGE.perMps` |
+| most one impact can do | 45 | `DAMAGE.maxHit` |
+| one crash's reports counted once within | 0.35 s | `DAMAGE.cooldown` |
+| light smoke / heavy smoke and half speed / a quarter speed | > 50 / > 80 / 100 | `DAMAGE.smokeLight`, `smokeHeavy`, `capHeavy`, `capWrecked` |
+| top speeds the caps apply to | taxi 36 m/s, bike 19 m/s | `DAMAGE.topSpeed` |
+| hint at | 30 damage, shown 6 s | `DAMAGE.hintAt`, `REPAIR.hintSeconds` |
+| repair: stopped under / settle / work | 0.5 m/s / 2 s / 3 s | `REPAIR.stopped`, `settle`, `work` |
+| repair price | free (0) | `REPAIR.cost` and the hooks |
+| front block depth / wall height / mansard height | 19 m / 3.3 m / 1.1 m | `APPROX_BUCKLEY.frontDepth`, `frontWall`, `fascia` |
+| mansard shingle rows | every 0.25 m (4 rows), each butt 5 cm proud and alternate rows a shade darker, all round the front block | `APPROX_BUCKLEY.fascia.row`, `lip` |
+| workshop side walls (the arched roof rises to the LiDAR 7.8 m) | 6.0 m | `APPROX_BUCKLEY.rearWall` |
+| two bays | 3.0 m wide, 3.0 m high, from 0.5 m along the front | `APPROX_BUCKLEY.bay` |
+| storefront windows / sign / planter | from 7.6 m along the front, glazed 0.9-2.55 m (head lowered from 2.7 m to make room for the brick band), aluminium frames 8 cm; sign 3.0-3.95 m up (raised from 2.8-3.75 m, above the band) | `APPROX_BUCKLEY.windows`, `sign`, `planter` |
+| red brick | a 0.3 m band over the storefront and the entrance, 0.3 m piers each side of the storefront, 6 cm proud, mortar every 7.5 cm; brick red 0x8e3a2e | `APPROX_BUCKLEY.brick`, `PAINT.brick` |
+| east-corner entrance | a 1.0 m glass door, 2.2 m high, with glass sidelights and a 0.45 m glass transom lettered "Buckley Tire Service Inc.", 8 cm aluminium frame, push bar at 1.0 m; lighter, glossier glass than the storefront | `APPROX_BUCKLEY.entrance`, `PAINT.entryGlass` |
+| repair spot | 3.4 m radius, 5 m out in front of the bays | `APPROX_BUCKLEY.zone` |
+| colours | picked from the written descriptions (white walls, reddish-brown trim, brown shingles, red sign, cream doors) | `PAINT` in `gf-buckley-meshes.js` |
+
+The OSM outline gives a front of about 23 m (75 ft) along Warren St and a connected depth of about 49 m (160 ft). That
+matches Dave's 60-75 ft by 150-180 ft estimate from the photos, so the outline was used as it is.
+
 ## Source and licence
 
 Data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the

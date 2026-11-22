@@ -204,20 +204,25 @@ test('CC-003 and CC-004 untouched: their data, records, meshes and generators ar
   assert.equal(sha('tools/gf/build-gf-buildings.mjs'), 'f0917f5b1b13847962d9487476da87b34ea10d4bb69ad7f0858af3f9d7acb08a');
   // gf-building-meshes.js as CC-004 left it (with its landmarks argument)
   assert.equal(sha('js/gf-building-meshes.js'), 'b331ca04cb78655388c802e093debd32e9472c90d87c4f687f11458425ed0d4f');
-  assert.equal(sha('js/gf-landmarks.js'), '49f2985744ffbdb25e78b1c4051a1c025c43c553d29009adddad83c837d3a538');
-  assert.equal(sha('js/gf-landmark-records.js'), '491ebb86fd14446fed666107df16c4685593d3695e8de07e03dcf6092d3c1c64');
+  // CC-BUCKLEY: the landmark data, its generator and records gained Buckley Tire's model (CC-004: 49f29857..., 491ebb86...,
+  // 9856eb4b..., f2889fce...); gf-landmark-meshes.js and the CC-003 files are untouched
+  assert.equal(sha('js/gf-landmarks.js'), '55cf3a190f74914220d38033b2af803bcf46294bafe6eadbeedce668553abbce');
+  assert.equal(sha('js/gf-landmark-records.js'), 'ec027a9e7d8408eb8d842f2da1f633db18e67a8d56fc5b15882e0671608be867');
   assert.equal(sha('js/gf-landmark-meshes.js'), '5e0159b02a2a7e806883ba9e0faa12a1b4dacb2f83769af09ea91d78f2bd158a');
-  assert.equal(sha('tools/gf/build-gf-landmarks.mjs'), '9856eb4bdbfacd29ef60bb556bbba853ddb0b3897f4b2c81776efdec891bdf89');
-  assert.equal(sha('tools/gf/data/gf_landmarks.json'), 'f2889fced72f8760763e9935288e7ebb300186c0e5ddb0c6625042c33ed71b28');
+  assert.equal(sha('tools/gf/build-gf-landmarks.mjs'), '65201498a67d9f7c7c4dc6c3796965b438ec7d93254ce8b405556864ca62218f');
+  assert.equal(sha('tools/gf/data/gf_landmarks.json'), '6b5588329fbcba8a8ca19fcc900fa8ba3eb4db1ea6421aba44fa240bdb10b930');
 });
 
 // With CC-004 (sourced landmarks) merged, its landmarks go on top of the LiDAR records and win
 const landmarksPresent = fs.existsSync(path.join(root, 'js/gf-landmarks.js')) && fs.existsSync(path.join(root, 'js/gf-landmark-records.js'));
-test('with CC-004: landmarks win over LiDAR; sources [0, 47, 509, 16, 7217]', { skip: !landmarksPresent && 'CC-004 (js/gf-landmarks.js) is not merged' }, async () => {
+const rec0 = (result, osm) => result.records.find((r) => r.osm === osm);
+test('with CC-004: landmarks win over LiDAR; sources [0, 47, 509, 17, 7216]', { skip: !landmarksPresent && 'CC-004 (js/gf-landmarks.js) is not merged' }, async () => {
   const { GF_LANDMARKS } = await import('../js/gf-landmarks.js');
   const { applyGfLandmarks } = await import('../js/gf-landmark-records.js');
   const result = applyGfLandmarks(createGfBuildingRecords(lidarCopy), GF_LANDMARKS);
-  assert.deepEqual(sources(result.records), [0, 47, 509, 16, 7217]);
+  // CC-BUCKLEY: Buckley Tire's LiDAR height (7.8 m) is its landmark height now (src 3), same metres (CC-004: 16, 7217)
+  assert.deepEqual(sources(result.records), [0, 47, 509, 17, 7216]);
+  assert.deepEqual([rec0(result, 'w1190839200').height, rec0(result, 'w1190839200').src], [7.8, 3]);
   const rec = new Map(result.records.map((r) => [r.osm, r]));
   for (const b of GF_LANDMARKS.buildings) {
     if (b.height !== null) assert.deepEqual([rec.get(b.osm).height, rec.get(b.osm).src], [b.height, 3], b.id);

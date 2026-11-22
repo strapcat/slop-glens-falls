@@ -7,7 +7,8 @@
     "status": "use = apply the non-null fields; needs-data = placeholder, nothing applied until Dave supplies data; no-change = matched and documented, nothing to apply; flag-only = documented (e.g. post-1993), nothing applied in CC-004.",
     "height": "height.value in metres wins (basis measured or lower-bound); else levels x 3.3 + 0.6 m (the CC-003 storey rule, labelled approximate metres from sourced storeys); else the building keeps its CC-003 height.",
     "confidence": "high = primary/official source, several agreeing, or a specific figure from a reliable local source; medium = one secondary source, inference, or a conflict noted; low = placement or shape stand-in.",
-    "osm": "OSM ids from tools/gf/data/osm_gf_buildings.json (CC-003 extract, osm_base 2026-11-01T13:05:10Z); the monument node from an Overpass query on 2026-11-01 (osm_base 2026-11-01T20:47:06Z, overpass-api.de, Overpass API 0.7.62.11)."
+    "osm": "OSM ids from tools/gf/data/osm_gf_buildings.json (CC-003 extract, osm_base 2026-11-01T13:05:10Z); the monument node from an Overpass query on 2026-11-01 (osm_base 2026-11-01T20:47:06Z, overpass-api.de, Overpass API 0.7.62.11).",
+    "model": "model.value names a procedural model js/gf-buckley-meshes.js builds on the OSM outline in place of the plain extrusion (CC-BUCKLEY: buckley-tire); the building keeps its record, collider and obstacle."
   },
   "attribution": "OSM ids and the monument node position: © OpenStreetMap contributors, ODbL 1.0",
   "landmarks": [
@@ -1321,6 +1322,56 @@
       },
       "missing": [],
       "notes": null
+    },
+    {
+      "id": "buckley-tire",
+      "name": "Buckley Tire Service (254 Warren St at Rogers St)",
+      "daveRequested": true,
+      "status": "use",
+      "osm": "w1190839200",
+      "osmMatch": {
+        "value": "OSM way 1190839200 (building=yes) on the NW corner of Warren & Rogers Sts; Dave's place pin for Buckley Tire Service, 254 Warren St (43.3104147, -73.6266758), falls inside it, at its Warren St front",
+        "source": [
+          "https://www.openstreetmap.org/way/1190839200"
+        ],
+        "confidence": "high"
+      },
+      "height": {
+        "value": 7.8,
+        "unit": "m",
+        "basis": "measured",
+        "source": [
+          "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/NY_Hudson_D22/USGS_NY_Hudson_D22_Project_Report.pdf",
+          "https://s3-us-west-2.amazonaws.com/usgs-lidar-public/NY_Hudson_1_D22/ept.json"
+        ],
+        "confidence": "medium",
+        "note": "USGS 3DEP NY_Hudson_D22 LiDAR roof over this footprint (CC-003b, js/gf-lidar-heights.js: 7.8 m): the tall rear workshop's roof. The low front block's height is approximate in code (js/gf-buckley-plan.js)."
+      },
+      "levels": null,
+      "facade": null,
+      "model": {
+        "value": "buckley-tire",
+        "source": [
+          "https://www.openstreetmap.org/way/1190839200"
+        ],
+        "confidence": "low",
+        "note": "CC-BUCKLEY: a hand-built procedural model (js/gf-buckley-plan.js) standing on the OSM outline. Look Dave-requested, modelled from the look described in Dave's spec (his Street View reference photos, Oct 2007, Jan 2022 and Aug 2025, never reached this session); no Google imagery is committed, traced or used as a texture. Every size beyond the outline and the LiDAR height is approximate."
+      },
+      "features": [],
+      "built": {
+        "value": null,
+        "note": "construction date unsourced"
+      },
+      "status1993": {
+        "value": null,
+        "note": "Dave says the Oct 2007 Street View shows the same building and layout; Dave to confirm it matches 1993"
+      },
+      "missing": [
+        "1993 appearance (Dave)",
+        "construction date",
+        "exact front-block height and facade sizes (approximate in code)"
+      ],
+      "notes": "CC-BUCKLEY, Dave 2026-11-12: a damaged vehicle is repaired here (the first mission). Modern Cooper Tires signage left out."
     }
   ]
 }

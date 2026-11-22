@@ -6,6 +6,7 @@ import { FACADES } from './gf-facades.js';
 import { neighbourRecords } from './gf-landmark-records.js';
 import { buildGfLandmarkFeatures } from './gf-landmark-meshes.js';
 import { gfBuildingsOnTerrain } from './gf-building-bases.js';
+import { buildGfModels } from './gf-buckley-meshes.js';
 
 // Glens Falls's buildings drawn on the CC-005b terrain: the records on their bases (gf-building-bases.js), by the same
 // footprint mesher and facades as gf-building-meshes.js, each footprint standing on its own base (footprintBase: its
@@ -22,7 +23,8 @@ function buildGfBuildingsOnTerrain(scene, data, landmarks, ground) {
   group.name = 'GlensFallsBuildings';
   const stats = { records: {}, meshes: 0, triangles: 0 };
   for (const style of STYLES) {
-    const list = records.filter((r) => r.style === style);
+    // CC-BUCKLEY: a building with a procedural model (a landmark's `model`) is drawn by it instead (below)
+    const list = records.filter((r) => r.style === style && !r.model);
     stats.records[style] = list.length;
     if (!list.length) continue;
     const material = createPreWarBuildingMaterial({ ...FACADES[style], footprintLocal: true, floorHeight: data.storey, footprintBase: true });
@@ -40,10 +42,14 @@ function buildGfBuildingsOnTerrain(scene, data, landmarks, ground) {
     maxFoundation: Math.max(...exposed), buriedOver1m: burial.filter((v) => v > 1).length, buriedOver3m: burial.filter((v) => v > 3).length,
     maxBurial: Math.max(...burial)
   };
+  // CC-BUCKLEY: the modelled landmarks (Buckley Tire), on their own OSM outlines; their colliders and obstacles stay the
+  // records' (the footprint)
+  const models = buildGfModels(group, records.filter((r) => r.model), { ground });
+  stats.models = models.map((m) => m.id);
   scene.add(group);
-  if (!landmarks) return { group, colliders, obstacles, stats };
+  if (!landmarks) return { group, colliders, obstacles, stats, models };
   const shapes = buildGfLandmarkFeatures(group, result.features);
-  return { group, colliders, obstacles, stats, landmarks: { applied: result.applied, features: result.features, pending: landmarks.pending, flagged: landmarks.flagged, shapes: shapes.stats } };
+  return { group, colliders, obstacles, stats, models, landmarks: { applied: result.applied, features: result.features, pending: landmarks.pending, flagged: landmarks.flagged, shapes: shapes.stats } };
 }
 
 export { buildGfBuildingsOnTerrain };

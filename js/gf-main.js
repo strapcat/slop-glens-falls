@@ -52,6 +52,8 @@ import { buildGfStreetFurniture } from './gf-street-furniture-meshes.js';
 import { installGfNpcTalk } from './gf-npc-talk-ui.js';
 import { installGfMinimap, buildRadarLayers, placeCreditAbove } from './gf-minimap.js';
 import { createGfCredit } from './gf-credit.js';
+import { createVehicleDamage, createRepairMission, parseMissionText } from './gf-vehicle-damage.js';
+import { installGfDamageView } from './gf-damage-view.js';
 
 // Glens Falls game view (index.html?city=glensfalls): the town from GF_GEO (roads, water, blocks) on its sourced terrain
 // (CC-005b: USGS 3DEP bare earth, gf-terrain.js, asked through gf-surface.js by everything that stands on it), its road graph
@@ -398,6 +400,17 @@ async function initApp() {
     blocked: (x, z, y, r) => controllerManager.bodyBlockedAt(x, z, y, r),
     roadway: (x, z) => !GF_BLOCKS.blockAt(x, z)
   });
+  // CC-BUCKLEY: the player's vehicles take damage from hard impacts (the collision events of controllers.js: buildings;
+  // traffic.js: other cars), and Buckley Tire's bays on Warren St fix them (gf-vehicle-damage.js; drawn by
+  // gf-damage-view.js once the radar is up)
+  const damage = createVehicleDamage({ entities: controllerManager.entities });
+  const buckley = (buildings.models || []).find((m) => m.id === 'buckley-tire');
+  const mission = createRepairMission({ damage, zone: buckley ? buckley.plan.zone : null });
+  const impactClock = () => performance.now() / 1000;
+  controllerManager.setCollisionListener((e) => damage.hit(e.a, e.speed, impactClock()));
+  trafficSystem.setCollisionListener((e) => { damage.hit(e.a, e.speed, impactClock()); damage.hit(e.b, e.speed, impactClock()); });
+  fetch(new URL('../data/gf/mission-text.json', import.meta.url), { cache: 'no-cache' })
+    .then((r) => (r.ok ? r.json() : null)).then((j) => { if (j) mission.setText(parseMissionText(j)); }).catch(() => {});
   // Reuse teleport placement so saved players return at rest, close to their last positions.
   try {
     const saved = JSON.parse(localStorage.getItem(STATE_KEY));
@@ -416,6 +429,9 @@ async function initApp() {
         } else controllerManager.teleportActiveTo(p.x, p.z, p.heading, p.y);
       }
       controllerManager.setMode(Object.hasOwn(controllerManager.entities, saved.activeMode) ? saved.activeMode : 'car');
+      // CC-BUCKLEY: each vehicle's damage, and whether the first repair is done
+      damage.load(saved.damage);
+      mission.load(saved.mission);
     }
   } catch { /* Missing or unavailable storage does not prevent playing. */ }
 
@@ -424,7 +440,8 @@ async function initApp() {
       const entities = Object.fromEntries(Object.entries(controllerManager.entities).map(([mode, entity]) => [mode, {
         x: entity.position.x, y: entity.position.y, z: entity.position.z, heading: entity.heading
       }]));
-      localStorage.setItem(STATE_KEY, JSON.stringify({ version: 1, activeMode: controllerManager.activeMode, entities }));
+      localStorage.setItem(STATE_KEY, JSON.stringify({ version: 1, activeMode: controllerManager.activeMode, entities,
+        damage: damage.save(), mission: mission.save() }));
     } catch { /* Storage may be disabled or full. */ }
   }
 
@@ -809,6 +826,12 @@ async function initApp() {
   });
   globalThis.slopGlensFalls.radar = radar;
   // the desktop map credit sits just above the radar card, not on it (touch screens: css/gf-mobile.css places it)
+  // CC-BUCKLEY: the damage chip, the mission toast, the smoke and Buckley's wrench on the radar
+  const damageView = installGfDamageView({ doc: document, scene, camera: cameraSystem.camera, damage, entities: controllerManager.entities,
+    radar, zone: buckley ? buckley.plan.zone : null });
+  dynamicRoots.push(damageView.root);
+  let missionView = null;
+  globalThis.slopGlensFalls.damage = { damage, mission, view: damageView, zone: buckley ? buckley.plan.zone : null, get last() { return missionView; } };
   const placeCredit = () => placeCreditAbove(document.getElementById('gf-attribution'), document.getElementById('minimap-card'), window,
     document.querySelector('.hud-bottom-center'));
   placeCredit();
@@ -931,6 +954,7 @@ async function initApp() {
     vehicleExit.refresh();
     trafficSystem.setParked(trafficBodies(controllerManager));
     controllerManager.update(dt, elapsed, cameraSystem.initialized ? cameraSystem.currentPos : null);
+    damage.update(); // CC-BUCKLEY: a damaged vehicle's top speed capped
     updateExitHint(false, now);
     cameraSystem.update(dt, elapsed);
     ground.terrain.update(cameraSystem.camera.position);
@@ -952,6 +976,9 @@ async function initApp() {
     signalHeads.update(elapsed);
     if (party) party.update(dt, elapsed, cameraSystem.currentPos);
     npcTalk.update(dt, elapsed);
+    // CC-BUCKLEY: the repair loop, then its chip / toast / smoke / radar marker
+    missionView = mission.update(dt, controllerManager.activeMode, controllerManager.getActiveEntity());
+    damageView.update(dt, controllerManager.activeMode, missionView);
     if (radar) radar.update(dt);
     // the shadow distance grows with the camera's height above the ground (not above y = 0, which the terrain is not)
     const cam = cameraSystem.currentPos, below = GF_SURFACE.ground(cam.x, cam.z);

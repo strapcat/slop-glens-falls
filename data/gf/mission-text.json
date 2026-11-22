@@ -1,0 +1,10 @@
+{
+  "_about": "CC-BUCKLEY: the first mission's text (the Buckley Tire repair). Placeholder lines for Dave to rewrite; js/gf-vehicle-damage.js has the same defaults if a key is missing. Not the NPC line bank (npc-lines.json).",
+  "buckley": {
+    "hint": "Your car's banged up. Get it to Buckley Tire on Warren St.",
+    "settle": "Pull in and stop at the Buckley Tire bays.",
+    "fixing": "Fixing…",
+    "done": "All set. Drive safe.",
+    "marker": "Buckley Tire"
+  }
+}

@@ -282,6 +282,28 @@ function drawCache(cache, compiled, cx, cz, scale, dpr) {
   cache.drawn = true;
 }
 
+// CC-BUCKLEY: a wrench (a marker's icon: 'wrench'), drawn with paths (no emoji font needed), dark on the pip, centred
+// on (x, y), about 2 * r across
+function drawWrench(ctx, x, y, r) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(-Math.PI / 4);
+  ctx.fillStyle = 'rgba(12, 14, 18, 0.92)';
+  ctx.strokeStyle = 'rgba(12, 14, 18, 0.92)';
+  ctx.lineCap = 'round';
+  ctx.lineWidth = r * 0.42;
+  ctx.beginPath();
+  ctx.moveTo(0, r * 0.95);
+  ctx.lineTo(0, -r * 0.2);
+  ctx.stroke();
+  // the open jaw: a ring with a notch
+  ctx.lineWidth = r * 0.34;
+  ctx.beginPath();
+  ctx.arc(0, -r * 0.55, r * 0.42, Math.PI * 0.35, Math.PI * 2.65);
+  ctx.stroke();
+  ctx.restore();
+}
+
 // Player arrow at the (rotated) centre, pointing up
 function drawArrow(ctx, size) {
   ctx.beginPath();
@@ -386,7 +408,8 @@ function drawView(view, compiled, layers, state) {
   for (const m of markers.values()) {
     let [sx, sy] = worldToRadar(m.x, m.z, px, pz, heading, scale);
     if (!inView(sx, sy, 9)) [sx, sy] = rimPoint(sx, sy, w, h, 9);
-    drawPip(ctx, sx, sy, 6.5, m.glyph || '', m.color || '#f5b62a');
+    drawPip(ctx, sx, sy, m.icon ? 8 : 6.5, m.glyph || '', m.color || '#f5b62a');
+    if (m.icon === 'wrench') drawWrench(ctx, sx, sy, 5.2);
   }
   drawArrow(ctx, Math.max(6, Math.min(11, Math.min(w, h) * 0.075)));
   // the N pip, a little smaller on a small card (the phone's 72-80 px radar)
@@ -479,9 +502,9 @@ function installGfMinimap({ doc = globalThis.document, controllerManager, layers
     toggle: () => setExpanded(!expanded),
     get expanded() { return expanded; },
     // a later mission icon (CC-BUCKLEY): an id and a position in the GF frame; nothing is placed by default
-    setMarker(id, { x, z, color, glyph } = {}) {
+    setMarker(id, { x, z, color, glyph, icon } = {}) {
       if (!Number.isFinite(x) || !Number.isFinite(z)) return false;
-      markers.set(String(id), { x, z, color, glyph });
+      markers.set(String(id), { x, z, color, glyph, icon });
       return true;
     },
     removeMarker: (id) => markers.delete(String(id)),

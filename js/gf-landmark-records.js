@@ -46,6 +46,8 @@ function applyGfLandmarks({ records, colliders, obstacles }, landmarks) {
     const r = records[i];
     const height = b.height ?? r.height;
     const record = { ...r, height, src: b.height !== null ? landmarks.srcCode : r.src, style: b.style ?? r.style, landmark: b.id };
+    // CC-BUCKLEY: a procedural model drawn on the outline in place of the plain extrusion (gf-building-terrain.js)
+    if (b.model) record.model = b.model;
     outRecords[i] = record;
     outColliders[i] = { ...colliders[i], maxY: height };
     applied.push({ id: b.id, osm: b.osm, name: b.name, daveRequested: b.daveRequested, before: { height: r.height, src: r.src, style: r.style },

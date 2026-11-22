@@ -1,0 +1,79 @@
+/* CC-BUCKLEY (Glens Falls only, loaded by js/gf-damage-view.js): the vehicle damage chip in the speed panel and the
+   mission toast (the Buckley Tire hint, "Fixing..." and its progress, "All set."). Touch-screen placement is in
+   css/gf-mobile.css. */
+
+.gf-damage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px 9px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font: 600 11px/1 Inter, system-ui, sans-serif;
+  color: var(--text-2, #c9c9c9);
+}
+.gf-damage[hidden] { display: none; }
+.gf-damage-icon { display: inline-flex; width: 14px; height: 14px; color: #f5b62a; }
+.gf-damage-icon svg, .gf-mission-icon svg { width: 100%; height: 100%; }
+.gf-damage-label { text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; }
+.gf-damage-bar {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  min-width: 60px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+}
+.gf-damage-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform: scaleX(0);
+  background: #7bc46b;
+  transition: transform 0.25s ease, background-color 0.25s ease;
+}
+.gf-damage[data-level='light'] .gf-damage-fill { background: #e3b23c; }
+.gf-damage[data-level='heavy'] .gf-damage-fill,
+.gf-damage[data-level='wrecked'] .gf-damage-fill { background: #d9483b; }
+.gf-damage-pct { min-width: 32px; text-align: right; font-variant-numeric: tabular-nums; color: #fff; }
+
+.gf-mission {
+  position: fixed;
+  z-index: 35;
+  left: 50%;
+  top: 22px;
+  transform: translate(-50%, -8px);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: min(520px, calc(100vw - 40px));
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(14, 16, 20, 0.86);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 12px 30px -14px rgba(0, 0, 0, 0.8);
+  color: #fff;
+  font: 600 14px/1.35 Inter, system-ui, sans-serif;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.gf-mission.is-shown { opacity: 1; transform: translate(-50%, 0); }
+.gf-mission-icon { flex: none; display: inline-flex; width: 18px; height: 18px; color: #f5b62a; }
+.gf-mission-text { flex: 1 1 auto; }
+.gf-mission-progress {
+  flex: none;
+  position: relative;
+  width: 110px;
+  height: 7px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.14);
+}
+.gf-mission-progress[hidden] { display: none; }
+.gf-mission-progress-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform: scaleX(0);
+  background: #f5b62a;
+}
